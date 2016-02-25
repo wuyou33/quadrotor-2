@@ -1,0 +1,871 @@
+/*
+PORT A: PIN 0 =>button User ;  PIN 5,6,7 =>SPI 1 ; PIN PA9,PA10=>USART1
+PORT B: PB6, PB7
+PORT C: PIN 6,7,8,9 =>PWMtimer1
+PORT D: PIN 12,13,14,15  =>LEDSang
+PORT E: PIN 3,0 =>SPI1
+
+*/
+#include "main.h"
+
+/* -----Khai bao bien------*/
+SPI_HandleTypeDef hspi1;
+I2C_HandleTypeDef I2C_InitStruct_10truc;
+USART_HandleTypeDef usart1;
+uint16_t pwm_speed;	
+int16_t Acc_X;
+int16_t Acc_Y;
+int16_t Acc_Z;
+int16_t Gyro_X;
+int16_t Gyro_Y;
+int16_t Gyro_Z;
+uint8_t MSB;
+uint8_t LSB;
+
+#ifdef _RTE_
+#include "RTE_Components.h"             
+#endif
+#ifdef RTE_CMSIS_RTOS                   
+#include "cmsis_os.h"                   
+#endif
+#ifdef RTE_CMSIS_RTOS_RTX
+extern uint32_t os_time;
+uint32_t HAL_GetTick(void) 
+{ 
+  return os_time; 
+}
+#endif
+
+#define CS_HIGH HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3, GPIO_PIN_SET)
+#define CS_LOW  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3, GPIO_PIN_RESET)
+
+#define LED_D_12_HIGH HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, GPIO_PIN_SET)
+#define LED_D_13_HIGH HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, GPIO_PIN_SET)
+#define LED_D_14_HIGH HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_SET)
+#define LED_D_15_HIGH HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, GPIO_PIN_SET)
+
+#define LED_D_12_LOW HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, GPIO_PIN_RESET)
+#define LED_D_13_LOW HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, GPIO_PIN_RESET)
+#define LED_D_14_LOW HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_RESET)
+#define LED_D_15_LOW HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, GPIO_PIN_RESET)
+
+#define SET_READ_SINGLE_CMD(x)			(x | 0x80)
+#define ABS(x)         (x < 0) ? (-x) : x
+
+
+/*
+Accel (int 16 bit)=> value [-2^15, 2^15-1]
+Acceleration Limit  |   Sensitivity             | Min - Max 
+---------------------------------------------------------------------
+2g                  |    16,384     = 2^15 / 2  |  [-16,384 ; 16,383 ]
+4g                  |    8,192      = 2^15 / 4  |
+8g                  |    4,096      = 2^15 / 8  |
+16g                 |    2,048      = 2^15 / 16 |
+Don vi tinh cua accel la m.g/s^2  voi m=10^-3, g=9.81 (m/s^2) 
+*/
+#define SENS_2G_RANGE_MG_PER_DIGIT		((float)0.06)  // Sensitivity for 2G range [mg/digit]
+#define LED_Threshold_MG											(1000) // 1000mg (1G) LED threshold value in mg. 1000mg = 1g with g=9.81 [m/s^2]
+
+
+/* ----------------------------------------- */
+/* LIS3DSH registers */
+/* ----------------------------------------- */
+uint8_t LIS3DSH_WHO_AM_I_ADDR					=	0x0F;
+uint8_t LIS3DSH_ID										=	0x3F;
+#define LIS3DSH_CTRL_REG1_ADDR					0x21
+#define LIS3DSH_CTRL_REG2_ADDR					0x22
+
+uint8_t LIS3DSH_REG_STATUS			  		= 0x27;
+
+uint8_t LIS3DSH_CTRL_REG4_ADDR			  = 0x20;
+uint8_t LIS3DSH_CTRL_REG4_ADDR_VALUE	= 0x77; /* set output data rate to 400 Hz and enable X,Y,Z axis */
+/* 
+bit 7 & 6 & 5 & 4: 0110 100Hz, 0111 400Hz, 1000 800Hz, 1001 1600Hz,....
+bit 3: 0 Block data update. Default value: 0 (0: continuous update; 1: output registers not updated until MSB and LSB have been read)
+bit 2: 1  X enable
+bit 1: 1  Y
+bit 0: 1  Z
+SUy ra=> 0110 0111=> 0x77
+*/
+
+
+uint8_t LIS3DSH_CTRL_REG3_ADDR				= 0x23;
+uint8_t LIS3DSH_CTRL_REG3_ADDR_VALUE  =	0xC8;
+/*
+bit 7: 1 DRDY signal enable to INT1. Default value: 0 (0: data ready signal not connected; 1: data ready signal connected to INT1)
+bit 6: 1
+bit 5: 0
+bit 4: 0	Interrupt 2 enable/disable. Default value:0  (0: INT2 signal disabled; 1: INT2 signal enabled)
+bit 3: 1 . Block data update
+bit 2: 0  (0: INT1/DRDY signal disabled; 1: INT1/DRDY signal enabled)
+bit 1: - (0: vector filter disabled; 1: vector filter enabled)
+bit 0: 0 Soft reset bit (0: no soft reset; 1: soft reset (POR function)
+SUy ra=> 1100 1000=> 0xc8
+*/
+
+
+uint8_t LIS3DSH_CTRL_REG5_ADDR			  =	0x24;
+uint8_t LIS3DSH_CTRL_REG5_ADDR_VALUE	=	0x00;
+/*
+bit 7 & 6:       00   Anti-aliasing filter bandwidth. Default value: 00 (00: 800 Hz; 01: 200 Hz; 10: 400 Hz; 11: 50 Hz)
+bit 5 & 4 & 3:   000  Full-scale selection. Default value: 000 (000: ±2 g; 001: ±4 g; 010: ±6 g; 011: ±8 g; 100: ±16 g)
+bit 2 & 1 :      00   Self-test enable. Default value: 00 (00: self-test disabled)
+bit 0: 						0   SPI serial interface mode selection. Default value: 0 (0: 4-wire interface; 1: 3-wire interface)
+*/
+
+
+uint8_t LIS3DSH_CTRL_REG6_ADDR				=	0x25;
+uint8_t LIS3DSH_CTRL_REG6_ADDR_VALUE	=	0x00;
+/*
+bit 7: 
+bit 6
+bit 5
+bit 4
+bit 3
+bit 2
+bit 1
+bit 0
+*/
+uint8_t LIS3DSH_OUT_X_L_ADDR					= 0x28;
+uint8_t LIS3DSH_OUT_X_H_ADDR					= 0x29;
+uint8_t LIS3DSH_OUT_Y_L_ADDR					= 0x2A;
+uint8_t LIS3DSH_OUT_Y_H_ADDR					= 0x2B;
+uint8_t LIS3DSH_OUT_Z_L_ADDR					= 0x2C;
+uint8_t LIS3DSH_OUT_Z_H_ADDR					= 0x2D;
+
+
+// khai bao nguyen mau Ham ------------------------------------------------------------------
+static void SystemClock_Config(void);
+static void Error_Handler(void);
+
+void KiemTraCodeOK(void);
+void Init_LEDSANG_PORTD_12_13_14_15(void);
+void Init_BUTTON_USER_PORT_A_0(void);
+void Init_PWM_GPIO_PORT_C_4Channel(void);
+void Init_PWM_TIM3_Handle(TIM_HandleTypeDef handle_timer_3);
+void Init_TIM3_OUTPUT_COMPARE(TIM_HandleTypeDef handle_timer_3, TIM_OC_InitTypeDef  TIM_Output_compare);
+void Init_SPI_CS_PORT_E_3(void);
+void Init_SPI_INT0_PORT_E_0(void);
+void Init_SPI1_PORT_A_5_6_7(void);
+void Init_SPI1_Instance(void);
+void Init_I2C_GPIO_PortB(void);
+void Init_I2C_Handle_10truc(void);
+void Init_USART1_With_PC(void);
+void Acc_Led_Sang(int16_t Acc_X, int16_t Acc_Y, int16_t Acc_Z);
+void SANG_1_LED(int8_t pin);
+void SANG_2_LED(int8_t type);
+void SANG_4_LED(void);
+void SANG_4_LED_OFF(void);
+void SPI_SendData(SPI_HandleTypeDef* hspi1, uint8_t registor, uint8_t data);
+uint8_t SPI_ReadData(SPI_HandleTypeDef* hspi1, uint8_t registor);
+uint8_t SPI_ReadID(SPI_HandleTypeDef* hspi1, uint8_t registor);
+
+
+void USART_Send_Char(uint8_t ch);
+void USART_Send_String(uint8_t *str);
+void USART_Send_Number(int32_t number);
+uint8_t USART_Read_Data(USART_HandleTypeDef* usart1);
+
+//timer
+volatile uint32_t g_iSysTicks = 0;
+void SysTick_Handler()
+{
+	g_iSysTicks++;
+}
+void delay_ms(uint32_t piMillis)
+{
+	uint32_t iStartTime = g_iSysTicks;
+	while( (g_iSysTicks - iStartTime ) < piMillis)
+	{}
+}			
+
+int main(void)
+{	
+		#ifdef RTE_CMSIS_RTOS                   // when using CMSIS RTOS
+			osKernelInitialize();                 // initialize CMSIS-RTOS
+		#endif				
+		TIM_HandleTypeDef handle_timer_3;					//khai bao Timer Handle
+		TIM_OC_InitTypeDef TIM_Output_compare;   //Khai bao Output Compare	
+		
+		Acc_X = 0x00;
+		Acc_Y = 0x00;
+		Acc_Z = 0x00;
+		pwm_speed=800;
+		
+		//END----------------------------------------------------------------------------
+		HAL_Init();
+		SystemClock_Config();	
+		__GPIOA_CLK_ENABLE();
+		__GPIOB_CLK_ENABLE();
+		__GPIOC_CLK_ENABLE();
+		__GPIOD_CLK_ENABLE();
+		__GPIOE_CLK_ENABLE();
+		__TIM1_CLK_ENABLE();
+		__TIM3_CLK_ENABLE();
+		__SPI1_CLK_ENABLE();
+		__USART1_CLK_ENABLE();
+		__I2C1_CLK_ENABLE();
+		//----------------//----------------//----------------//----------------//----------------
+		
+		
+		//--------------------------------------
+		//Usart connect COM PC
+		Init_USART1_With_PC();
+				
+		Init_LEDSANG_PORTD_12_13_14_15();
+		Init_BUTTON_USER_PORT_A_0();
+		
+		//PWM motor
+		Init_PWM_GPIO_PORT_C_4Channel();		
+		Init_PWM_TIM3_Handle(handle_timer_3);
+		Init_TIM3_OUTPUT_COMPARE(handle_timer_3, TIM_Output_compare);		
+		
+		//accelera 10 truc MPU6050
+		Init_I2C_GPIO_PortB();
+		Init_I2C_Handle_10truc();
+		
+		//Init SPI1 accelerametor 3 truc LIS3DSH
+		/*tam thoi dong lai
+		Init_SPI_CS_PORT_E_3();
+		Init_SPI_INT0_PORT_E_0();
+		Init_SPI1_PORT_A_5_6_7();		
+		Init_SPI1_Instance();	
+		*/		
+		//------------------------------------------------------
+		
+		
+		
+		
+		HAL_TIM_PWM_Start(&handle_timer_3, TIM_CHANNEL_1);
+		//HAL_TIM_PWM_Start(&handle_timer_3, TIM_CHANNEL_2);
+				
+		HAL_TIM_Base_Start_IT(&handle_timer_3); 
+		HAL_TIM_PWM_Start(&handle_timer_3,TIM_CHANNEL_1); 
+		HAL_TIMEx_PWMN_Start(&handle_timer_3,TIM_CHANNEL_1);	
+		
+		SANG_4_LED();
+		delay_ms(2000); //HAL_Delay(2000);		
+		__HAL_TIM_SetCompare(&handle_timer_3, TIM_CHANNEL_1, 700);
+		TIM3->CCR1 = 700;
+		SANG_4_LED_OFF();
+		delay_ms(500); //HAL_Delay(500);		
+		__HAL_TIM_SetCompare(&handle_timer_3, TIM_CHANNEL_1, 800);
+		TIM3->CCR1 = 800;
+		//END --------------PWM setup brushless motor-------------------------------------------		
+		
+		
+		
+
+
+		//---------------SPI Accelerameter-----------------------------------------------------------
+		CS_HIGH;
+		__HAL_SPI_ENABLE(&hspi1);			
+		
+		while(HAL_SPI_GetState(&hspi1)!=HAL_SPI_STATE_READY)
+		{
+			SANG_4_LED();
+		}		
+		//0x20 = 0x77 100Hz and XYZ enable
+		SPI_SendData(&hspi1, LIS3DSH_CTRL_REG4_ADDR, LIS3DSH_CTRL_REG4_ADDR_VALUE );		
+		//0x23 = 0xC8  //DRY active high on INT1 pin
+		SPI_SendData(&hspi1, LIS3DSH_CTRL_REG3_ADDR, LIS3DSH_CTRL_REG3_ADDR_VALUE );		
+		SPI_SendData(&hspi1, LIS3DSH_CTRL_REG5_ADDR, LIS3DSH_CTRL_REG5_ADDR_VALUE );		
+		SPI_SendData(&hspi1, LIS3DSH_CTRL_REG6_ADDR, LIS3DSH_CTRL_REG6_ADDR_VALUE );
+		//END---------------SPI Accelerameter-----------------------------------------------------------
+					
+		#ifdef RTE_CMSIS_RTOS // when using CMSIS RTOS
+			osKernelStart();     // start thread execution 
+		#endif			
+		
+		KiemTraCodeOK();
+		while(1)
+		{				
+			//------------SPI--------------------------------------------------
+			//while( (GPIOE->IDR & (1 << 0)) != 0){}	
+			//X			
+			MSB = SPI_ReadData(&hspi1, LIS3DSH_OUT_X_H_ADDR);
+			LSB = SPI_ReadData(&hspi1, LIS3DSH_OUT_X_L_ADDR);			
+			Acc_X = (int16_t)((((int16_t)MSB) << 8) | LSB);			//Acc_X = (MSB << 8) | (LSB);
+			//Acc_X = Acc_X * SENS_2G_RANGE_MG_PER_DIGIT; /* convert Z absolute value to mg value */
+			//Y
+			MSB = SPI_ReadData(&hspi1, LIS3DSH_OUT_Y_H_ADDR);
+			LSB = SPI_ReadData(&hspi1, LIS3DSH_OUT_Y_L_ADDR);			
+			Acc_Y = (int16_t)((((int16_t)MSB) << 8) | LSB);			//Acc_Y = (MSB << 8) | (LSB);
+			//Z
+			MSB = SPI_ReadData(&hspi1, LIS3DSH_OUT_Z_H_ADDR);
+			LSB = SPI_ReadData(&hspi1, LIS3DSH_OUT_Z_L_ADDR);			
+			Acc_Z = (int16_t)((((int16_t)MSB) << 8) | LSB);			//Acc_Y = (MSB << 8) | (LSB);
+			
+			
+			Acc_Led_Sang( Acc_X,  Acc_Y,  Acc_Z);	
+				
+			
+			
+			//------------PWM- Motor-------------------------------------------------
+			if(HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_0)==GPIO_PIN_SET)
+			{
+				while(HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_0)==GPIO_PIN_SET)
+				{	//khi nhan buttun USER ma chua tha ra -> khong lam gi
+				}
+				HAL_GPIO_TogglePin(GPIOD,GPIO_PIN_13);
+				pwm_speed = pwm_speed + 50;
+				
+				if(pwm_speed >= 2000)
+				{
+					pwm_speed = 800;
+				}
+			}
+			TIM3->CCR1 = pwm_speed;
+			__HAL_TIM_SetCompare(&handle_timer_3,TIM_CHANNEL_1, pwm_speed);
+			//END------------PWM--------------------------------------------------
+			
+		}
+}
+
+void KiemTraCodeOK(void)
+{
+		int i = 0;
+		while(i < 5)
+		{
+			SANG_2_LED(1);				delay_ms(200);				SANG_2_LED(2);				delay_ms(200);
+			i++;
+		}
+}
+
+void Init_LEDSANG_PORTD_12_13_14_15(void)
+{
+  GPIO_InitTypeDef PIN_LED_SANG_PORTD;
+
+//Init PIN cho led sang
+	PIN_LED_SANG_PORTD.Pin = GPIO_PIN_12 | GPIO_PIN_13 | GPIO_PIN_14 | GPIO_PIN_15;
+	PIN_LED_SANG_PORTD.Mode = GPIO_MODE_OUTPUT_PP;
+	PIN_LED_SANG_PORTD.Pull = GPIO_NOPULL;
+	PIN_LED_SANG_PORTD.Speed = GPIO_SPEED_HIGH;
+	HAL_GPIO_Init(GPIOD, &PIN_LED_SANG_PORTD);
+}
+
+void Init_BUTTON_USER_PORT_A_0(void)
+{
+  GPIO_InitTypeDef BUTTON_USER_PORTA_0;	
+	//Init button User
+	BUTTON_USER_PORTA_0.Pin = GPIO_PIN_0;
+	BUTTON_USER_PORTA_0.Mode = GPIO_MODE_INPUT;
+	BUTTON_USER_PORTA_0.Pull = GPIO_NOPULL;
+	BUTTON_USER_PORTA_0.Speed = GPIO_SPEED_HIGH;
+	HAL_GPIO_Init(GPIOA, &BUTTON_USER_PORTA_0);
+}
+
+void Init_PWM_GPIO_PORT_C_4Channel(void)
+{
+		GPIO_InitTypeDef GPIO_PWM_PORTC_6789;	
+		//Init PWM GPIOC cho 4 channel
+		GPIO_PWM_PORTC_6789.Pin = GPIO_PIN_9 | GPIO_PIN_8 | GPIO_PIN_7 | GPIO_PIN_6;
+		GPIO_PWM_PORTC_6789.Mode = GPIO_MODE_AF_PP;
+		GPIO_PWM_PORTC_6789.Pull = GPIO_NOPULL;
+		GPIO_PWM_PORTC_6789.Speed = GPIO_SPEED_FAST;
+		GPIO_PWM_PORTC_6789.Alternate = GPIO_AF2_TIM3;
+		HAL_GPIO_Init(GPIOC, &GPIO_PWM_PORTC_6789);
+}
+
+void Init_PWM_TIM3_Handle(TIM_HandleTypeDef handle_timer_3)
+{
+		//Init TIM HAndle TIM3
+		handle_timer_3.Instance = TIM3;
+		handle_timer_3.Init.Prescaler = 84-1; 									//vi timer 3 co max clock la 84MHz, -1 la vi dem(count) tu 0
+		handle_timer_3.Init.CounterMode = TIM_COUNTERMODE_UP; 	//dem len
+		handle_timer_3.Init.Period = 20000-1;									//Period(chu ki) = 20 mili s
+		handle_timer_3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;// =0
+		HAL_TIM_PWM_Init(&handle_timer_3);										//Init PWM voi TIM HANDLE
+}
+
+void Init_TIM3_OUTPUT_COMPARE(TIM_HandleTypeDef handle_timer_3, TIM_OC_InitTypeDef  TIM_Output_compare)
+{
+		//Init TIM OutputCompare
+		TIM_Output_compare.OCMode = TIM_OCMODE_PWM1;
+		TIM_Output_compare.OCIdleState = TIM_OCIDLESTATE_SET;
+		TIM_Output_compare.Pulse = 2000;											//set dutty cycle = Pulse*100/Period = 2000*100 / 20000 = 10%
+		TIM_Output_compare.OCPolarity = TIM_OCPOLARITY_HIGH;
+		TIM_Output_compare.OCFastMode = TIM_OCFAST_ENABLE;		
+		HAL_TIM_PWM_ConfigChannel(&handle_timer_3, &TIM_Output_compare, TIM_CHANNEL_1); //config PWM cho channel 1 (PORTC.6)
+		HAL_TIM_PWM_Init(&handle_timer_3);
+		HAL_TIM_PWM_MspInit(&handle_timer_3);
+}
+
+void Init_SPI_CS_PORT_E_3(void)
+{
+		GPIO_InitTypeDef SPI_CS_PE3;	
+		//Init SPI1----------------------------------------------------------------------
+		//      - PE-3 - SPI CS -> Output, Push-Pull
+		SPI_CS_PE3.Pin = GPIO_PIN_3;
+		SPI_CS_PE3.Mode = GPIO_MODE_OUTPUT_PP;
+		SPI_CS_PE3.Speed = GPIO_SPEED_FAST;
+		SPI_CS_PE3.Pull = GPIO_NOPULL;
+		HAL_GPIO_Init(GPIOE, &SPI_CS_PE3);	
+}
+
+void Init_SPI_INT0_PORT_E_0(void)
+{
+		GPIO_InitTypeDef SPI_INT0_PE0;	
+		//    - PE-0 is connected to the INT0 output of the accelerator, which we will use to get notified if new data is available.
+		//      - PE-0 - Accelerator INT0  -> Input, pull-down
+		SPI_INT0_PE0.Pin  = GPIO_PIN_0;
+		SPI_INT0_PE0.Mode = GPIO_MODE_INPUT;
+		SPI_INT0_PE0.Pull = GPIO_PULLUP;
+		SPI_INT0_PE0.Speed = GPIO_SPEED_FAST;
+		HAL_GPIO_Init(GPIOE, &SPI_INT0_PE0);
+}
+
+
+void Init_SPI1_PORT_A_5_6_7(void)
+{
+		GPIO_InitTypeDef GPIO_Pin_SPI_PortA_5_6_7;	
+		/*
+		PA5 = SCK : Serial Clock
+		PA6 = MISO : Master In Slave Out
+		PA7 = MOSI : Master Out Slave In -> Alternate, push-pull
+		*/
+		GPIO_Pin_SPI_PortA_5_6_7.Pin = GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7;
+		GPIO_Pin_SPI_PortA_5_6_7.Mode = GPIO_MODE_AF_PP;
+		GPIO_Pin_SPI_PortA_5_6_7.Alternate = GPIO_AF5_SPI1;
+		GPIO_Pin_SPI_PortA_5_6_7.Speed = GPIO_SPEED_FAST;
+		GPIO_Pin_SPI_PortA_5_6_7.Pull = GPIO_NOPULL;
+		HAL_GPIO_Init(GPIOA, &GPIO_Pin_SPI_PortA_5_6_7);
+}
+
+void Init_SPI1_Instance(void)
+{
+		//__HAL_RESET_HANDLE_STATE(&hspi1);	
+		hspi1.Instance = SPI1;
+		hspi1.Init.Mode              = SPI_MODE_MASTER;
+		hspi1.Init.Direction         = SPI_DIRECTION_2LINES;       // Full-duplex using MISO/MOSI lines
+		hspi1.Init.DataSize          = SPI_DATASIZE_8BIT;  
+		hspi1.Init.CLKPolarity       = SPI_POLARITY_LOW;  	
+		hspi1.Init.CLKPhase          = SPI_PHASE_1EDGE;
+		hspi1.Init.NSS               = SPI_NSS_SOFT;
+		hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;	
+		hspi1.Init.FirstBit          = SPI_FIRSTBIT_MSB;
+		hspi1.Init.TIMode            = SPI_TIMODE_DISABLED;  		
+		hspi1.Init.CRCCalculation    = SPI_CRCCALCULATION_DISABLED;		
+		hspi1.Init.CRCPolynomial     = 7;            
+		//HAL_SPI_DeInit(&hspi1);
+		HAL_SPI_Init(&hspi1);		
+}
+
+
+/////Accelerametor 10truc///////////
+//-------------------------------------------------------
+void Init_I2C_GPIO_PortB(void)
+{
+		/**I2C1 GPIO Configuration    
+    PB6     ------> I2C1_SCL
+    PB7     ------> I2C1_SDA 
+    */
+		GPIO_InitTypeDef 	GPIO_InitStruct;
+		GPIO_InitStruct.Pin = GPIO_PIN_6 | GPIO_PIN_7;
+		GPIO_InitStruct.Speed = GPIO_SPEED_FAST;
+		GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
+		GPIO_InitStruct.Pull = GPIO_PULLUP;
+		GPIO_InitStruct.Alternate = GPIO_AF4_I2C1;
+		HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);		
+}
+void Init_I2C_Handle_10truc(void)
+{
+	I2C_InitStruct_10truc.Instance = I2C1;
+  I2C_InitStruct_10truc.Init.ClockSpeed = 100000;
+  I2C_InitStruct_10truc.Init.DutyCycle = I2C_DUTYCYCLE_2;
+  I2C_InitStruct_10truc.Init.OwnAddress1 = 0;
+  I2C_InitStruct_10truc.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+  I2C_InitStruct_10truc.Init.DualAddressMode = I2C_DUALADDRESS_DISABLED;
+  I2C_InitStruct_10truc.Init.OwnAddress2 = 0;
+  I2C_InitStruct_10truc.Init.GeneralCallMode = I2C_GENERALCALL_DISABLED;
+  I2C_InitStruct_10truc.Init.NoStretchMode = I2C_NOSTRETCH_DISABLED;
+  HAL_I2C_Init(&I2C_InitStruct_10truc);
+}
+////end /Accelerametor 10truc///////////
+
+
+
+
+
+
+/////////////////////////////////////////////////////////////////////
+///USART//////USART///////////////////////////////////////////////////////
+void Init_USART1_With_PC(void)
+{	
+		GPIO_InitTypeDef 	GPIO_Init_USART1;
+	
+		GPIO_Init_USART1.Pin = GPIO_PIN_9 | GPIO_PIN_10;
+		GPIO_Init_USART1.Speed = GPIO_SPEED_LOW;
+		GPIO_Init_USART1.Mode = GPIO_MODE_AF_PP;
+		GPIO_Init_USART1.Pull = GPIO_NOPULL;
+		GPIO_Init_USART1.Alternate = GPIO_AF7_USART1;
+		HAL_GPIO_Init(GPIOA, &GPIO_Init_USART1);	
+	
+	
+		HAL_USART_DeInit(&usart1);
+		usart1.Instance = USART1;
+		usart1.Init.BaudRate = 9600; //The standard baud rates are: 1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200, 250000, , 230400, 460800, 921600, 1.5Mbps, 3Mbps… The bigger the number is, the faster your communication is. FT232 supports up to 3Mbps and that is really fast. Normally, we just use up to 115200bps for all applications.
+		usart1.Init.WordLength = USART_WORDLENGTH_8B;
+		usart1.Init.StopBits = USART_STOPBITS_1;
+		usart1.Init.Parity = USART_PARITY_NONE;
+		usart1.Init.Mode = USART_MODE_TX_RX;
+		//huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+		//huart1.Init.OverSampling = UART_OVERSAMPLING_16;
+		//huart1.Init.CLKLastBit = ;
+		//huart1.Init.CLKPhase = ;
+		//huart1.Init.CLKPolarity = ;
+		if(HAL_USART_Init(&usart1) != HAL_OK)
+		{
+			Error_Handler();
+		}
+}
+
+
+void USART_Send_Char(uint8_t ch )
+{
+	HAL_USART_Transmit(&usart1, (uint8_t *) &ch , sizeof(ch), 1000);
+	while(HAL_USART_GetState(&usart1)!= HAL_USART_STATE_READY)
+	{
+		SANG_4_LED();
+	}
+}
+
+
+void USART_Send_String(uint8_t *str)
+{
+	while(*str != 0)
+  {
+		USART_Send_Char(*str++);
+		while(HAL_USART_GetState(&usart1)!= HAL_USART_STATE_READY){}
+		//HAL_USART_Transmit(usart1, (uint8_t *) str, sizeof(str), 100 );
+		//while(HAL_USART_GetState(usart1)!= HAL_USART_STATE_READY){}
+    //str++;
+  }	
+	//HAL_USART_Transmit_IT(usart1, (uint8_t *)str, sizeof(str) );
+	//while(HAL_USART_GetState(usart1)!= HAL_USART_STATE_READY){}
+}
+
+
+
+void USART_Send_Number(int32_t x )
+{
+	char value[10]; //a temp array to hold results of conversion
+  int i = 0; //loop index  
+  do
+  {
+    value[i] = (char)(x % 10) + '0'; //convert integer to character
+    x /= 10;
+		i=i+1;
+  } while(x);
+  
+  while(i) //send data
+  {		
+		HAL_USART_Transmit(&usart1, (uint8_t *) &value[i] , sizeof(value[i]), 100);
+		while(HAL_USART_GetState(&usart1)!= HAL_USART_STATE_READY)
+		{}
+		i=i-1;
+    //USART_Send_Char(usart1, value[--i]); 
+		//while(HAL_USART_GetState(usart1)!= HAL_USART_STATE_READY){}
+  }
+}
+
+
+
+
+uint8_t USART_Read_Data(USART_HandleTypeDef* usart1)
+{
+	uint8_t res;
+	HAL_USART_Receive_IT(usart1, &res, 10);
+	while(HAL_USART_GetState(usart1)!= HAL_USART_STATE_READY)
+	{}
+	return res;
+}
+//END//END/////////////////////////////////////////////////////////////////
+//END///USART//////USART///////////////////////////////////////////////////////
+
+
+
+
+
+
+void Acc_Led_Sang(int16_t Acc_X, int16_t Acc_Y, int16_t Acc_Z)
+{
+		int16_t defaulValue = 1000;
+		LED_D_12_LOW;
+		LED_D_13_LOW;
+		LED_D_14_LOW;
+		LED_D_15_LOW;			
+		
+		if(Acc_X < -defaulValue)
+		{
+			LED_D_12_LOW;
+			LED_D_14_HIGH;
+		}
+		else if(Acc_X > defaulValue)
+		{
+			LED_D_14_LOW;				
+			LED_D_12_HIGH;
+		}
+
+		if(Acc_Y < -defaulValue)
+		{				
+			LED_D_15_LOW;				
+			LED_D_13_HIGH;
+		}
+		else if(Acc_Y > defaulValue)
+		{				
+			LED_D_13_LOW;				
+			LED_D_15_HIGH;
+		}		
+		delay_ms(20);
+}
+
+void SANG_1_LED(int8_t PIN)
+{
+		LED_D_12_LOW;
+		LED_D_13_LOW;
+		LED_D_14_LOW;
+		LED_D_15_LOW;
+		if(PIN==12)
+		{
+			LED_D_12_HIGH;
+		}
+		else if(PIN==13)
+		{
+			LED_D_13_HIGH;
+		}
+		else if(PIN==14)
+		{
+			LED_D_14_HIGH;
+		}
+		else if(PIN==15)
+		{
+			LED_D_15_HIGH;
+		}
+}
+
+void SANG_2_LED(int8_t type)
+{
+	LED_D_12_LOW;
+	LED_D_13_LOW;
+	LED_D_14_LOW;
+	LED_D_15_LOW;
+	if(type==1)
+	{	
+		LED_D_12_HIGH;
+		LED_D_14_HIGH;
+	}
+	else if(type==2)
+	{
+		LED_D_13_HIGH;
+		LED_D_15_HIGH;
+	}
+}
+
+void SANG_4_LED()
+{
+		LED_D_12_HIGH;
+		LED_D_13_HIGH;
+		LED_D_14_HIGH;
+		LED_D_15_HIGH;
+}
+void SANG_4_LED_OFF()
+{
+		LED_D_12_LOW;
+		LED_D_13_LOW;
+		LED_D_14_LOW;
+		LED_D_15_LOW;
+}
+
+void SPI_SendData(SPI_HandleTypeDef* hspi1, uint8_t registor, uint8_t data)
+{		
+		CS_LOW;
+		HAL_SPI_Transmit(hspi1, &registor , 1, 100);
+		while(HAL_SPI_GetState(hspi1)!=HAL_SPI_STATE_READY)
+		{
+			//SANG_2_LED(1);
+		}	
+		
+		HAL_SPI_Transmit(hspi1, &data , 1, 100);
+		while(HAL_SPI_GetState(hspi1)!=HAL_SPI_STATE_READY)
+		{
+			//SANG_2_LED(2);
+		}	
+		CS_HIGH;
+		
+}
+
+
+uint8_t SPI_ReadData(SPI_HandleTypeDef* hspi1, uint8_t registor)	
+{
+		uint8_t result;
+		CS_LOW;		
+		//registor = SET_READ_SINGLE_CMD(registor); 
+		registor = registor | 0x80;
+		
+		HAL_SPI_Transmit(hspi1, &registor, 1, 100);
+		while(HAL_SPI_GetState(hspi1)!=HAL_SPI_STATE_READY)
+		{
+			//SANG_2_LED(1);
+		}
+		
+			
+		HAL_SPI_Receive(hspi1, &result, 1, 100);
+		while(HAL_SPI_GetState(hspi1)!=HAL_SPI_STATE_READY)
+		{
+			//SANG_2_LED(2);
+		}				
+		CS_HIGH;
+		return result; 		
+}
+
+
+uint8_t SPI_ReadID(SPI_HandleTypeDef* hspi1, uint8_t registor)
+{
+		uint8_t result;
+		
+		CS_LOW;  
+		registor = registor | 0x80;
+		HAL_SPI_Transmit(hspi1, &registor, 1, 100);
+		while(HAL_SPI_GetState(hspi1)!=HAL_SPI_STATE_READY)
+		{
+		}
+		
+		HAL_SPI_Receive(hspi1, &result, 1, 100);
+		while(HAL_SPI_GetState(hspi1)!=HAL_SPI_STATE_READY)
+		{
+		}
+		CS_HIGH;		
+		return result;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//__________________________________________________________________________________
+//__________________________________________________________________________________
+//__________________________________________________________________________________
+//__________________________________________________________________________________
+//__________________________________________________________________________________
+//__________________________________________________________________________________
+//__________________________________________________________________________________
+//__________________________________________________________________________________
+/**
+  * @brief  System Clock Configuration
+  *         The system Clock is configured as follow : 
+  *            System Clock source            = PLL (HSE)
+  *            SYSCLK(Hz)                     = 168000000
+  *            HCLK(Hz)                       = 168000000
+  *            AHB Prescaler                  = 1
+  *            APB1 Prescaler                 = 4
+  *            APB2 Prescaler                 = 2
+  *            HSE Frequency(Hz)              = 8000000
+  *            PLL_M                          = 8
+  *            PLL_N                          = 336
+  *            PLL_P                          = 2
+  *            PLL_Q                          = 7
+  *            VDD(V)                         = 3.3
+  *            Main regulator output voltage  = Scale1 mode
+  *            Flash Latency(WS)              = 5
+  * @param  None
+  * @retval None
+  */
+static void SystemClock_Config(void)
+{
+  RCC_ClkInitTypeDef RCC_ClkInitStruct;
+  RCC_OscInitTypeDef RCC_OscInitStruct;
+  
+  /* Enable Power Control clock */
+  __HAL_RCC_PWR_CLK_ENABLE();
+  
+  /* The voltage scaling allows optimizing the power consumption when the device is 
+     clocked below the maximum system frequency, to update the voltage scaling value 
+     regarding system frequency refer to product datasheet.  */
+  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+
+  /* Enable HSE Oscillator and activate PLL with HSE as source */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.PLL.PLLM = 8;
+  RCC_OscInitStruct.PLL.PLLN = 336;
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
+  RCC_OscInitStruct.PLL.PLLQ = 7;
+  if(HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  {
+    /* Initialization Error */
+    Error_Handler();
+  }
+  
+  /* Select PLL as system clock source and configure the HCLK, PCLK1 and PCLK2 
+     clocks dividers */
+  RCC_ClkInitStruct.ClockType = (RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2);
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;  
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;  
+  if(HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5) != HAL_OK)
+  {
+    /* Initialization Error */
+    Error_Handler();
+  }
+
+  /* STM32F405x/407x/415x/417x Revision Z devices: prefetch is supported  */
+  if (HAL_GetREVID() == 0x1001)
+  {
+    /* Enable the Flash prefetch */
+    __HAL_FLASH_PREFETCH_BUFFER_ENABLE();
+  }
+}
+
+static void Error_Handler(void)
+{
+  //SET = sang, RESET = tat
+		/*HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, GPIO_PIN_SET);*/
+  while(1)
+  {			
+		SANG_4_LED();
+		delay_ms(500);
+		SANG_4_LED_OFF();
+		delay_ms(500);
+	}
+}
+
+void USART1_IRQHandler(void)
+{
+}
+
+#ifdef  USE_FULL_ASSERT
+
+/**
+  * @brief  Reports the name of the source file and the source line number
+  *         where the assert_param error has occurred.
+  * @param  file: pointer to the source file name
+  * @param  line: assert_param error line source number
+  * @retval None
+  */
+void assert_failed(uint8_t* file, uint32_t line)
+{ 
+  /* User can add his own implementation to report the file name and line number,
+     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+
+  /* Infinite loop */
+  while (1)
+  {
+  }
+}
+#endif
