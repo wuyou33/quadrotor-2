@@ -17,7 +17,8 @@ I2C_HandleTypeDef I2C_InitStruct_10truc;
 TIM_HandleTypeDef handle_timer_3;					//khai bao Timer Handle
 TIM_OC_InitTypeDef TIM_Output_compare;   //Khai bao Output Compare	
 TIM_HandleTypeDef htimer1;
-long input_capture;
+long counter_timer1 = 0;
+long input_capture_timer1_ch1;
 int16_t pwm_speed, pwm_left, pwm_right, pwm_front, pwm_back;	
 uint8_t who_i_am_reg_value_MPU6050;
 float rotation_x;
@@ -175,13 +176,17 @@ int main(void)
 		
 		KiemTraCodeOK();
 		while(1)
-		{				
+		{	
+			counter_timer1 = __HAL_TIM_GetCounter(&htimer1);
+			input_capture_timer1_ch1 = __HAL_TIM_GET_COMPARE(&htimer1, TIM_CHANNEL_1);
+			
+			//MPU6050
 			TM_MPU6050_ReadAll(&I2C_InitStruct_10truc,MPU6050_I2C_ADDR, &output);
 			delay_ms(1);		
 			rotation_x = Calculate_Accel_X_Angles(output.Accelerometer_X, output.Accelerometer_Y,output.Accelerometer_Z);
 			rotation_y = Calculate_Accel_Y_Angles(output.Accelerometer_X, output.Accelerometer_Y,output.Accelerometer_Z);
-			
 			Sang_Led_By_MPU6050_Values(rotation_x, rotation_y);
+			//END MPU6050
 			
 			//------------PWM- Motor-------------------------------------------------
 			if(HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_0)==GPIO_PIN_SET)
@@ -518,16 +523,19 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 {
 	if (htim->Instance==TIM2)
 		{
-				input_capture = __HAL_TIM_GetCompare(&htimer1, TIM_CHANNEL_1);	//read TIM1 channel 1 capture value
-				__HAL_TIM_SetCounter(&htimer1, 0);															//reset counter after input capture interrupt occurs
+			//read TIM1 channel 1 capture value
+			//input_capture = __HAL_TIM_GetCompare(&htimer1, TIM_CHANNEL_1);	
+				
+			//reset counter after input capture interrupt occurs
+			__HAL_TIM_SetCounter(&htimer1, 0);															
 		}
 }
+
 
 /*
 void TIM1_CC_IRQHandler(void)
 { 
 	uint32_t uhCaptureNumber;
-	//TIM_GET_ITSTATUS(TIM1, TIM_IT_CC1)
   if(TIM_GET_ITSTATUS(TIM1, TIM_IT_CC2) == SET) 
   {
     // Clear TIM1 Capture compare interrupt pending bit 

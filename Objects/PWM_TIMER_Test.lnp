@@ -1,6 +1,6 @@
 --cpu Cortex-M4.fp
 ".\objects\main.o"
-".\objects\stm32f4xx_hal_1.o"
+".\objects\stm32f4xx_hal.o"
 ".\objects\stm32f4xx_hal_cortex.o"
 ".\objects\stm32f4xx_hal_dma.o"
 ".\objects\stm32f4xx_hal_dma_ex.o"
