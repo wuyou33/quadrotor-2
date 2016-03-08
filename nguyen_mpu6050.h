@@ -105,41 +105,6 @@ typedef struct _TM_MPU6050_t {
 } TM_MPU6050_t;
 
 
-float Calculate_Accel_X_Angles(int16_t ACCEL_XOUT,int16_t ACCEL_YOUT, int16_t ACCEL_ZOUT)
-{
-		int16_t ACCEL_XANGLE;
-		float m_pi = 3.1415926535;
-		ACCEL_XOUT = (float)(ACCEL_XOUT/MPU6050_ACCE_SENS_2);
-		ACCEL_YOUT = (float)(ACCEL_YOUT/MPU6050_ACCE_SENS_2);
-		ACCEL_ZOUT = (float)(ACCEL_ZOUT/MPU6050_ACCE_SENS_2);
-	
-		ACCEL_XANGLE = (float)(  (float)(180.0/m_pi) * atan((float)ACCEL_YOUT / sqrt(pow((float)ACCEL_ZOUT, 2) + pow((float)ACCEL_XOUT, 2))));
-		return ACCEL_XANGLE;
-}
-
-float Calculate_Accel_Y_Angles(int16_t ACCEL_XOUT,int16_t ACCEL_YOUT, int16_t ACCEL_ZOUT)
-{
-		int16_t ACCEL_YANGLE;
-		float m_pi = 3.1415926535;
-		ACCEL_XOUT = (float)(ACCEL_XOUT/MPU6050_ACCE_SENS_2);
-		ACCEL_YOUT = (float)(ACCEL_YOUT/MPU6050_ACCE_SENS_2);
-		ACCEL_ZOUT = (float)(ACCEL_ZOUT/MPU6050_ACCE_SENS_2);
-
-		ACCEL_YANGLE = (float)(   (float)(180.0/m_pi) * atan((float)-ACCEL_XOUT / sqrt(pow((float)ACCEL_ZOUT, 2) + pow((float)ACCEL_YOUT, 2))));
-		return ACCEL_YANGLE;
-}
-
-void Calculate_Gyro_Angels()
-{
-		/*GYRO_XRATE = (float)GYRO_XOUT / gyro_xsensitivity; //gyro_xsensitivity = MPU6050_GYRO_SENS_250 = 131
-		GYRO_YRATE = (float)GYRO_YOUT / gyro_ysensitivity;
-		GYRO_ZRATE = (float)GYRO_ZOUT / gyro_zsensitivity;
-		
-		GYRO_XANGLE += GYRO_XRATE * dt; //float dt = 0.05f;
-		GYRO_YANGLE += GYRO_YRATE * dt;
-		GYRO_ZANGLE += GYRO_ZRATE * dt;
-	*/
-}
 
 
 

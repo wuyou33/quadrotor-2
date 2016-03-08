@@ -1,87 +1,109 @@
 /*
-PORT A: PA0 																	=>button User  
-				PA9, PA10															=>USART1
-PORT B: PB6, PB7 															=>I2C1 chip 10 truc mpu6050
-PORT C: PC6, PC7, PC8, PC9 										=>timer3
+PORT A: PA0 																	=>button User  				
+PORT B: PB6, PB7 															=>I2C1 cam bien 10 truc mpu6050
+																							//PB6     ------> I2C1_SCL
+																							//PB7     ------> I2C1_SDA 
+PORT C: PC6, PC7, PC8, PC9 										=>timer3 output PWM
 PORT D: PD12, PD13, PD14, PD15  							=>LEDSang
-PORT E: PE3, PE0 															=>SPI1
-				PE9, PE11, PE13, PE14									=>timer 1
+PORT E: PE9, PE11, PE13, PE14									=>timer 1 -> inputcapture PWM RF module
 */
 #include "math.h"
 #include "main.h"
 #include "common.h"
 #include "nguyen_mpu6050.h"
 
-//khai bao bien
-I2C_HandleTypeDef I2C_InitStruct_10truc;
-TIM_HandleTypeDef handle_timer_3;					//khai bao Timer Handle
-TIM_OC_InitTypeDef TIM_Output_compare;   //Khai bao Output Compare	
-TIM_HandleTypeDef htimer1;
-long counter_timer1 = 0;
-long input_capture_timer1_ch1;
+//I2C handle, dung de doc value cua cam bien MPU6050
+I2C_HandleTypeDef I2C_Handle_10truc;
+
+//timer 3 dung de output PWM ra 4 channel
+TIM_HandleTypeDef Tim3_Handle_PWM;		
+
+//timer 1 dung de capture PWM cua RF module
+TIM_HandleTypeDef Tim1_Handle_InputCapture_RF_module;
+
+//PWM
 int16_t pwm_speed, pwm_left, pwm_right, pwm_front, pwm_back;	
+
+//cam bien MPU6050
 uint8_t who_i_am_reg_value_MPU6050;
-float rotation_x;
-float rotation_y;
+float rotation_x, rotation_y, rotation_z;
+
+//InputCapture PWM
+long counter_capture_timer1 = 0;
+long input_capture_timer1_ch1;
+long input_capture_timer1_ch2;
+long input_capture_timer1_ch3;
+long input_capture_timer1_ch4;
+
+
 //------------------------------
-
-
 															//...code default of ARM
 															#ifdef _RTE_
-															#include "RTE_Components.h"             
+																#include "RTE_Components.h"             
 															#endif
 															#ifdef RTE_CMSIS_RTOS                   
-															#include "cmsis_os.h"                   
+																#include "cmsis_os.h"                   
 															#endif
 															#ifdef RTE_CMSIS_RTOS_RTX
-															extern uint32_t os_time;
-															uint32_t HAL_GetTick(void) 
-															{ 
-																return os_time; 
-															}
+																extern uint32_t os_time;
+																uint32_t HAL_GetTick(void) 
+																{ 
+																	return os_time; 
+																}
 															#endif
 
-// khai bao nguyen mau Ham ------------------------------------------------------------------
+//------------------------------------------------------------------
+//ham handle error						
 static void SystemClock_Config(void);
-static void Error_Handler(void); static void Error_Handler1(void); static void Error_Handler2(void);
-static void Error_Handler3(void); static void Error_Handler4(void);
-
-void KiemTraCodeOK(void);
-void Acc_Led_Sang(int16_t Acc_X, int16_t Acc_Y, int16_t Acc_Z);
+static void Error_Handler(void); 
+static void Error_Handler1(void); 
+static void Error_Handler2(void);
+static void Error_Handler3(void); 
+static void Error_Handler4(void);
+															
+//ham Led Sang
 void SANG_1_LED(int8_t pin);
 void SANG_2_LED(int8_t type);
 void SANG_4_LED(void);
+void SANG_4_LED_FOREVER(void);
 void SANG_4_LED_OFF(void);
-
-//Init function
+															
+void KiemTraCodeOK(void);
+//void Acc_Led_Sang(int16_t Acc_X, int16_t Acc_Y, int16_t Acc_Z);
+															
+//Khoi Tao LED, BUTTON USER
 void Init_LEDSANG_PORTD_12_13_14_15(void);
 void Init_BUTTON_USER_PORT_A_0(void);
 															
-//timer 3															
+//Khoi tao TIMER3 output PWM											
 void Init_PWM_GPIO_PORT_C_4Channel(void);
-void Init_PWM_TIM3_Handle(TIM_HandleTypeDef handle_timer_3);
-void Init_TIM3_OUTPUT_COMPARE(TIM_HandleTypeDef handle_timer_3, TIM_OC_InitTypeDef  TIM_Output_compare);
+void Init_PWM_TIM3_Handle(void);
+void Init_TIM3_OUTPUT_COMPARE(void);
 															
-//timer 1
-void Init_Receiver_TIM1_PWM_Capture_PortE(TIM_HandleTypeDef handle_timer_1);
+//timer 1 inputcapture for RF module
+//void Init_Receiver_TIM1_PWM_Capture_PortE(TIM_HandleTypeDef handle_timer_1);
 
 
 //i2c chip mpu6050 10truc
 void Init_I2C_GPIO_PortB(void);
 void Init_I2C_Handle_10truc(void);
-void TM_I2C_IS_DEVICE_CONNECTED( I2C_HandleTypeDef* Handle);
-uint8_t TM_I2C_WHO_I_AM(I2C_HandleTypeDef* Handle, uint8_t device_address, uint8_t register_address);
-void TM_MPU6050_SetDataRate(I2C_HandleTypeDef* Handle, uint8_t device_address, uint8_t register_address, uint8_t rate);
-void TM_MPU6050_SetAccelerometer(I2C_HandleTypeDef* Handle, uint8_t device_address, uint8_t register_address, uint8_t Acc_8G_Value);
-void TM_MPU6050_SetGyroscope(I2C_HandleTypeDef* Handle, uint8_t device_address, uint8_t register_address, uint8_t Gyro_250s_Value); 
-void TM_I2C_WRITE(I2C_HandleTypeDef* Handle, uint8_t device_address, uint8_t register_address, uint8_t data);
-void TM_I2C_READ_MULTI(I2C_HandleTypeDef* Handle, uint8_t device_address, uint8_t register_address, uint8_t* data, uint16_t count);
-void TM_I2C_READ( I2C_HandleTypeDef* Handle, uint8_t device_address, uint8_t register_address, uint8_t* data);
-void TM_MPU6050_ReadAll(I2C_HandleTypeDef* Handle, uint8_t device_address, TM_MPU6050_t* output );
-void Sang_Led_By_MPU6050_Values(float rotation_x, float rotation_y);
+void TM_I2C_IS_DEVICE_CONNECTED(void);
+uint8_t TM_I2C_WHO_I_AM( uint8_t device_address, uint8_t register_address);
+void TM_MPU6050_SetDataRate(uint8_t device_address, uint8_t register_address, uint8_t rate);
+void TM_MPU6050_SetAccelerometer(uint8_t device_address, uint8_t register_address, uint8_t Acc_8G_Value);
+void TM_MPU6050_SetGyroscope(uint8_t device_address, uint8_t register_address, uint8_t Gyro_250s_Value); 
+void TM_I2C_WRITE( uint8_t device_address, uint8_t register_address, uint8_t data);
+void TM_I2C_READ_MULTI( uint8_t device_address, uint8_t register_address, uint8_t* data, uint16_t count);
+void TM_I2C_READ(  uint8_t device_address, uint8_t register_address, uint8_t* data);
+void TM_MPU6050_ReadAll( uint8_t device_address, TM_MPU6050_t* output );
+void Sang_Led_By_MPU6050_Values(void);
+void Calculate_Accel_X_Angles(int16_t ACCEL_XOUT,int16_t ACCEL_YOUT, int16_t ACCEL_ZOUT);
+void Calculate_Accel_Y_Angles(int16_t ACCEL_XOUT,int16_t ACCEL_YOUT, int16_t ACCEL_ZOUT);
+void Calculate_Accel_Z_Angles(int16_t ACCEL_XOUT,int16_t ACCEL_YOUT, int16_t ACCEL_ZOUT);
 
 
-//function delay, viet lai
+
+//ham delay default
 volatile uint32_t g_iSysTicks = 0;
 void SysTick_Handler()
 {
@@ -97,7 +119,6 @@ void delay_ms(uint32_t piMillis)
 
 int main(void)
 {	
-		//---khoi tao gia tri
 		TM_MPU6050_t output;
 		pwm_speed=800;			
 		who_i_am_reg_value_MPU6050 = 0;
@@ -108,85 +129,92 @@ int main(void)
 																			#endif		
 																			HAL_Init();
 																			SystemClock_Config();	
-		
 		//cap xung clock
-		__GPIOA_CLK_ENABLE();	__GPIOB_CLK_ENABLE();	__GPIOC_CLK_ENABLE();	__GPIOD_CLK_ENABLE();	__GPIOE_CLK_ENABLE();
-		__TIM1_CLK_ENABLE(); 	__TIM3_CLK_ENABLE();
-		__I2C1_CLK_ENABLE();	
-	
-					
-		//GPIO init cho 4 led sang
-		Init_LEDSANG_PORTD_12_13_14_15();
+		__GPIOA_CLK_ENABLE();	
+		__GPIOB_CLK_ENABLE();	
+		__GPIOC_CLK_ENABLE();	
+		__GPIOD_CLK_ENABLE();	
+		__GPIOE_CLK_ENABLE();
+		__TIM1_CLK_ENABLE(); 	
+		__TIM3_CLK_ENABLE();
+		__I2C1_CLK_ENABLE();						
 		
-		//gpio init cho button user
-		Init_BUTTON_USER_PORT_A_0();
+		//----------------------------------------------------
+		Init_LEDSANG_PORTD_12_13_14_15(); //GPIO init cho 4 led sang
+		Init_BUTTON_USER_PORT_A_0();			//gpio init cho button user
+
+		//--------------------------------------------------
+		Init_PWM_GPIO_PORT_C_4Channel();					//setting cho 4 PIN of PWM		
+		Init_PWM_TIM3_Handle();		//Khoi tao timer 3
+		Init_TIM3_OUTPUT_COMPARE();//cau hinh timer 3 voi mode output PWM
 		
-		//Init PWM motor
-		Init_PWM_GPIO_PORT_C_4Channel();		
-		
-		//init timer 3
-		Init_PWM_TIM3_Handle(handle_timer_3);
-		
-		//init timer 3 output pwm
-		Init_TIM3_OUTPUT_COMPARE(handle_timer_3, TIM_Output_compare);	
-		
-		
-		//Init Accelerometer 10 truc MPU6050		
-		Init_I2C_GPIO_PortB();
-		Init_I2C_Handle_10truc();	
-		__HAL_I2C_ENABLE(&I2C_InitStruct_10truc);
-		TM_I2C_IS_DEVICE_CONNECTED(&I2C_InitStruct_10truc);	
-		
-		//test register who_i_am value of mpu6050
-		who_i_am_reg_value_MPU6050 = TM_I2C_WHO_I_AM(&I2C_InitStruct_10truc, MPU6050_I2C_ADDR, MPU6050_WHO_AM_I_REGISTER);
-		if( who_i_am_reg_value_MPU6050 != MPU6050_I_AM_VALUES )
-		{
-			while(1){Error_Handler();}
-		}
-		TM_I2C_WRITE(&I2C_InitStruct_10truc, MPU6050_I2C_ADDR, MPU6050_PWR_MGMT_1, 0x00); //# Now wake the 6050 up as it starts in sleep mode
-		TM_MPU6050_SetDataRate(&I2C_InitStruct_10truc, MPU6050_I2C_ADDR, MPU6050_SMPLRT_DIV, TM_MPU6050_DataRate_1KHz); 
-		TM_MPU6050_SetAccelerometer(&I2C_InitStruct_10truc, MPU6050_I2C_ADDR, MPU6050_ACCEL_CONFIG, TM_MPU6050_Accelerometer_2G); 
-		TM_MPU6050_SetGyroscope(&I2C_InitStruct_10truc, MPU6050_I2C_ADDR, MPU6050_GYRO_CONFIG, TM_MPU6050_Gyroscope_250s); 
-		TM_MPU6050_ReadAll(&I2C_InitStruct_10truc,MPU6050_I2C_ADDR, &output);
-		delay_ms(1);		
-		
-		Init_Receiver_TIM1_PWM_Capture_PortE(htimer1);
 		
 		//Khoi dong PWM motor
-		HAL_TIM_PWM_Start(&handle_timer_3, TIM_CHANNEL_1);		//HAL_TIM_PWM_Start(&handle_timer_3, TIM_CHANNEL_2);
-		HAL_TIM_Base_Start_IT(&handle_timer_3); 
-		HAL_TIM_PWM_Start(&handle_timer_3,TIM_CHANNEL_1); 
-		HAL_TIMEx_PWMN_Start(&handle_timer_3,TIM_CHANNEL_1);	
+		HAL_TIM_Base_Start_IT(&Tim3_Handle_PWM); 
+		HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_1);		//HAL_TIM_PWM_Start(&handle_timer_3, TIM_CHANNEL_2);
+		HAL_TIMEx_PWMN_Start(&Tim3_Handle_PWM,TIM_CHANNEL_1);	
 		
-		SANG_4_LED();	delay_ms(2000); 
-		__HAL_TIM_SetCompare(&handle_timer_3, TIM_CHANNEL_1, 700);
+		
+		SANG_4_LED();	
+		delay_ms(2000); 
+		__HAL_TIM_SetCompare(&Tim3_Handle_PWM, TIM_CHANNEL_1, 700);
 		TIM3->CCR1 = 700;
 		
-		SANG_4_LED_OFF();	delay_ms(500); 
-		__HAL_TIM_SetCompare(&handle_timer_3, TIM_CHANNEL_1, 800);
-		TIM3->CCR1 = 800;
-		//END --------------		
+		SANG_4_LED_OFF();	
+		delay_ms(500); 
+		__HAL_TIM_SetCompare(&Tim3_Handle_PWM, TIM_CHANNEL_1, 800);
+		TIM3->CCR1 = 800;			
 		
-																//.... code dafault cua ARM
-																// when using CMSIS RTOS
-																// start thread execution 
+		
+		
+		//---------------------------------------------------			
+		Init_I2C_GPIO_PortB();											//cau hinh PB6, PB7 doc cam bien mpu6050
+		
+		Init_I2C_Handle_10truc();	//khoi tao I2C handle
+		//HAL_I2C_Init(&I2C_Handle_10truc);
+		//__HAL_I2C_ENABLE(&I2C_Handle_10truc);				//start I2C handle	
+		TM_I2C_IS_DEVICE_CONNECTED();	
+				
+		//doc gia tri cua WHO I AM register, neu co loi se Sang 4 LED mãi
+		who_i_am_reg_value_MPU6050 = TM_I2C_WHO_I_AM( MPU6050_I2C_ADDR, MPU6050_WHO_AM_I_REGISTER);
+		if( who_i_am_reg_value_MPU6050 != MPU6050_I_AM_VALUES )
+		{
+			SANG_4_LED_FOREVER();
+		}
+		//setting/config cho cam bien mpu6050
+		TM_I2C_WRITE( MPU6050_I2C_ADDR, MPU6050_PWR_MGMT_1, 0x00); 
+		TM_MPU6050_SetDataRate( MPU6050_I2C_ADDR, MPU6050_SMPLRT_DIV, TM_MPU6050_DataRate_1KHz); 
+		TM_MPU6050_SetAccelerometer( MPU6050_I2C_ADDR, MPU6050_ACCEL_CONFIG, TM_MPU6050_Accelerometer_2G); 
+		TM_MPU6050_SetGyroscope( MPU6050_I2C_ADDR, MPU6050_GYRO_CONFIG, TM_MPU6050_Gyroscope_250s); 
+		TM_MPU6050_ReadAll( MPU6050_I2C_ADDR, &output);
+		delay_ms(1);		
+		
+		
+		//---------------------------------------------------
+		//Init_Receiver_TIM1_PWM_Capture_PortE(htimer1);
+		
+		
+
+																//.... code dafault cua ARM		// when using CMSIS RTOS	// start thread execution 
 																#ifdef RTE_CMSIS_RTOS 
 																	osKernelStart();     
 																#endif			
 		
 		KiemTraCodeOK();
+		
 		while(1)
 		{	
-			counter_timer1 = __HAL_TIM_GetCounter(&htimer1);
-			input_capture_timer1_ch1 = __HAL_TIM_GET_COMPARE(&htimer1, TIM_CHANNEL_1);
+			//counter_timer1 = __HAL_TIM_GetCounter(&htimer1);
+			//input_capture_timer1_ch1 = __HAL_TIM_GET_COMPARE(&htimer1, TIM_CHANNEL_1);
 			
-			//MPU6050
-			TM_MPU6050_ReadAll(&I2C_InitStruct_10truc,MPU6050_I2C_ADDR, &output);
+			//MPU6050-------------
+			TM_MPU6050_ReadAll( MPU6050_I2C_ADDR, &output);
 			delay_ms(1);		
-			rotation_x = Calculate_Accel_X_Angles(output.Accelerometer_X, output.Accelerometer_Y,output.Accelerometer_Z);
-			rotation_y = Calculate_Accel_Y_Angles(output.Accelerometer_X, output.Accelerometer_Y,output.Accelerometer_Z);
-			Sang_Led_By_MPU6050_Values(rotation_x, rotation_y);
-			//END MPU6050
+			Calculate_Accel_X_Angles(output.Accelerometer_X, output.Accelerometer_Y, output.Accelerometer_Z);
+			Calculate_Accel_Y_Angles(output.Accelerometer_X, output.Accelerometer_Y, output.Accelerometer_Z);
+			Calculate_Accel_Z_Angles(output.Accelerometer_X, output.Accelerometer_Y, output.Accelerometer_Z);
+			Sang_Led_By_MPU6050_Values();
+			//END MPU6050----------
 			
 			//------------PWM- Motor-------------------------------------------------
 			if(HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_0)==GPIO_PIN_SET)
@@ -203,16 +231,20 @@ int main(void)
 				}
 			}
 			TIM3->CCR1 = pwm_speed;
-			__HAL_TIM_SetCompare(&handle_timer_3,TIM_CHANNEL_1, pwm_speed);
+			__HAL_TIM_SetCompare(&Tim3_Handle_PWM,TIM_CHANNEL_1, pwm_speed);
 			//END------------PWM--------------------------------------------------			
 		}
+		//End while(1)
 }
 
+//
+//
+//
+//
 void KiemTraCodeOK(void)
 {
 		int i = 0;
-		while(i < 5)
-		{
+		while(i < 5){
 			SANG_2_LED(1);				delay_ms(200);				SANG_2_LED(2);				delay_ms(200);
 			i++;
 		}
@@ -222,8 +254,6 @@ void KiemTraCodeOK(void)
 void Init_LEDSANG_PORTD_12_13_14_15(void)
 {
   GPIO_InitTypeDef PIN_LED_SANG_PORTD;
-
-//Init PIN cho led sang
 	PIN_LED_SANG_PORTD.Pin = GPIO_PIN_12 | GPIO_PIN_13 | GPIO_PIN_14 | GPIO_PIN_15;
 	PIN_LED_SANG_PORTD.Mode = GPIO_MODE_OUTPUT_PP;
 	PIN_LED_SANG_PORTD.Pull = GPIO_NOPULL;
@@ -234,18 +264,21 @@ void Init_LEDSANG_PORTD_12_13_14_15(void)
 void Init_BUTTON_USER_PORT_A_0(void)
 {
   GPIO_InitTypeDef BUTTON_USER_PORTA_0;	
-	//Init button User
 	BUTTON_USER_PORTA_0.Pin = GPIO_PIN_0;
 	BUTTON_USER_PORTA_0.Mode = GPIO_MODE_INPUT;
 	BUTTON_USER_PORTA_0.Pull = GPIO_NOPULL;
 	BUTTON_USER_PORTA_0.Speed = GPIO_SPEED_HIGH;
 	HAL_GPIO_Init(GPIOA, &BUTTON_USER_PORTA_0);
 }
-
+//
+//
+//
+//Timer 3 output PWM ra 4 channel
+//
 void Init_PWM_GPIO_PORT_C_4Channel(void)
 {
-		GPIO_InitTypeDef GPIO_PWM_PORTC_6789;	
-		//Init PWM GPIOC cho 4 channel
+	//Init PWM GPIOC cho 4 channel
+		GPIO_InitTypeDef GPIO_PWM_PORTC_6789;			
 		GPIO_PWM_PORTC_6789.Pin = GPIO_PIN_9 | GPIO_PIN_8 | GPIO_PIN_7 | GPIO_PIN_6;
 		GPIO_PWM_PORTC_6789.Mode = GPIO_MODE_AF_PP;
 		GPIO_PWM_PORTC_6789.Pull = GPIO_NOPULL;
@@ -254,37 +287,35 @@ void Init_PWM_GPIO_PORT_C_4Channel(void)
 		HAL_GPIO_Init(GPIOC, &GPIO_PWM_PORTC_6789);
 }
 
-void Init_PWM_TIM3_Handle(TIM_HandleTypeDef handle_timer_3)
+void Init_PWM_TIM3_Handle()
 {
-		handle_timer_3.Instance = TIM3;
-		handle_timer_3.Init.Prescaler = 84-1; 									//vi timer 3 co max clock la 84MHz, -1 la vi dem(count) tu 0
-		handle_timer_3.Init.CounterMode = TIM_COUNTERMODE_UP; 	//dem len
-		handle_timer_3.Init.Period = 20000-1;									//Period(chu ki) = 20 mili s
-		handle_timer_3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;// =0
-		HAL_TIM_PWM_Init(&handle_timer_3);										//Init PWM voi TIM HANDLE
+		Tim3_Handle_PWM.Instance = TIM3;
+		Tim3_Handle_PWM.Init.Prescaler = 84-1; 									//vi timer 3 co max clock la 84MHz, -1 la vi dem(count) tu 0
+		Tim3_Handle_PWM.Init.CounterMode = TIM_COUNTERMODE_UP; 	//dem len
+		Tim3_Handle_PWM.Init.Period = 20000-1;									//Period(chu ki) = 20 mili s
+		Tim3_Handle_PWM.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;// =0
+		HAL_TIM_PWM_Init(&Tim3_Handle_PWM);										//Init PWM voi TIM HANDLE
 }
 
-void Init_TIM3_OUTPUT_COMPARE(TIM_HandleTypeDef handle_timer_3, TIM_OC_InitTypeDef  TIM_Output_compare)
+void Init_TIM3_OUTPUT_COMPARE()
 {
+		TIM_OC_InitTypeDef  TIM_Output_compare;
 		TIM_Output_compare.OCMode = TIM_OCMODE_PWM1;
 		TIM_Output_compare.OCIdleState = TIM_OCIDLESTATE_SET;
 		TIM_Output_compare.Pulse = 2000;											//set dutty cycle = Pulse*100/Period = 2000*100 / 20000 = 10%
 		TIM_Output_compare.OCPolarity = TIM_OCPOLARITY_HIGH;
 		TIM_Output_compare.OCFastMode = TIM_OCFAST_ENABLE;		
-		HAL_TIM_PWM_ConfigChannel(&handle_timer_3, &TIM_Output_compare, TIM_CHANNEL_1); //config PWM cho channel 1 (PORTC.6)
-		HAL_TIM_PWM_Init(&handle_timer_3);
-		HAL_TIM_PWM_MspInit(&handle_timer_3);
+		HAL_TIM_PWM_ConfigChannel(&Tim3_Handle_PWM, &TIM_Output_compare, TIM_CHANNEL_1); //config PWM cho channel 1 (PORTC.6)
+		HAL_TIM_PWM_Init(&Tim3_Handle_PWM);
+		HAL_TIM_PWM_MspInit(&Tim3_Handle_PWM);
 }
-
-
-
-
-
-
-
-
-
-/////Accelerametor 10truc///////////
+//
+//
+//
+//
+//
+//Accelerametor 10truc mpu6050
+//
 void Init_I2C_GPIO_PortB(void)
 {
 		//I2C1 GPIO Configuration    
@@ -298,137 +329,142 @@ void Init_I2C_GPIO_PortB(void)
 		GPIO_InitStruct.Alternate = GPIO_AF4_I2C1;
 		HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);		
 }
-void Init_I2C_Handle_10truc(void)
+void Init_I2C_Handle_10truc()
 {
-	I2C_InitStruct_10truc.Instance = I2C1;
-  I2C_InitStruct_10truc.Init.ClockSpeed = 100000;
-  I2C_InitStruct_10truc.Init.DutyCycle = I2C_DUTYCYCLE_2;
-  I2C_InitStruct_10truc.Init.OwnAddress1 = 0;
-  I2C_InitStruct_10truc.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
-  I2C_InitStruct_10truc.Init.DualAddressMode = I2C_DUALADDRESS_DISABLED;
-  I2C_InitStruct_10truc.Init.OwnAddress2 = 0;
-  I2C_InitStruct_10truc.Init.GeneralCallMode = I2C_GENERALCALL_DISABLED;
-  I2C_InitStruct_10truc.Init.NoStretchMode = I2C_NOSTRETCH_DISABLED;
-  HAL_I2C_Init(&I2C_InitStruct_10truc);	
+	I2C_Handle_10truc.Instance = I2C1;
+  I2C_Handle_10truc.Init.ClockSpeed = 100000;
+  I2C_Handle_10truc.Init.DutyCycle = I2C_DUTYCYCLE_2;
+  I2C_Handle_10truc.Init.OwnAddress1 = 0;
+  I2C_Handle_10truc.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+  I2C_Handle_10truc.Init.DualAddressMode = I2C_DUALADDRESS_DISABLED;
+  I2C_Handle_10truc.Init.OwnAddress2 = 0;
+  I2C_Handle_10truc.Init.GeneralCallMode = I2C_GENERALCALL_DISABLED;
+  I2C_Handle_10truc.Init.NoStretchMode = I2C_NOSTRETCH_DISABLED;
+  HAL_I2C_Init(&I2C_Handle_10truc);	
+	__HAL_I2C_ENABLE(&I2C_Handle_10truc);
 }
-
-
-void TM_I2C_IS_DEVICE_CONNECTED(I2C_HandleTypeDef* Handle)
+void TM_I2C_IS_DEVICE_CONNECTED()
 {
-	if(HAL_I2C_IsDeviceReady(Handle, MPU6050_I2C_ADDR, 2, 5) != HAL_OK) 
+	if(HAL_I2C_IsDeviceReady(&I2C_Handle_10truc, MPU6050_I2C_ADDR, 2, 5) != HAL_OK) 
 	{
 		while(1)
 		{
 			Error_Handler();
 		}
 	}
-	while( HAL_I2C_GetState(Handle)!=HAL_I2C_STATE_READY ){}
+	while( HAL_I2C_GetState(&I2C_Handle_10truc) != HAL_I2C_STATE_READY )
+	{
+		while(1)
+		{
+			Error_Handler();
+		}
+	}
 }
 
-uint8_t TM_I2C_WHO_I_AM(I2C_HandleTypeDef* Handle, uint8_t device_address, uint8_t register_address)
+uint8_t TM_I2C_WHO_I_AM(uint8_t device_address, uint8_t register_address)
 {	
 	uint8_t data;
-	if (HAL_I2C_Master_Transmit(Handle, (uint16_t)device_address, &register_address, 1, 1000) != HAL_OK) 
+	if (HAL_I2C_Master_Transmit(&I2C_Handle_10truc, (uint16_t)device_address, &register_address, 1, 1000) != HAL_OK) 
 	{}
-	while(HAL_I2C_GetState(Handle) != HAL_I2C_STATE_READY) {}		
+	while(HAL_I2C_GetState(&I2C_Handle_10truc) != HAL_I2C_STATE_READY) {}		
 	
-	if (HAL_I2C_Master_Receive(Handle, device_address, &data, 1, 1000) != HAL_OK) 
+	if (HAL_I2C_Master_Receive(&I2C_Handle_10truc, device_address, &data, 1, 1000) != HAL_OK) 
 	{}
-	while(HAL_I2C_GetState(Handle) != HAL_I2C_STATE_READY) {}
+	while(HAL_I2C_GetState(&I2C_Handle_10truc) != HAL_I2C_STATE_READY) {}
 	return data;
 }
 
 
-void TM_I2C_WRITE(I2C_HandleTypeDef* Handle, uint8_t device_address, uint8_t register_address, uint8_t data) 
+void TM_I2C_WRITE( uint8_t device_address, uint8_t register_address, uint8_t data) 
 {
 	uint8_t d[2];		
 	d[0] = register_address;
 	d[1] = data;	
-	if (HAL_I2C_Master_Transmit(Handle, (uint16_t)device_address, (uint8_t *)d, 2, 1000) != HAL_OK) 
+	if (HAL_I2C_Master_Transmit(&I2C_Handle_10truc, (uint16_t)device_address, (uint8_t *)d, 2, 1000) != HAL_OK) 
 	{}
-	while(HAL_I2C_GetState(Handle) != HAL_I2C_STATE_READY) {}	
+	while(HAL_I2C_GetState(&I2C_Handle_10truc) != HAL_I2C_STATE_READY) {}	
 }
 	
 	
-void TM_I2C_READ( I2C_HandleTypeDef* Handle, uint8_t device_address, uint8_t register_address, uint8_t* data)
+void TM_I2C_READ(  uint8_t device_address, uint8_t register_address, uint8_t* data)
 {
-	if (HAL_I2C_Master_Transmit(Handle, (uint16_t)device_address, &register_address, 1, 1000) != HAL_OK) 
+	if (HAL_I2C_Master_Transmit(&I2C_Handle_10truc, (uint16_t)device_address, &register_address, 1, 1000) != HAL_OK) 
 	{}
-	while(HAL_I2C_GetState(Handle) != HAL_I2C_STATE_READY) {}
+	while(HAL_I2C_GetState(&I2C_Handle_10truc) != HAL_I2C_STATE_READY) {}
 	
-	if (HAL_I2C_Master_Receive(Handle, device_address, data, 1, 1000) != HAL_OK) 
+	if (HAL_I2C_Master_Receive(&I2C_Handle_10truc, device_address, data, 1, 1000) != HAL_OK) 
 	{}
-	while(HAL_I2C_GetState(Handle) != HAL_I2C_STATE_READY) {}
+	while(HAL_I2C_GetState(&I2C_Handle_10truc) != HAL_I2C_STATE_READY) {}
 }
 
 
-void TM_I2C_READ_MULTI(I2C_HandleTypeDef* Handle, uint8_t device_address, uint8_t register_address, uint8_t* data, uint16_t count)  
+void TM_I2C_READ_MULTI( uint8_t device_address, uint8_t register_address, uint8_t* data, uint16_t count)  
 {
-	if (HAL_I2C_Master_Transmit(Handle, (uint16_t)device_address, &register_address, 1, 1000) != HAL_OK) 
+	if (HAL_I2C_Master_Transmit(&I2C_Handle_10truc, (uint16_t)device_address, &register_address, 1, 1000) != HAL_OK) 
 	{}
-	while(HAL_I2C_GetState(Handle) != HAL_I2C_STATE_READY) {}
+	while(HAL_I2C_GetState(&I2C_Handle_10truc) != HAL_I2C_STATE_READY) {}
 	
-	if (HAL_I2C_Master_Receive(Handle, device_address, data, count, 1000) != HAL_OK) 
+	if (HAL_I2C_Master_Receive(&I2C_Handle_10truc, device_address, data, count, 1000) != HAL_OK) 
 	{}
-	while(HAL_I2C_GetState(Handle) != HAL_I2C_STATE_READY) {}	
+	while(HAL_I2C_GetState(&I2C_Handle_10truc) != HAL_I2C_STATE_READY) {}	
 }
 
 
-void TM_MPU6050_SetDataRate(I2C_HandleTypeDef* Handle, uint8_t device_address, uint8_t register_address, uint8_t rate) 
+void TM_MPU6050_SetDataRate(uint8_t device_address, uint8_t register_address, uint8_t rate) 
 {
-	TM_I2C_WRITE(Handle, device_address, register_address, rate);
-	while(HAL_I2C_GetState(Handle)!=HAL_I2C_STATE_READY){}
+	TM_I2C_WRITE( device_address, register_address, rate);
+	while(HAL_I2C_GetState(&I2C_Handle_10truc)!=HAL_I2C_STATE_READY){}
 }
 
-void TM_MPU6050_SetAccelerometer(I2C_HandleTypeDef* Handle, uint8_t device_address, uint8_t register_address, uint8_t Acc_8G_Value) 
+void TM_MPU6050_SetAccelerometer(uint8_t device_address, uint8_t register_address, uint8_t Acc_8G_Value) 
 {
 	uint8_t temp;		
-	TM_I2C_READ(Handle, device_address, register_address, &temp);
-	while(HAL_I2C_GetState(Handle)!=HAL_I2C_STATE_READY){}
+	TM_I2C_READ( device_address, register_address, &temp);
+	while(HAL_I2C_GetState(&I2C_Handle_10truc)!=HAL_I2C_STATE_READY){}
 	temp = (temp & 0xE7) | (uint8_t)Acc_8G_Value << 3;
-	TM_I2C_WRITE(Handle, device_address, register_address, temp);
-	while(HAL_I2C_GetState(Handle)!=HAL_I2C_STATE_READY){}
+	TM_I2C_WRITE( device_address, register_address, temp);
+	while(HAL_I2C_GetState(&I2C_Handle_10truc)!=HAL_I2C_STATE_READY){}
 }
 
-void TM_MPU6050_SetGyroscope(I2C_HandleTypeDef* Handle, uint8_t device_address, uint8_t register_address, uint8_t Gyro_250s_Value) 
+void TM_MPU6050_SetGyroscope( uint8_t device_address, uint8_t register_address, uint8_t Gyro_250s_Value) 
 {
 	uint8_t temp;		
-	TM_I2C_READ(Handle, device_address, register_address, &temp);
-	while(HAL_I2C_GetState(Handle)!=HAL_I2C_STATE_READY){}
+	TM_I2C_READ( device_address, register_address, &temp);
+	while(HAL_I2C_GetState(&I2C_Handle_10truc)!=HAL_I2C_STATE_READY){}
 	temp = (temp & 0xE7) | (uint8_t)Gyro_250s_Value << 3;
-	TM_I2C_WRITE(Handle, device_address, register_address, temp);
-	while(HAL_I2C_GetState(Handle)!=HAL_I2C_STATE_READY){}
+	TM_I2C_WRITE( device_address, register_address, temp);
+	while(HAL_I2C_GetState(&I2C_Handle_10truc)!=HAL_I2C_STATE_READY){}
 }
 
-void TM_MPU6050_ReadAccelerometer(I2C_HandleTypeDef* Handle, uint8_t device_address, TM_MPU6050_t* output )
+void TM_MPU6050_ReadAccelerometer( uint8_t device_address, TM_MPU6050_t* output )
 {
 	uint8_t data[6];
-	TM_I2C_READ_MULTI(Handle, device_address, MPU6050_ACCEL_XOUT_H, data, 6);
-	while(HAL_I2C_GetState(Handle)!=HAL_I2C_STATE_READY){}
+	TM_I2C_READ_MULTI( device_address, MPU6050_ACCEL_XOUT_H, data, 6);
+	while(HAL_I2C_GetState(&I2C_Handle_10truc)!=HAL_I2C_STATE_READY){}
 		
 	output->Accelerometer_X = (int16_t)(data[0] << 8 | data[1]);
 	output->Accelerometer_Y = (int16_t)(data[2] << 8 | data[3]);
 	output->Accelerometer_Z = (int16_t)(data[4] << 8 | data[5]);
 }
 
-void TM_MPU6050_ReadGyroscope(I2C_HandleTypeDef* Handle, uint8_t device_address, TM_MPU6050_t* output )
+void TM_MPU6050_ReadGyroscope( uint8_t device_address, TM_MPU6050_t* output )
 {
 	uint8_t data[6];
-	TM_I2C_READ_MULTI(Handle, device_address, MPU6050_GYRO_XOUT_H, data, 6);
-	while(HAL_I2C_GetState(Handle)!=HAL_I2C_STATE_READY){}
+	TM_I2C_READ_MULTI( device_address, MPU6050_GYRO_XOUT_H, data, 6);
+	while(HAL_I2C_GetState(&I2C_Handle_10truc)!=HAL_I2C_STATE_READY){}
 		
 	output->Gyroscope_X = (int16_t)(data[0] << 8 | data[1]);
 	output->Gyroscope_Y = (int16_t)(data[2] << 8 | data[3]);
 	output->Gyroscope_Z = (int16_t)(data[4] << 8 | data[5]);
 }	
 
-void TM_MPU6050_ReadAll(I2C_HandleTypeDef* Handle, uint8_t device_address, TM_MPU6050_t* output )
+void TM_MPU6050_ReadAll( uint8_t device_address, TM_MPU6050_t* output )
 {
 	uint8_t data[14];
 	int16_t temp;	
 	
-	TM_I2C_READ_MULTI(Handle, device_address, MPU6050_ACCEL_XOUT_H, data, 14); /* Read full raw data, 14bytes */
-	while(HAL_I2C_GetState(Handle)!=HAL_I2C_STATE_READY){}	
+	TM_I2C_READ_MULTI( device_address, MPU6050_ACCEL_XOUT_H, data, 14); /* Read full raw data, 14bytes */
+	while(HAL_I2C_GetState(&I2C_Handle_10truc)!=HAL_I2C_STATE_READY){}	
 	
 	output->Accelerometer_X = (int16_t)(data[0] << 8 | data[1]);	/* Format accelerometer data */
 	output->Accelerometer_Y = (int16_t)(data[2] << 8 | data[3]);
@@ -444,34 +480,75 @@ void TM_MPU6050_ReadAll(I2C_HandleTypeDef* Handle, uint8_t device_address, TM_MP
 
 
 
-void Sang_Led_By_MPU6050_Values(float rotation_x,  float rotation_y)
+void Sang_Led_By_MPU6050_Values()
 {
 	if(rotation_x > 10)
 	{
-		SANG_1_LED(12); 		delay_ms(10);	
+		SANG_1_LED(12); 
 	}else if(rotation_x < -10)
 	{
-		SANG_1_LED(13); 		delay_ms(10);	
+		SANG_1_LED(13); 	
 	}
+	
 	if(rotation_y > 10)
 	{
-		SANG_1_LED(14);   delay_ms(10);	
+		SANG_1_LED(14);  
 	}else if(rotation_y < -10)
 	{
-		SANG_1_LED(15);    delay_ms(10);	
+		SANG_1_LED(15);  
 	}
-	SANG_4_LED_OFF();
+	delay_ms(20);
 }
-////end /Accelerametor 10truc///////////
 
+void Calculate_Accel_X_Angles(int16_t ACCEL_XOUT,int16_t ACCEL_YOUT, int16_t ACCEL_ZOUT)
+{
+		float _sqrt;
+		float _180do_chia_m_pi;
+		_180do_chia_m_pi = (180/3.141592);
+		
+		ACCEL_XOUT = (float)(ACCEL_XOUT/MPU6050_ACCE_SENS_2);
+		ACCEL_YOUT = (float)(ACCEL_YOUT/MPU6050_ACCE_SENS_2);
+		ACCEL_ZOUT = (float)(ACCEL_ZOUT/MPU6050_ACCE_SENS_2);
+		_sqrt = sqrt( ACCEL_ZOUT*ACCEL_ZOUT + ACCEL_XOUT*ACCEL_XOUT );	
+		rotation_x = (_180do_chia_m_pi * (float)atan(ACCEL_YOUT/_sqrt));
+}
 
+void Calculate_Accel_Y_Angles(int16_t ACCEL_XOUT,int16_t ACCEL_YOUT, int16_t ACCEL_ZOUT)
+{
+		float _sqrt;
+		float _180do_chia_m_pi;
+		_180do_chia_m_pi = (180/3.141592);
+		ACCEL_XOUT = (float)(ACCEL_XOUT/MPU6050_ACCE_SENS_2);
+		ACCEL_YOUT = (float)(ACCEL_YOUT/MPU6050_ACCE_SENS_2);
+		ACCEL_ZOUT = (float)(ACCEL_ZOUT/MPU6050_ACCE_SENS_2);
+		_sqrt = sqrt( ACCEL_ZOUT*ACCEL_ZOUT + ACCEL_YOUT*ACCEL_YOUT );
+		rotation_y = (   _180do_chia_m_pi * (float)-atan(ACCEL_XOUT /_sqrt     ));
+}
 
+//double Calculate_Gyro_Angels(int16_t ACCEL_XOUT,int16_t ACCEL_YOUT, int16_t ACCEL_ZOUT){}
+
+	
+void Calculate_Accel_Z_Angles(int16_t ACCEL_XOUT,int16_t ACCEL_YOUT, int16_t ACCEL_ZOUT)
+{
+		float _180do_chia_m_pi;
+		_180do_chia_m_pi = (180/3.141592);
+		ACCEL_XOUT = (float)(ACCEL_XOUT/MPU6050_ACCE_SENS_2);
+		ACCEL_YOUT = (float)(ACCEL_YOUT/MPU6050_ACCE_SENS_2);
+		ACCEL_ZOUT = (float)(ACCEL_ZOUT/MPU6050_ACCE_SENS_2);
+	
+		rotation_z = _180do_chia_m_pi * atan(ACCEL_ZOUT/ (float)sqrt( ACCEL_YOUT*ACCEL_YOUT + ACCEL_XOUT*ACCEL_XOUT ) );
+		
+}
+//end Accelerametor 10truc
+//
+//
+//
 
 
 //
 //Timer 1 PWM input capture
 //
-void Init_Receiver_TIM1_PWM_Capture_PortE(TIM_HandleTypeDef timer1)
+/*void Init_Receiver_TIM1_PWM_Capture_PortE(TIM_HandleTypeDef timer1)
 {
 		GPIO_InitTypeDef GPIO_PWM_PORT_E;	
 		TIM_ClockConfigTypeDef sClockSourceConfig;
@@ -530,6 +607,7 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 			__HAL_TIM_SetCounter(&htimer1, 0);															
 		}
 }
+*/
 
 
 /*
@@ -571,9 +649,9 @@ void TIM1_CC_IRQHandler(void)
   }
 }*/
 
-void TIM1_IRQHandler(void) {}
+//void TIM1_IRQHandler(void) {}
 
-void TIM3_IRQHandler(void) {}
+//void TIM3_IRQHandler(void) {}
 //
 //End Timer 1 PWM input capture
 //
@@ -761,6 +839,15 @@ void SANG_4_LED()
 		LED_D_14_HIGH;
 		LED_D_15_HIGH;
 }
+void SANG_4_LED_FOREVER()
+{
+	
+		LED_D_12_HIGH;
+		LED_D_13_HIGH;
+		LED_D_14_HIGH;
+		LED_D_15_HIGH;
+		while(1){}
+}
 void SANG_4_LED_OFF()
 {
 		LED_D_12_LOW;
@@ -768,7 +855,7 @@ void SANG_4_LED_OFF()
 		LED_D_14_LOW;
 		LED_D_15_LOW;
 }
-void Acc_Led_Sang(int16_t Acc_X, int16_t Acc_Y, int16_t Acc_Z)
+/*void Acc_Led_Sang(int16_t Acc_X, int16_t Acc_Y, int16_t Acc_Z)
 {
 		int16_t defaulValue = 1000;
 		LED_D_12_LOW;
@@ -798,7 +885,7 @@ void Acc_Led_Sang(int16_t Acc_X, int16_t Acc_Y, int16_t Acc_Z)
 			LED_D_15_HIGH;
 		}		
 		delay_ms(20);
-}
+}*/
 #ifdef  USE_FULL_ASSERT
 
 /**
