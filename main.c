@@ -81,7 +81,7 @@ void Init_PWM_TIM3_Handle(void);
 void Init_TIM3_OUTPUT_COMPARE(void);
 															
 //timer 1 inputcapture for RF module
-//void Init_Receiver_TIM1_PWM_Capture_PortE(TIM_HandleTypeDef handle_timer_1);
+void Init_Receiver_TIM1_PWM_Capture_PortE();//Tim1_Handle_InputCapture_RF_module
 
 
 //i2c chip mpu6050 10truc
@@ -96,10 +96,11 @@ void TM_I2C_WRITE( uint8_t device_address, uint8_t register_address, uint8_t dat
 void TM_I2C_READ_MULTI( uint8_t device_address, uint8_t register_address, uint8_t* data, uint16_t count);
 void TM_I2C_READ(  uint8_t device_address, uint8_t register_address, uint8_t* data);
 void TM_MPU6050_ReadAll( uint8_t device_address, TM_MPU6050_t* output );
-void Sang_Led_By_MPU6050_Values(void);
-void Calculate_Accel_X_Angles(int16_t ACCEL_XOUT,int16_t ACCEL_YOUT, int16_t ACCEL_ZOUT);
-void Calculate_Accel_Y_Angles(int16_t ACCEL_XOUT,int16_t ACCEL_YOUT, int16_t ACCEL_ZOUT);
-void Calculate_Accel_Z_Angles(int16_t ACCEL_XOUT,int16_t ACCEL_YOUT, int16_t ACCEL_ZOUT);
+
+void Calculate_Accel_X_Angles(TM_MPU6050_t* output, float* angel_x);
+void Calculate_Accel_Y_Angles(TM_MPU6050_t* output, float* angel_y);
+void Calculate_Accel_Z_Angles(TM_MPU6050_t* output, float* angel_z);
+void Sang_Led_By_MPU6050_Values(float angel_x, float angel_y, float angel_z );
 
 
 
@@ -187,21 +188,17 @@ int main(void)
 		TM_MPU6050_SetAccelerometer( MPU6050_I2C_ADDR, MPU6050_ACCEL_CONFIG, TM_MPU6050_Accelerometer_2G); 
 		TM_MPU6050_SetGyroscope( MPU6050_I2C_ADDR, MPU6050_GYRO_CONFIG, TM_MPU6050_Gyroscope_250s); 
 		TM_MPU6050_ReadAll( MPU6050_I2C_ADDR, &output);
-		delay_ms(1);		
 		
 		
 		//---------------------------------------------------
-		//Init_Receiver_TIM1_PWM_Capture_PortE(htimer1);
-		
-		
+		Init_Receiver_TIM1_PWM_Capture_PortE();		
 
 																//.... code dafault cua ARM		// when using CMSIS RTOS	// start thread execution 
 																#ifdef RTE_CMSIS_RTOS 
 																	osKernelStart();     
 																#endif			
 		
-		KiemTraCodeOK();
-		
+		KiemTraCodeOK();		
 		while(1)
 		{	
 			//counter_timer1 = __HAL_TIM_GetCounter(&htimer1);
@@ -209,11 +206,10 @@ int main(void)
 			
 			//MPU6050-------------
 			TM_MPU6050_ReadAll( MPU6050_I2C_ADDR, &output);
-			delay_ms(1);		
-			Calculate_Accel_X_Angles(output.Accelerometer_X, output.Accelerometer_Y, output.Accelerometer_Z);
-			Calculate_Accel_Y_Angles(output.Accelerometer_X, output.Accelerometer_Y, output.Accelerometer_Z);
-			Calculate_Accel_Z_Angles(output.Accelerometer_X, output.Accelerometer_Y, output.Accelerometer_Z);
-			Sang_Led_By_MPU6050_Values();
+			Calculate_Accel_X_Angles(&output, &rotation_x);
+			Calculate_Accel_Y_Angles(&output, &rotation_y);
+			Calculate_Accel_Z_Angles(&output, &rotation_z);
+			Sang_Led_By_MPU6050_Values(rotation_x, rotation_y, rotation_z);
 			//END MPU6050----------
 			
 			//------------PWM- Motor-------------------------------------------------
@@ -480,63 +476,60 @@ void TM_MPU6050_ReadAll( uint8_t device_address, TM_MPU6050_t* output )
 
 
 
-void Sang_Led_By_MPU6050_Values()
+void Sang_Led_By_MPU6050_Values(float angel_x, float angel_y, float angel_z )
 {
-	if(rotation_x > 10)
+	SANG_4_LED_OFF();
+	if(angel_x > 20)
 	{
-		SANG_1_LED(12); 
-	}else if(rotation_x < -10)
+		SANG_1_LED(LED_YELLOW); 
+	}else if(angel_x < -20)
 	{
-		SANG_1_LED(13); 	
+		SANG_1_LED(LED_RED); 	
 	}
 	
-	if(rotation_y > 10)
+	if(angel_y > 20)
 	{
-		SANG_1_LED(14);  
-	}else if(rotation_y < -10)
+		SANG_1_LED(LED_BLUE);  
+	}else if(angel_y < -20)
 	{
-		SANG_1_LED(15);  
+		SANG_1_LED(LED_ORANGE);  
 	}
-	delay_ms(20);
+	delay_ms(50);
 }
 
-void Calculate_Accel_X_Angles(int16_t ACCEL_XOUT,int16_t ACCEL_YOUT, int16_t ACCEL_ZOUT)
+void Calculate_Accel_X_Angles(TM_MPU6050_t* output, float* angel_x)
 {
 		float _sqrt;
-		float _180do_chia_m_pi;
-		_180do_chia_m_pi = (180/3.141592);
-		
-		ACCEL_XOUT = (float)(ACCEL_XOUT/MPU6050_ACCE_SENS_2);
-		ACCEL_YOUT = (float)(ACCEL_YOUT/MPU6050_ACCE_SENS_2);
-		ACCEL_ZOUT = (float)(ACCEL_ZOUT/MPU6050_ACCE_SENS_2);
-		_sqrt = sqrt( ACCEL_ZOUT*ACCEL_ZOUT + ACCEL_XOUT*ACCEL_XOUT );	
-		rotation_x = (_180do_chia_m_pi * (float)atan(ACCEL_YOUT/_sqrt));
+		float mot_180_do_chia_pi = (float)((float)180.0/PI);	
+		float ACCEL_XOUT = (float)(output->Accelerometer_X/MPU6050_ACCE_SENS_2);
+		float ACCEL_YOUT = (float)(output->Accelerometer_Y/MPU6050_ACCE_SENS_2);
+		float ACCEL_ZOUT = (float)(output->Accelerometer_Z/MPU6050_ACCE_SENS_2);
+	
+		_sqrt = (float)sqrt( ACCEL_ZOUT*ACCEL_ZOUT + ACCEL_XOUT*ACCEL_XOUT );	
+		*angel_x = (float)(mot_180_do_chia_pi * (float)atan(ACCEL_YOUT/_sqrt));
 }
 
-void Calculate_Accel_Y_Angles(int16_t ACCEL_XOUT,int16_t ACCEL_YOUT, int16_t ACCEL_ZOUT)
+void Calculate_Accel_Y_Angles(TM_MPU6050_t* output, float* angel_y)
 {
 		float _sqrt;
-		float _180do_chia_m_pi;
-		_180do_chia_m_pi = (180/3.141592);
-		ACCEL_XOUT = (float)(ACCEL_XOUT/MPU6050_ACCE_SENS_2);
-		ACCEL_YOUT = (float)(ACCEL_YOUT/MPU6050_ACCE_SENS_2);
-		ACCEL_ZOUT = (float)(ACCEL_ZOUT/MPU6050_ACCE_SENS_2);
-		_sqrt = sqrt( ACCEL_ZOUT*ACCEL_ZOUT + ACCEL_YOUT*ACCEL_YOUT );
-		rotation_y = (   _180do_chia_m_pi * (float)-atan(ACCEL_XOUT /_sqrt     ));
+		float mot_180_do_chia_pi = (float)((float)180.0/PI);	
+		float ACCEL_XOUT = (float)(output->Accelerometer_X/MPU6050_ACCE_SENS_2);
+		float ACCEL_YOUT = (float)(output->Accelerometer_Y/MPU6050_ACCE_SENS_2);
+		float ACCEL_ZOUT = (float)(output->Accelerometer_Z/MPU6050_ACCE_SENS_2);
+		_sqrt = (float)sqrt( ACCEL_ZOUT*ACCEL_ZOUT + ACCEL_YOUT*ACCEL_YOUT );
+		*angel_y = (float)(mot_180_do_chia_pi * (float)-atan(ACCEL_XOUT /_sqrt));
 }
 
-//double Calculate_Gyro_Angels(int16_t ACCEL_XOUT,int16_t ACCEL_YOUT, int16_t ACCEL_ZOUT){}
-
 	
-void Calculate_Accel_Z_Angles(int16_t ACCEL_XOUT,int16_t ACCEL_YOUT, int16_t ACCEL_ZOUT)
+void Calculate_Accel_Z_Angles(TM_MPU6050_t* output, float* angel_z)
 {
-		float _180do_chia_m_pi;
-		_180do_chia_m_pi = (180/3.141592);
-		ACCEL_XOUT = (float)(ACCEL_XOUT/MPU6050_ACCE_SENS_2);
-		ACCEL_YOUT = (float)(ACCEL_YOUT/MPU6050_ACCE_SENS_2);
-		ACCEL_ZOUT = (float)(ACCEL_ZOUT/MPU6050_ACCE_SENS_2);
-	
-		rotation_z = _180do_chia_m_pi * atan(ACCEL_ZOUT/ (float)sqrt( ACCEL_YOUT*ACCEL_YOUT + ACCEL_XOUT*ACCEL_XOUT ) );
+		float _sqrt;
+		float mot_180_do_chia_pi = (float)((float)180.0/PI);
+		float ACCEL_XOUT = (float)(output->Accelerometer_X/MPU6050_ACCE_SENS_2);
+		float ACCEL_YOUT = (float)(output->Accelerometer_Y/MPU6050_ACCE_SENS_2);
+		float ACCEL_ZOUT = (float)(output->Accelerometer_Z/MPU6050_ACCE_SENS_2);
+		_sqrt= (float)sqrt( ACCEL_YOUT*ACCEL_YOUT + ACCEL_XOUT*ACCEL_XOUT );
+		*angel_z = (float)(mot_180_do_chia_pi * atan(_sqrt/ACCEL_ZOUT));
 		
 }
 //end Accelerametor 10truc
@@ -544,45 +537,51 @@ void Calculate_Accel_Z_Angles(int16_t ACCEL_XOUT,int16_t ACCEL_YOUT, int16_t ACC
 //
 //
 
-
+//
 //
 //Timer 1 PWM input capture
 //
-/*void Init_Receiver_TIM1_PWM_Capture_PortE(TIM_HandleTypeDef timer1)
+void Init_Receiver_TIM1_PWM_Capture_PortE()//Tim1_Handle_InputCapture_RF_module
 {
-		GPIO_InitTypeDef GPIO_PWM_PORT_E;	
-		TIM_ClockConfigTypeDef sClockSourceConfig;
-		TIM_MasterConfigTypeDef TIM_sMasterConfig;
-		TIM_IC_InitTypeDef TIM_Input_Capture;
+		GPIO_InitTypeDef 						GPIO_PWM_PORT_E;	
+		TIM_ClockConfigTypeDef 			sClockSourceConfig;
+		TIM_MasterConfigTypeDef 		TIM_sMasterConfig;
+		TIM_IC_InitTypeDef 					TIM_Input_Capture;
 		
-		HAL_NVIC_SetPriority(TIM1_CC_IRQn, 0, 0);
-		HAL_NVIC_EnableIRQ(TIM1_CC_IRQn);
+		//HAL_NVIC_SetPriority(TIM1_CC_IRQn, 0, 0);
+		//HAL_NVIC_EnableIRQ(TIM1_CC_IRQn);
 	
-		//GPIO 
-		GPIO_PWM_PORT_E.Pin = GPIO_PIN_9 | GPIO_PIN_10 | GPIO_PIN_13 | GPIO_PIN_14;
-		GPIO_PWM_PORT_E.Mode = GPIO_MODE_AF_PP;
-		GPIO_PWM_PORT_E.Pull = GPIO_NOPULL;
-		GPIO_PWM_PORT_E.Speed = GPIO_SPEED_FAST;
+		//-------GPIO---------------
+		GPIO_PWM_PORT_E.Pin 			= GPIO_PIN_9 | GPIO_PIN_10 | GPIO_PIN_13 | GPIO_PIN_14;
+		GPIO_PWM_PORT_E.Mode 			= GPIO_MODE_AF_PP;
+		GPIO_PWM_PORT_E.Pull 			= GPIO_NOPULL;
+		GPIO_PWM_PORT_E.Speed 		= GPIO_SPEED_FAST;
 		GPIO_PWM_PORT_E.Alternate = GPIO_AF1_TIM1;
 		HAL_GPIO_Init(GPIOE, &GPIO_PWM_PORT_E);
 	
+	
 		//timer 1 handle
-		timer1.Instance = TIM1;
-		timer1.Init.Prescaler = 84-1; 									//vi timer 3 co max clock la 84MHz, -1 la vi dem(count) tu 0
-		timer1.Init.CounterMode = TIM_COUNTERMODE_UP; 	//dem len
-		timer1.Init.Period = 20000-1;									//Period(chu ki) = 20 mili s
-		timer1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;// =0
-		if(HAL_TIM_Base_Init(&timer1)!=HAL_OK) 	{			Error_Handler();		}
+		Tim1_Handle_InputCapture_RF_module.Instance 						= TIM1;
+		Tim1_Handle_InputCapture_RF_module.Init.Prescaler 			= 84-1; 									//vi timer 3 co max clock la 84MHz, -1 la vi dem(count) tu 0
+		Tim1_Handle_InputCapture_RF_module.Init.CounterMode 		= TIM_COUNTERMODE_UP; 	//dem len
+		Tim1_Handle_InputCapture_RF_module.Init.Period 					= 20000-1;									//Period(chu ki) = 20 mili s
+		Tim1_Handle_InputCapture_RF_module.Init.ClockDivision 	= TIM_CLOCKDIVISION_DIV1;// =0
+		if(HAL_TIM_Base_Init(&Tim1_Handle_InputCapture_RF_module)!=HAL_OK) 	
+		{			
+			Error_Handler();		
+		}
 		
 		sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-		HAL_TIM_ConfigClockSource(&timer1, &sClockSourceConfig);
-		if(HAL_TIM_IC_Init(&timer1)!=HAL_OK)	{			Error_Handler();		}
+		HAL_TIM_ConfigClockSource(&Tim1_Handle_InputCapture_RF_module, &sClockSourceConfig);
+		if(HAL_TIM_IC_Init(&Tim1_Handle_InputCapture_RF_module)!=HAL_OK)	
+		{			
+			Error_Handler();		
+		}
 		
 		TIM_sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
 		TIM_sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-		HAL_TIMEx_MasterConfigSynchronization(&timer1, &TIM_sMasterConfig);
+		HAL_TIMEx_MasterConfigSynchronization(&Tim1_Handle_InputCapture_RF_module, &TIM_sMasterConfig);
 	
-
 		//timer 1 Input capture
 		TIM_Input_Capture.ICPolarity = TIM_ICPOLARITY_RISING;
 		TIM_Input_Capture.ICSelection = TIM_ICSELECTION_DIRECTTI;
@@ -590,9 +589,15 @@ void Calculate_Accel_Z_Angles(int16_t ACCEL_XOUT,int16_t ACCEL_YOUT, int16_t ACC
 		TIM_Input_Capture.ICFilter = 0;
 		
 		//start Timer 1 with Input Capture
-		if(HAL_TIM_IC_ConfigChannel(&timer1, &TIM_Input_Capture, TIM_CHANNEL_1) != HAL_OK){			Error_Handler();		}	
-		__HAL_TIM_ENABLE_IT(&timer1, TIM_IT_UPDATE);		
-		if(HAL_TIM_IC_Start_IT(&timer1, TIM_CHANNEL_1) != HAL_OK){		Error_Handler();	}
+		if(HAL_TIM_IC_ConfigChannel(&Tim1_Handle_InputCapture_RF_module, &TIM_Input_Capture, TIM_CHANNEL_1) != HAL_OK)
+		{			
+			Error_Handler();		
+		}	
+		__HAL_TIM_ENABLE_IT(&Tim1_Handle_InputCapture_RF_module, TIM_IT_UPDATE);		
+		if(HAL_TIM_IC_Start_IT(&Tim1_Handle_InputCapture_RF_module, TIM_CHANNEL_1) != HAL_OK)
+		{		
+			Error_Handler();	
+		}
 }
 
 
@@ -604,12 +609,9 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 			//input_capture = __HAL_TIM_GetCompare(&htimer1, TIM_CHANNEL_1);	
 				
 			//reset counter after input capture interrupt occurs
-			__HAL_TIM_SetCounter(&htimer1, 0);															
+			//__HAL_TIM_SetCounter(&htimer1, 0);															
 		}
 }
-*/
-
-
 /*
 void TIM1_CC_IRQHandler(void)
 { 
@@ -855,37 +857,6 @@ void SANG_4_LED_OFF()
 		LED_D_14_LOW;
 		LED_D_15_LOW;
 }
-/*void Acc_Led_Sang(int16_t Acc_X, int16_t Acc_Y, int16_t Acc_Z)
-{
-		int16_t defaulValue = 1000;
-		LED_D_12_LOW;
-		LED_D_13_LOW;
-		LED_D_14_LOW;
-		LED_D_15_LOW;			
-		
-		if(Acc_X < -defaulValue)
-		{
-			LED_D_12_LOW;
-			LED_D_14_HIGH;
-		}
-		else if(Acc_X > defaulValue)
-		{
-			LED_D_14_LOW;				
-			LED_D_12_HIGH;
-		}
-
-		if(Acc_Y < -defaulValue)
-		{				
-			LED_D_15_LOW;				
-			LED_D_13_HIGH;
-		}
-		else if(Acc_Y > defaulValue)
-		{				
-			LED_D_13_LOW;				
-			LED_D_15_HIGH;
-		}		
-		delay_ms(20);
-}*/
 #ifdef  USE_FULL_ASSERT
 
 /**

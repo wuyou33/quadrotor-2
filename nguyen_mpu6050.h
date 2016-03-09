@@ -1,6 +1,21 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <math.h>
+#define PI							(float)3.141592
+	
+
+//----------------------//
+//				 ORANGE							//
+//	Yellow 				Red					//
+//				  BLUE	 			//
+//----------------------//
+#define LED_YELLOW						12
+#define LED_ORANGE						13
+#define LED_RED								14
+#define LED_BLUE							15
+
+	
+
 #define TM_MPU6050_DataRate_8KHz       0   /*!< Sample rate set to 8 kHz */
 #define TM_MPU6050_DataRate_4KHz       1   /*!< Sample rate set to 4 kHz */
 #define TM_MPU6050_DataRate_2KHz       3   /*!< Sample rate set to 2 kHz */
