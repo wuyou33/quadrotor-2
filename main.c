@@ -20,6 +20,9 @@ TIM_HandleTypeDef Tim3_Handle_PWM;
 
 //timer 1 dung de capture PWM cua RF module
 TIM_HandleTypeDef Tim1_Handle_InputCapture_RF_module;
+uint32_t uhCaptureNumber;
+int uhIC3ReadValue1, uhIC3ReadValue2, uwCapture;
+uint32_t uwTIM1Freq;
 
 //PWM
 int16_t pwm_speed, pwm_left, pwm_right, pwm_front, pwm_back;	
@@ -81,7 +84,7 @@ void Init_PWM_TIM3_Handle(void);
 void Init_TIM3_OUTPUT_COMPARE(void);
 															
 //timer 1 inputcapture for RF module
-void Init_Receiver_TIM1_PWM_Capture_PortE();//Tim1_Handle_InputCapture_RF_module
+void Init_Receiver_TIM1_PWM_Capture_PortE(void);//Tim1_Handle_InputCapture_RF_module
 
 
 //i2c chip mpu6050 10truc
@@ -541,11 +544,11 @@ void Calculate_Accel_Z_Angles(TM_MPU6050_t* output, float* angel_z)
 //
 //Timer 1 PWM input capture
 //
-void Init_Receiver_TIM1_PWM_Capture_PortE()//Tim1_Handle_InputCapture_RF_module
+void Init_Receiver_TIM1_PWM_Capture_PortE()
 {
 		GPIO_InitTypeDef 						GPIO_PWM_PORT_E;	
-		TIM_ClockConfigTypeDef 			sClockSourceConfig;
-		TIM_MasterConfigTypeDef 		TIM_sMasterConfig;
+		//TIM_ClockConfigTypeDef 			sClockSourceConfig;
+		//TIM_MasterConfigTypeDef 		TIM_sMasterConfig;
 		TIM_IC_InitTypeDef 					TIM_Input_Capture;
 		
 		//HAL_NVIC_SetPriority(TIM1_CC_IRQn, 0, 0);
@@ -566,21 +569,17 @@ void Init_Receiver_TIM1_PWM_Capture_PortE()//Tim1_Handle_InputCapture_RF_module
 		Tim1_Handle_InputCapture_RF_module.Init.CounterMode 		= TIM_COUNTERMODE_UP; 	//dem len
 		Tim1_Handle_InputCapture_RF_module.Init.Period 					= 20000-1;									//Period(chu ki) = 20 mili s
 		Tim1_Handle_InputCapture_RF_module.Init.ClockDivision 	= TIM_CLOCKDIVISION_DIV1;// =0
-		if(HAL_TIM_Base_Init(&Tim1_Handle_InputCapture_RF_module)!=HAL_OK) 	
+		if(HAL_TIM_Base_Init(&Tim1_Handle_InputCapture_RF_module) != HAL_OK) 	
 		{			
 			Error_Handler();		
 		}
 		
-		sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-		HAL_TIM_ConfigClockSource(&Tim1_Handle_InputCapture_RF_module, &sClockSourceConfig);
-		if(HAL_TIM_IC_Init(&Tim1_Handle_InputCapture_RF_module)!=HAL_OK)	
-		{			
-			Error_Handler();		
-		}
+		//sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+		//HAL_TIM_ConfigClockSource(&Tim1_Handle_InputCapture_RF_module, &sClockSourceConfig);
 		
-		TIM_sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-		TIM_sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-		HAL_TIMEx_MasterConfigSynchronization(&Tim1_Handle_InputCapture_RF_module, &TIM_sMasterConfig);
+		//TIM_sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+		//TIM_sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+		//HAL_TIMEx_MasterConfigSynchronization(&Tim1_Handle_InputCapture_RF_module, &TIM_sMasterConfig);
 	
 		//timer 1 Input capture
 		TIM_Input_Capture.ICPolarity = TIM_ICPOLARITY_RISING;
@@ -588,12 +587,18 @@ void Init_Receiver_TIM1_PWM_Capture_PortE()//Tim1_Handle_InputCapture_RF_module
 		TIM_Input_Capture.ICPrescaler = TIM_ICPSC_DIV1;
 		TIM_Input_Capture.ICFilter = 0;
 		
-		//start Timer 1 with Input Capture
+		
 		if(HAL_TIM_IC_ConfigChannel(&Tim1_Handle_InputCapture_RF_module, &TIM_Input_Capture, TIM_CHANNEL_1) != HAL_OK)
 		{			
 			Error_Handler();		
 		}	
-		__HAL_TIM_ENABLE_IT(&Tim1_Handle_InputCapture_RF_module, TIM_IT_UPDATE);		
+		
+		if(HAL_TIM_IC_Init(&Tim1_Handle_InputCapture_RF_module)  !=  HAL_OK)	
+		{			
+			Error_Handler();		
+		}
+		
+		//__HAL_TIM_ENABLE_IT(&Tim1_Handle_InputCapture_RF_module, TIM_IT_UPDATE);		
 		if(HAL_TIM_IC_Start_IT(&Tim1_Handle_InputCapture_RF_module, TIM_CHANNEL_1) != HAL_OK)
 		{		
 			Error_Handler();	
@@ -601,55 +606,54 @@ void Init_Receiver_TIM1_PWM_Capture_PortE()//Tim1_Handle_InputCapture_RF_module
 }
 
 
-void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
+void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef* handle_Timer)
 {
-	if (htim->Instance==TIM2)
-		{
-			//read TIM1 channel 1 capture value
-			//input_capture = __HAL_TIM_GetCompare(&htimer1, TIM_CHANNEL_1);	
-				
-			//reset counter after input capture interrupt occurs
-			//__HAL_TIM_SetCounter(&htimer1, 0);															
+	//https://github.com/fboris/STM32Cube_FW_F4/blob/master/Projects/STM324xG_EVAL/Examples/TIM/TIM_PWMInput/Src/main.c
+	//https://github.com/fboris/STM32Cube_FW_F4/tree/master/Projects/STM324xG_EVAL/Examples/TIM/TIM_PWMInput
+	if (handle_Timer->Instance == TIM1)
+	{
+			
+			uhIC3ReadValue1 = HAL_TIM_ReadCapturedValue(handle_Timer, TIM_CHANNEL_1);	
+			__HAL_TIM_SetCounter(handle_Timer, 0);	
+		
+			//__HAL_TIM_CLEAR_FLAG(handle_Timer, TIM_FLAG_UPDATE);
+			//__HAL_TIM_SetCounter(handle_Timer, 0);				
+			
+			
+			/*if(__HAL_TIM_GET_ITSTATUS(handle_Timer, TIM_IT_UPDATE)!=RESET)
+			{
+				if(uhCaptureNumber==0)
+				{
+					//capture lan 1
+					uhIC3ReadValue1 = __HAL_TIM_GetCompare(handle_Timer, TIM_CHANNEL_1);	
+					uhCaptureNumber = 1;
+				}else if(uhCaptureNumber==1)
+				{
+					uhIC3ReadValue2 = __HAL_TIM_GetCompare(handle_Timer, TIM_CHANNEL_1);	
+					//capture lan 2
+							if (uhIC3ReadValue2 > uhIC3ReadValue1)
+							{
+									uwCapture = (uhIC3ReadValue2 - uhIC3ReadValue1); 
+							}
+							else if (uhIC3ReadValue2 < uhIC3ReadValue1)
+							{
+									uwCapture = ((0xFFFF - uhIC3ReadValue1) + uhIC3ReadValue2); 
+							}
+							else
+							{
+									uwCapture = 0;
+							}							
+							
+					//tinh tan so Frequency 
+					uwTIM1Freq = (uint32_t) SystemCoreClock / uwCapture;
+					uhCaptureNumber = 0;
+				}
+			}*/
 		}
 }
-/*
-void TIM1_CC_IRQHandler(void)
-{ 
-	uint32_t uhCaptureNumber;
-  if(TIM_GET_ITSTATUS(TIM1, TIM_IT_CC2) == SET) 
-  {
-    // Clear TIM1 Capture compare interrupt pending bit 
-    TIM_ClearITPendingBit(TIM1, TIM_IT_CC2);
-    if(uhCaptureNumber == 0)
-    {
-      // Get the Input Capture value
-      uhIC3ReadValue1 = TIM_GetCapture2(TIM1);
-      uhCaptureNumber = 1;
-    }
-    else if(uhCaptureNumber == 1)
-    {
-      // Get the Input Capture value 
-      uhIC3ReadValue2 = TIM_GetCapture2(TIM1); 
-      
-      // Capture computation 
-      if (uhIC3ReadValue2 > uhIC3ReadValue1)
-      {
-        uwCapture = (uhIC3ReadValue2 - uhIC3ReadValue1); 
-      }
-      else if (uhIC3ReadValue2 < uhIC3ReadValue1)
-      {
-        uwCapture = ((0xFFFF - uhIC3ReadValue1) + uhIC3ReadValue2); 
-      }
-      else
-      {
-        uwCapture = 0;
-      }
-      // Frequency computation 
-      uwTIM1Freq = (uint32_t) SystemCoreClock / uwCapture;
-      uhCaptureNumber = 0;
-    }
-  }
-}*/
+
+
+void TIM1_CC_IRQHandler(void){}
 
 //void TIM1_IRQHandler(void) {}
 
