@@ -207,42 +207,47 @@
         <Ww>
           <count>1</count>
           <WinNumber>1</WinNumber>
-          <ItemText>rotation_x</ItemText>
+          <ItemText>IC_ReadValue1,0x0A</ItemText>
         </Ww>
         <Ww>
           <count>2</count>
           <WinNumber>1</WinNumber>
-          <ItemText>rotation_y</ItemText>
+          <ItemText>IC_ReadValue2,0x0A</ItemText>
         </Ww>
         <Ww>
           <count>3</count>
           <WinNumber>1</WinNumber>
-          <ItemText>rotation_z</ItemText>
+          <ItemText>IC_ReadValue3,0x0A</ItemText>
         </Ww>
         <Ww>
           <count>4</count>
           <WinNumber>1</WinNumber>
-          <ItemText>who_i_am_reg_value_MPU6050</ItemText>
+          <ItemText>IC_PulseWidth,0x0A</ItemText>
         </Ww>
         <Ww>
           <count>5</count>
           <WinNumber>1</WinNumber>
-          <ItemText>uhCaptureNumber,0x0A</ItemText>
+          <ItemText>IC_duttyCycle,0x0A</ItemText>
         </Ww>
         <Ww>
           <count>6</count>
           <WinNumber>1</WinNumber>
-          <ItemText>uhIC3ReadValue1,0x0A</ItemText>
+          <ItemText>IC_flagCaptureNumber,0x0A</ItemText>
         </Ww>
         <Ww>
           <count>7</count>
           <WinNumber>1</WinNumber>
-          <ItemText>uhIC3ReadValue2,0x0A</ItemText>
+          <ItemText>number_interrup_counter,0x0A</ItemText>
         </Ww>
         <Ww>
           <count>8</count>
           <WinNumber>1</WinNumber>
-          <ItemText>uwCapture,0x0A</ItemText>
+          <ItemText>timer1_counter,0x0A</ItemText>
+        </Ww>
+        <Ww>
+          <count>9</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>\\PWM_TIMER_Test\main.c\timer1_counter,0x0A</ItemText>
         </Ww>
       </WatchWindow1>
       <WatchWindow2>
@@ -254,14 +259,14 @@
         <Ww>
           <count>1</count>
           <WinNumber>2</WinNumber>
-          <ItemText>rotation_y</ItemText>
+          <ItemText>rotation_y,0x0A</ItemText>
         </Ww>
       </WatchWindow2>
       <MemoryWindow1>
         <Mm>
           <WinNumber>1</WinNumber>
-          <SubType>0</SubType>
-          <ItemText>\\PWM_TIMER_Test\main.c\Acc_X</ItemText>
+          <SubType>4</SubType>
+          <ItemText>\\PWM_TIMER_Test\main.c\IC_duttyCycle</ItemText>
           <AccSizeX>0</AccSizeX>
         </Mm>
       </MemoryWindow1>
@@ -293,10 +298,10 @@
         <AscS3>0</AscS3>
         <aSer3>0</aSer3>
         <eProf>0</eProf>
-        <aLa>1</aLa>
+        <aLa>0</aLa>
         <aPa1>0</aPa1>
-        <AscS4>0</AscS4>
-        <aSer4>0</aSer4>
+        <AscS4>1</AscS4>
+        <aSer4>1</aSer4>
         <StkLoc>0</StkLoc>
         <TrcWin>0</TrcWin>
         <newCpu>0</newCpu>
@@ -305,6 +310,13 @@
       <LintExecutable></LintExecutable>
       <LintConfigFile></LintConfigFile>
       <bLintAuto>0</bLintAuto>
+      <LogicAnalyzers>
+        <Wi>
+          <IntNumber>0</IntNumber>
+          <FirstString>\\PWM_TIMER_Test\main.c\IC_flagCaptureNumber</FirstString>
+          <SecondString>FF00000000000000000000000000E0FFFFFFEF41010000000000000000000000000000005C5C50574D5F54494D45525F546573745C6D61696E2E635C49435F666C6167436170747572654E756D6265720000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000001000000000000000000F03F0100000000000000000000000000000000000000BC370008</SecondString>
+        </Wi>
+      </LogicAnalyzers>
       <SystemViewers>
         <Entry>
           <Name>System Viewer\GPIOA</Name>
@@ -313,6 +325,10 @@
         <Entry>
           <Name>System Viewer\TIM1</Name>
           <WinId>35905</WinId>
+        </Entry>
+        <Entry>
+          <Name>System Viewer\TIM2</Name>
+          <WinId>35902</WinId>
         </Entry>
         <Entry>
           <Name>System Viewer\TIM3</Name>
