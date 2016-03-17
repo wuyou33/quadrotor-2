@@ -25,6 +25,7 @@ TIM_HandleTypeDef Tim3_Handle_PWM;
 
 //timer 1 dung de capture PWM cua RF module
 TIM_HandleTypeDef htim1;
+TIM_HandleTypeDef htim2;
 int32_t IC_Throttle1, IC_Throttle2, IC_Throttle3;
 int16_t IC_Throttle_flag_capture_number;
 int16_t IC_Throttle_pusle_width;
@@ -114,7 +115,8 @@ void Init_PWM_TIM3_Handle(void);
 void Init_TIM3_OUTPUT_COMPARE(void);
 															
 //timer 1 & 2 inputcapture for RF module
-void Init_Receiver_TIM_PWM_Capture(void);
+void Init_Receiver_TIM_PWM_Capture_TIM1(void);
+void Init_Receiver_TIM_PWM_Capture_TIM2(void);
 
 
 //i2c chip mpu6050 10truc
@@ -234,10 +236,14 @@ int main(void)
 		
 		
 		//---------------------------------------------------
-		//Init_Receiver_TIM1_PWM_Capture_PortE();
-		Init_Receiver_TIM_PWM_Capture();
-		if(HAL_TIM_IC_Start_IT(&htim1, TIM_CHANNEL_1) != HAL_OK)		{							Error_Handler();			}		
-																		//.... code dafault cua ARM		// when using CMSIS RTOS	// start thread execution 
+		Init_Receiver_TIM_PWM_Capture_TIM1();			
+		Init_Receiver_TIM_PWM_Capture_TIM2();
+		
+		
+			
+		
+			
+																//.... code dafault cua ARM		// when using CMSIS RTOS	// start thread execution 
 																#ifdef RTE_CMSIS_RTOS 
 																	osKernelStart();     
 																#endif			
@@ -270,6 +276,7 @@ int main(void)
 			TIM3->CCR1 = pwm_speed;
 			__HAL_TIM_SetCompare(&Tim3_Handle_PWM,TIM_CHANNEL_1, pwm_speed);
 			//END------------PWM--------------------------------------------------
+			
 		}
 		
 		//End while(1)
@@ -279,9 +286,9 @@ int main(void)
 //
 //Timer 1 PWM input capture
 //
-void Init_Receiver_TIM_PWM_Capture(void)
+void Init_Receiver_TIM_PWM_Capture_TIM1(void)
 {
-	GPIO_InitTypeDef 						GPIO_PWM_PORT_E;	
+	GPIO_InitTypeDef 						GPIO_PWM_InputCapture;	
 	TIM_ClockConfigTypeDef sClockSourceConfig;
   TIM_SlaveConfigTypeDef sSlaveConfig;
   TIM_MasterConfigTypeDef sMasterConfig;
@@ -290,17 +297,17 @@ void Init_Receiver_TIM_PWM_Capture(void)
 	HAL_NVIC_SetPriority(TIM1_CC_IRQn, 0, 0);
 	HAL_NVIC_EnableIRQ(TIM1_CC_IRQn);
 	
-		GPIO_PWM_PORT_E.Pin 			= GPIO_PIN_9 | GPIO_PIN_11 | GPIO_PIN_13 | GPIO_PIN_14;
-		GPIO_PWM_PORT_E.Mode 			= GPIO_MODE_AF_PP; 
-		GPIO_PWM_PORT_E.Pull 			= GPIO_NOPULL;
-		GPIO_PWM_PORT_E.Speed 		= GPIO_SPEED_FAST;
-		GPIO_PWM_PORT_E.Alternate = GPIO_AF1_TIM1;
-		HAL_GPIO_Init(GPIOE, &GPIO_PWM_PORT_E);
+	GPIO_PWM_InputCapture.Pin 			= GPIO_PIN_9;
+	GPIO_PWM_InputCapture.Mode 			= GPIO_MODE_AF_PP; 
+	GPIO_PWM_InputCapture.Pull 			= GPIO_NOPULL;
+	GPIO_PWM_InputCapture.Speed 		= GPIO_SPEED_FAST;
+	GPIO_PWM_InputCapture.Alternate = GPIO_AF1_TIM1;
+	HAL_GPIO_Init(GPIOE, &GPIO_PWM_InputCapture);
 
   htim1.Instance = TIM1;
-  htim1.Init.Prescaler = 84-1;
+  htim1.Init.Prescaler = 168-1;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 100000;
+  htim1.Init.Period = 65535;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   HAL_TIM_Base_Init(&htim1);
 
@@ -310,7 +317,7 @@ void Init_Receiver_TIM_PWM_Capture(void)
   HAL_TIM_IC_Init(&htim1);
 
   sSlaveConfig.SlaveMode = TIM_SLAVEMODE_RESET;
-  sSlaveConfig.InputTrigger = TIM_TS_TI1FP1;
+  sSlaveConfig.InputTrigger = TIM_TS_TI2FP2;
   sSlaveConfig.TriggerPolarity = TIM_INPUTCHANNELPOLARITY_BOTHEDGE;
   sSlaveConfig.TriggerFilter = 0;
   HAL_TIM_SlaveConfigSynchronization(&htim1, &sSlaveConfig);
@@ -324,93 +331,132 @@ void Init_Receiver_TIM_PWM_Capture(void)
   sConfigIC.ICPrescaler = TIM_ICPSC_DIV1;
   sConfigIC.ICFilter = 0;
   HAL_TIM_IC_ConfigChannel(&htim1, &sConfigIC, TIM_CHANNEL_1);
-	__HAL_TIM_ENABLE_IT(&htim1, TIM_IT_UPDATE | TIM_IT_CC1 | TIM_IT_CC2 | TIM_IT_CC3 | TIM_IT_CC4);
+	//__HAL_TIM_ENABLE_IT(&htim1, TIM_IT_CC1);
+	if(HAL_TIM_IC_Start_IT(&htim1, TIM_CHANNEL_1) != HAL_OK)		{							Error_Handler();			}	
+}	
+
+void Init_Receiver_TIM_PWM_Capture_TIM2(void)
+{
+	GPIO_InitTypeDef 						GPIO_PWM_InputCapture;	
+	TIM_ClockConfigTypeDef sClockSourceConfig;
+  TIM_SlaveConfigTypeDef sSlaveConfig;
+  TIM_MasterConfigTypeDef sMasterConfig;
+  TIM_IC_InitTypeDef sConfigIC;
+	
+	HAL_NVIC_SetPriority(TIM2_IRQn, 0, 0);
+	HAL_NVIC_EnableIRQ(TIM2_IRQn);
+	
+	GPIO_PWM_InputCapture.Pin 			= GPIO_PIN_5;
+	GPIO_PWM_InputCapture.Mode 			= GPIO_MODE_AF_PP; 
+	GPIO_PWM_InputCapture.Pull 			= GPIO_NOPULL;
+	GPIO_PWM_InputCapture.Speed 		= GPIO_SPEED_FAST;
+	GPIO_PWM_InputCapture.Alternate = GPIO_AF1_TIM2;
+	HAL_GPIO_Init(GPIOA, &GPIO_PWM_InputCapture);
+
+  htim2.Instance = TIM2;
+  htim2.Init.Prescaler = 84-1;
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.Period = 0xFFFF;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  HAL_TIM_Base_Init(&htim2);
+
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig);
+
+  HAL_TIM_IC_Init(&htim2);
+
+  sSlaveConfig.SlaveMode = TIM_SLAVEMODE_RESET;
+  sSlaveConfig.InputTrigger = TIM_TS_TI2FP2;
+  sSlaveConfig.TriggerPolarity = TIM_INPUTCHANNELPOLARITY_BOTHEDGE;
+  sSlaveConfig.TriggerFilter = 0;
+  HAL_TIM_SlaveConfigSynchronization(&htim2, &sSlaveConfig);
+
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig);
+
+  sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_BOTHEDGE;
+  sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
+  sConfigIC.ICPrescaler = TIM_ICPSC_DIV1;
+  sConfigIC.ICFilter = 0;
+  HAL_TIM_IC_ConfigChannel(&htim2, &sConfigIC, TIM_CHANNEL_1);
+	//__HAL_TIM_ENABLE_IT(&htim1, TIM_IT_UPDATE);
+	//__HAL_TIM_ENABLE_IT(&htim1, TIM_IT_CC1);
+	if(HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1) != HAL_OK)		{							Error_Handler();			}
 }	
 
 
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *handle)
-{		
-	if (handle->Instance == TIM1 )
-	{		
-			//khi co interrup la TIM_IT_UPDATE, Do counter dem len den max. Sau do, counter reset lai ve 0
-			if(__HAL_TIM_GET_ITSTATUS(handle, TIM_IT_UPDATE) == SET)
-			{
-						__HAL_TIM_CLEAR_IT(handle, TIM_IT_UPDATE);
-						__HAL_TIM_CLEAR_FLAG(handle, TIM_IT_UPDATE);		
-						IC_Throttle1 = 0;
-						IC_Throttle2 = 0; 
-						IC_Throttle3 = 0; 
-						IC_Throttle_pusle_width = 0;
-						IC_Throttle_cycle_time = 0;
-						IC_Throttle_frequency = 0;
-						IC_Throttle_flag_capture_number=0;
-						IC_counter_register_timer = 0;
-						IC_interrupt_numbers_timer = 0;
-						TIM2->CNT     = 0;
-			}
-				
-			//khi co interrup la TIM_IT_CC1, co su kien capture canh	
-			if(__HAL_TIM_GET_ITSTATUS(handle, TIM_IT_CC1) == SET)
+{	
+	
+}
+
+
+void TIM2_IRQHandler(void)
+{
+		//IC_interrupt_numbers_timer = IC_interrupt_numbers_timer + 1;	
+		//if(IC_interrupt_numbers_timer > 100000)
+		//{IC_interrupt_numbers_timer=0;}
+		//HAL_TIM_IC_CaptureCallback(&htim2);
+		if(__HAL_TIM_GET_ITSTATUS(&htim2, TIM_IT_CC1) == SET)
 			{		
-						__HAL_TIM_CLEAR_IT(handle, TIM_IT_CC1);
-						__HAL_TIM_CLEAR_FLAG(handle, TIM_IT_CC1);		
+						__HAL_TIM_CLEAR_IT(&htim2, TIM_IT_CC1);
+						__HAL_TIM_CLEAR_FLAG(&htim2, TIM_IT_CC1);		
 						if(IC_Throttle_flag_capture_number==0)
 						{					
-									IC_Throttle1 = HAL_TIM_ReadCapturedValue(handle, TIM_CHANNEL_1);
+									IC_Throttle1 = HAL_TIM_ReadCapturedValue(&htim2, TIM_CHANNEL_1);
 									IC_Throttle_flag_capture_number = 1;
 										
 						}else if(IC_Throttle_flag_capture_number==1)
 						{
-									IC_Throttle2 = HAL_TIM_ReadCapturedValue(handle, TIM_CHANNEL_1);
+									IC_Throttle2 = HAL_TIM_ReadCapturedValue(&htim2, TIM_CHANNEL_1);
 									IC_Throttle_pusle_width		= (IC_Throttle2 - IC_Throttle1);
 									IC_Throttle_flag_capture_number = 2;	
 											
 						}
 						else if(IC_Throttle_flag_capture_number==2)
 						{
-									IC_Throttle3 = HAL_TIM_ReadCapturedValue(handle, TIM_CHANNEL_1);
+									IC_Throttle3 = HAL_TIM_ReadCapturedValue(&htim2, TIM_CHANNEL_1);
 									IC_Throttle_cycle_time = (IC_Throttle3 - IC_Throttle1);
 									IC_Throttle_flag_capture_number = 3;
 						}else if(IC_Throttle_flag_capture_number==3)
 						{
 									IC_Throttle_flag_capture_number=0;
-									//TIM2->CNT = 0;
+									TIM2->CNT = 0;
 						}						
-			}	
-			
-			
-			//khi co interrup la TIM_IT_CC1, co su kien capture canh	
-			if(__HAL_TIM_GET_ITSTATUS(handle, TIM_IT_CC2) == SET)
-			{	
-						__HAL_TIM_CLEAR_IT(handle, TIM_IT_CC2);
-						__HAL_TIM_CLEAR_FLAG(handle, TIM_IT_CC2);	
 			}
-			
-			
-			//khi co interrup la TIM_IT_CC1, co su kien capture canh	
-			if(__HAL_TIM_GET_ITSTATUS(handle, TIM_IT_CC3) == SET)
-			{	
-						__HAL_TIM_CLEAR_IT(handle, TIM_IT_CC3);
-						__HAL_TIM_CLEAR_FLAG(handle, TIM_IT_CC3);
-			}
-			
-			
-			//khi co interrup la TIM_IT_CC1, co su kien capture canh	
-			if(__HAL_TIM_GET_ITSTATUS(handle, TIM_IT_CC4) == SET)
-			{	
-						__HAL_TIM_CLEAR_IT(handle, TIM_IT_CC4);
-						__HAL_TIM_CLEAR_FLAG(handle, TIM_IT_CC4);
-			}
-	}
 }
-
-
 void TIM1_CC_IRQHandler(void)
 {
-		IC_interrupt_numbers_timer = IC_interrupt_numbers_timer + 1;	
-		if(IC_interrupt_numbers_timer > 100000)
-		{IC_interrupt_numbers_timer=0;}
-		HAL_TIM_IC_CaptureCallback(&htim1);
+		
+					//khi co interrup la TIM_IT_CC1, co su kien capture canh	
+						if(__HAL_TIM_GET_ITSTATUS(&htim1, TIM_IT_CC1) == SET)
+						{		
+									__HAL_TIM_CLEAR_IT(&htim1, TIM_IT_CC1);
+									__HAL_TIM_CLEAR_FLAG(&htim1, TIM_IT_CC1);		
+									if(IC_Throttle_flag_capture_number==0)
+									{					
+												IC_Throttle1 = HAL_TIM_ReadCapturedValue(&htim1, TIM_CHANNEL_1);
+												IC_Throttle_flag_capture_number = 1;
+													
+									}else if(IC_Throttle_flag_capture_number==1)
+									{
+												IC_Throttle2 = HAL_TIM_ReadCapturedValue(&htim1, TIM_CHANNEL_1);
+												IC_Throttle_pusle_width		= (IC_Throttle2 - IC_Throttle1);
+												IC_Throttle_flag_capture_number = 2;	
+														
+									}
+									else if(IC_Throttle_flag_capture_number==2)
+									{
+												IC_Throttle3 = HAL_TIM_ReadCapturedValue(&htim1, TIM_CHANNEL_1);
+												IC_Throttle_cycle_time = (IC_Throttle3 - IC_Throttle1);
+												IC_Throttle_flag_capture_number = 3;
+									}else if(IC_Throttle_flag_capture_number==3)
+									{
+												IC_Throttle_flag_capture_number=0;
+												TIM1->CNT = 0;
+									}						
+						}
 }
 //
 //End Timer 1 PWM input capture
@@ -423,7 +469,7 @@ void TIM1_CC_IRQHandler(void)
 void KiemTraCodeOK(void)
 {
 		int i = 0;
-		while(i < 4)
+		while(i < 5)
 		{
 			SANG_2_LED(1);				
 			delay_ms(100);				
@@ -813,9 +859,9 @@ static void Error_Handler(void)
   while(1)
   {			
 		SANG_4_LED();
-		delay_ms(500);
+		delay_ms(200);
 		SANG_4_LED_OFF();
-		delay_ms(500);
+		delay_ms(200);
 	}
 }
 
