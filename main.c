@@ -1,13 +1,23 @@
 /*
 TONG HOP CAC PIN SU DUNG
 
-PORT A: PA0 																	=>button User  				
+PORT A: PA0 																	=>button User  
+				PA5																		=> Timer 2 input capture
+				
 PORT B: PB6, PB7 															=>I2C1 cam bien 10 truc mpu6050
 																							//PB6     ------> I2C1_SCL
 																							//PB7     ------> I2C1_SDA 
-PORT C: PC6, PC7, PC8, PC9 										=>timer3 output PWM
+PORT C: PC6,  																=>timer3 output PWM
+				PC7, PC8, PC9(timer 3 chua dung)
+				
 PORT D: PD12, PD13, PD14, PD15  							=>LEDSang
-PORT E: PE9, PE11, PE13, PE14									=>timer 1 -> inputcapture PWM RF module
+
+PORT E: PE9 																	=>timer 1 input capture
+				PE11, PE13, PE14(Timer 1 chua dung)
+*/
+/*
+Clock of timer
+http://www.farrellf.com/projects/hardware/2012-08-11_STM32F4_Basics:_Timers_(Part_1)/
 */
 
 
@@ -26,6 +36,8 @@ TIM_HandleTypeDef Tim3_Handle_PWM;
 //timer 1 dung de capture PWM cua RF module
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
+TIM_HandleTypeDef htim4;
+TIM_HandleTypeDef htim5;
 int32_t IC_Throttle1, IC_Throttle2, IC_Throttle3;
 int16_t IC_Throttle_flag_capture_number;
 int16_t IC_Throttle_pusle_width;
@@ -117,6 +129,8 @@ void Init_TIM3_OUTPUT_COMPARE(void);
 //timer 1 & 2 inputcapture for RF module
 void Init_Receiver_TIM_PWM_Capture_TIM1(void);
 void Init_Receiver_TIM_PWM_Capture_TIM2(void);
+void Init_Receiver_TIM_PWM_Capture_TIM4(void);
+void Init_Receiver_TIM_PWM_Capture_TIM5(void);
 
 
 //i2c chip mpu6050 10truc
@@ -385,6 +399,105 @@ void Init_Receiver_TIM_PWM_Capture_TIM2(void)
 	if(HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1) != HAL_OK)		{							Error_Handler();			}
 }	
 
+void Init_Receiver_TIM_PWM_Capture_TIM4(void)
+{
+	GPIO_InitTypeDef 						GPIO_PWM_InputCapture;	
+	TIM_ClockConfigTypeDef sClockSourceConfig;
+  TIM_SlaveConfigTypeDef sSlaveConfig;
+  TIM_MasterConfigTypeDef sMasterConfig;
+  TIM_IC_InitTypeDef sConfigIC;
+	
+	HAL_NVIC_SetPriority(TIM4_IRQn, 0, 0);
+	HAL_NVIC_EnableIRQ(TIM4_IRQn);
+	
+	GPIO_PWM_InputCapture.Pin 			= GPIO_PIN_5;
+	GPIO_PWM_InputCapture.Mode 			= GPIO_MODE_AF_PP; 
+	GPIO_PWM_InputCapture.Pull 			= GPIO_NOPULL;
+	GPIO_PWM_InputCapture.Speed 		= GPIO_SPEED_FAST;
+	GPIO_PWM_InputCapture.Alternate = GPIO_AF2_TIM4;
+	//HAL_GPIO_Init(GPIOA, &GPIO_PWM_InputCapture);
+
+  htim4.Instance = TIM4;
+  htim4.Init.Prescaler = 84-1;
+  htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim4.Init.Period = 0xFFFF;
+  htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  HAL_TIM_Base_Init(&htim4);
+
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  HAL_TIM_ConfigClockSource(&htim4, &sClockSourceConfig);
+
+  HAL_TIM_IC_Init(&htim4);
+
+  sSlaveConfig.SlaveMode = TIM_SLAVEMODE_RESET;
+  sSlaveConfig.InputTrigger = TIM_TS_TI2FP2;
+  sSlaveConfig.TriggerPolarity = TIM_INPUTCHANNELPOLARITY_BOTHEDGE;
+  sSlaveConfig.TriggerFilter = 0;
+  HAL_TIM_SlaveConfigSynchronization(&htim4, &sSlaveConfig);
+
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  HAL_TIMEx_MasterConfigSynchronization(&htim4, &sMasterConfig);
+
+  sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_BOTHEDGE;
+  sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
+  sConfigIC.ICPrescaler = TIM_ICPSC_DIV1;
+  sConfigIC.ICFilter = 0;
+  HAL_TIM_IC_ConfigChannel(&htim4, &sConfigIC, TIM_CHANNEL_1);
+	//__HAL_TIM_ENABLE_IT(&htim1, TIM_IT_UPDATE);
+	//__HAL_TIM_ENABLE_IT(&htim1, TIM_IT_CC1);
+	if(HAL_TIM_IC_Start_IT(&htim4, TIM_CHANNEL_1) != HAL_OK)		{							Error_Handler();			}
+}
+void Init_Receiver_TIM_PWM_Capture_TIM5(void)
+{
+	GPIO_InitTypeDef 						GPIO_PWM_InputCapture;	
+	TIM_ClockConfigTypeDef sClockSourceConfig;
+  TIM_SlaveConfigTypeDef sSlaveConfig;
+  TIM_MasterConfigTypeDef sMasterConfig;
+  TIM_IC_InitTypeDef sConfigIC;
+	
+	HAL_NVIC_SetPriority(TIM5_IRQn, 0, 0);
+	HAL_NVIC_EnableIRQ(TIM5_IRQn);
+	
+	GPIO_PWM_InputCapture.Pin 			= GPIO_PIN_5;
+	GPIO_PWM_InputCapture.Mode 			= GPIO_MODE_AF_PP; 
+	GPIO_PWM_InputCapture.Pull 			= GPIO_NOPULL;
+	GPIO_PWM_InputCapture.Speed 		= GPIO_SPEED_FAST;
+	GPIO_PWM_InputCapture.Alternate = GPIO_AF1_TIM2;
+	//HAL_GPIO_Init(GPIOA, &GPIO_PWM_InputCapture);
+
+  htim5.Instance = TIM5;
+  htim5.Init.Prescaler = 84-1;
+  htim5.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim5.Init.Period = 0xFFFF;
+  htim5.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  HAL_TIM_Base_Init(&htim5);
+
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  HAL_TIM_ConfigClockSource(&htim5, &sClockSourceConfig);
+
+  HAL_TIM_IC_Init(&htim5);
+
+  sSlaveConfig.SlaveMode = TIM_SLAVEMODE_RESET;
+  sSlaveConfig.InputTrigger = TIM_TS_TI2FP2;
+  sSlaveConfig.TriggerPolarity = TIM_INPUTCHANNELPOLARITY_BOTHEDGE;
+  sSlaveConfig.TriggerFilter = 0;
+  HAL_TIM_SlaveConfigSynchronization(&htim5, &sSlaveConfig);
+
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  HAL_TIMEx_MasterConfigSynchronization(&htim5, &sMasterConfig);
+
+  sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_BOTHEDGE;
+  sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
+  sConfigIC.ICPrescaler = TIM_ICPSC_DIV1;
+  sConfigIC.ICFilter = 0;
+  HAL_TIM_IC_ConfigChannel(&htim5, &sConfigIC, TIM_CHANNEL_1);
+	//__HAL_TIM_ENABLE_IT(&htim1, TIM_IT_UPDATE);
+	//__HAL_TIM_ENABLE_IT(&htim1, TIM_IT_CC1);
+	if(HAL_TIM_IC_Start_IT(&htim5, TIM_CHANNEL_1) != HAL_OK)		{							Error_Handler();			}
+}	
+
 
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *handle)
 {	
@@ -394,10 +507,6 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *handle)
 
 void TIM2_IRQHandler(void)
 {
-		//IC_interrupt_numbers_timer = IC_interrupt_numbers_timer + 1;	
-		//if(IC_interrupt_numbers_timer > 100000)
-		//{IC_interrupt_numbers_timer=0;}
-		//HAL_TIM_IC_CaptureCallback(&htim2);
 		if(__HAL_TIM_GET_ITSTATUS(&htim2, TIM_IT_CC1) == SET)
 			{		
 						__HAL_TIM_CLEAR_IT(&htim2, TIM_IT_CC1);
@@ -423,6 +532,66 @@ void TIM2_IRQHandler(void)
 						{
 									IC_Throttle_flag_capture_number=0;
 									TIM2->CNT = 0;
+						}						
+			}
+}
+void TIM4_IRQHandler(void)
+{
+			if(__HAL_TIM_GET_ITSTATUS(&htim4, TIM_IT_CC1) == SET)
+			{		
+						__HAL_TIM_CLEAR_IT(&htim4, TIM_IT_CC1);
+						__HAL_TIM_CLEAR_FLAG(&htim4, TIM_IT_CC1);		
+						if(IC_Throttle_flag_capture_number==0)
+						{					
+									IC_Throttle1 = HAL_TIM_ReadCapturedValue(&htim4, TIM_CHANNEL_1);
+									IC_Throttle_flag_capture_number = 1;
+										
+						}else if(IC_Throttle_flag_capture_number==1)
+						{
+									IC_Throttle2 = HAL_TIM_ReadCapturedValue(&htim4, TIM_CHANNEL_1);
+									IC_Throttle_pusle_width		= (IC_Throttle2 - IC_Throttle1);
+									IC_Throttle_flag_capture_number = 2;	
+											
+						}
+						else if(IC_Throttle_flag_capture_number==2)
+						{
+									IC_Throttle3 = HAL_TIM_ReadCapturedValue(&htim4, TIM_CHANNEL_1);
+									IC_Throttle_cycle_time = (IC_Throttle3 - IC_Throttle1);
+									IC_Throttle_flag_capture_number = 3;
+						}else if(IC_Throttle_flag_capture_number==3)
+						{
+									IC_Throttle_flag_capture_number=0;
+									TIM4->CNT = 0;
+						}						
+			}
+}
+void TIM5_IRQHandler(void)
+{
+			if(__HAL_TIM_GET_ITSTATUS(&htim5, TIM_IT_CC1) == SET)
+			{		
+						__HAL_TIM_CLEAR_IT(&htim5, TIM_IT_CC1);
+						__HAL_TIM_CLEAR_FLAG(&htim5, TIM_IT_CC1);		
+						if(IC_Throttle_flag_capture_number==0)
+						{					
+									IC_Throttle1 = HAL_TIM_ReadCapturedValue(&htim5, TIM_CHANNEL_1);
+									IC_Throttle_flag_capture_number = 1;
+										
+						}else if(IC_Throttle_flag_capture_number==1)
+						{
+									IC_Throttle2 = HAL_TIM_ReadCapturedValue(&htim5, TIM_CHANNEL_1);
+									IC_Throttle_pusle_width		= (IC_Throttle2 - IC_Throttle1);
+									IC_Throttle_flag_capture_number = 2;	
+											
+						}
+						else if(IC_Throttle_flag_capture_number==2)
+						{
+									IC_Throttle3 = HAL_TIM_ReadCapturedValue(&htim5, TIM_CHANNEL_1);
+									IC_Throttle_cycle_time = (IC_Throttle3 - IC_Throttle1);
+									IC_Throttle_flag_capture_number = 3;
+						}else if(IC_Throttle_flag_capture_number==3)
+						{
+									IC_Throttle_flag_capture_number=0;
+									TIM5->CNT = 0;
 						}						
 			}
 }
