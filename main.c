@@ -46,7 +46,7 @@ int16_t IC_Throttle_frequency;
 int32_t IC_counter_register_timer;
 int32_t IC_interrupt_numbers_timer;
 
-//rudder (xoay theo truc z)
+//rudder (xoay theo truc z) - goc Yaw
 int32_t IC_Rudder_Xoay1, IC_Rudder_Xoay2, IC_Rudder_Xoay3;
 int16_t IC_Rudder_Xoay_flag_capture_number;
 int16_t IC_Rudder_Xoay_pusle_width;
@@ -54,14 +54,14 @@ int16_t IC_Rudder_Xoay_cycle_time;
 int16_t IC_Rudder_Xoay_frequency;
 
 
-//elevator (tien - lui)
+//elevator (tien - lui) - goc Pitch
 int32_t IC_Elevator_TienLui1, IC_Elevator_TienLui2, IC_Elevator_TienLui3;
 int16_t IC_Elevator_TienLui_flag_capture_number;
 int16_t IC_Elevator_TienLui_pusle_width;
 int16_t IC_Elevator_TienLui_cycle_time;
 int16_t IC_Elevator_TienLui_frequency;
 
-//Aileron_TraiPhai (trai - phai)
+//Aileron_TraiPhai (trai - phai) - goc Roll
 int32_t IC_Aileron_TraiPhai1, IC_Aileron_TraiPhai2, IC_Aileron_TraiPhai3;
 int16_t IC_Aileron_TraiPhai_flag_capture_number;
 int16_t IC_Aileron_TraiPhai_pusle_width;
