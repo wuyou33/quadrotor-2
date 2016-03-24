@@ -1,19 +1,27 @@
 /*
 TONG HOP CAC PIN SU DUNG
 
-PORT A: PA0 																	=>button User  
-				PA5																		=> Timer 2 input capture
+PORT A: PA0 																	=> Button User  
+				PA1																		=> TIM5_CH2 InputCaptrue
+				PA5																		=> TIM2_CH1 InputCaptrue
 				
-PORT B: PB6, PB7 															=>I2C1 cam bien 10 truc mpu6050
-																							//PB6     ------> I2C1_SCL
-																							//PB7     ------> I2C1_SDA 
-PORT C: PC6,  																=>timer3 output PWM
-				PC7, PC8, PC9(timer 3 chua dung)
+PORT B: PB6, PB7 															=> I2C1 cam bien 10 truc mpu6050 (PB6->I2C1_SCL,	PB7->I2C1_SDA) 
+				PB8																		=> TIM4_CH3 Inputcapture
+																									
+PORT C: PC6,  																=> TIM3_CH1 Output Campare PWM
+				PC7, PC8, PC9(timer 3 chua su dung)
 				
-PORT D: PD12, PD13, PD14, PD15  							=>LEDSang
+PORT D: PD12, PD13, PD14, PD15  							=> LEDSang (PD12 GREEN, PD13 ORANGE, PD14 RED, PD15 BLUE)
 
-PORT E: PE9 																	=>timer 1 input capture
-				PE11, PE13, PE14(Timer 1 chua dung)
+PORT E: PE9 																	=> TIM1_CH1 InputCaptrue
+
+--------------------------------------------------------------------------
+InputCaptrue PIN
+PE9 ->TIM1_CH1  //Throttle (can ga) tang giam toc do quay
+PA5 ->TIM2_CH1  //Rudder (xoay theo truc z) - goc Yaw
+PB8 ->TIM4_CH3  //Elevator (tien - lui) - goc Pitch
+PA1 ->TIM5_CH2  //Aileron_TraiPhai (trai - phai) - goc Roll
+				
 */
 /*
 Clock of timer
@@ -38,7 +46,9 @@ TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim4;
 TIM_HandleTypeDef htim5;
-int32_t IC_Throttle1, IC_Throttle2, IC_Throttle3;
+
+//Throttle (can ga) tang giam toc do quay
+int32_t IC_Throttle1, IC_Throttle2;
 int16_t IC_Throttle_flag_capture_number;
 int16_t IC_Throttle_pusle_width;
 int16_t IC_Throttle_cycle_time;
@@ -46,23 +56,23 @@ int16_t IC_Throttle_frequency;
 int32_t IC_counter_register_timer;
 int32_t IC_interrupt_numbers_timer;
 
-//rudder (xoay theo truc z) - goc Yaw
-int32_t IC_Rudder_Xoay1, IC_Rudder_Xoay2, IC_Rudder_Xoay3;
+//Rudder (xoay theo truc z) - goc Yaw
+int32_t IC_Rudder_Xoay1, IC_Rudder_Xoay2;
 int16_t IC_Rudder_Xoay_flag_capture_number;
 int16_t IC_Rudder_Xoay_pusle_width;
 int16_t IC_Rudder_Xoay_cycle_time;
 int16_t IC_Rudder_Xoay_frequency;
 
 
-//elevator (tien - lui) - goc Pitch
-int32_t IC_Elevator_TienLui1, IC_Elevator_TienLui2, IC_Elevator_TienLui3;
+//Elevator (tien - lui) - goc Pitch
+int32_t IC_Elevator_TienLui1, IC_Elevator_TienLui2;
 int16_t IC_Elevator_TienLui_flag_capture_number;
 int16_t IC_Elevator_TienLui_pusle_width;
 int16_t IC_Elevator_TienLui_cycle_time;
 int16_t IC_Elevator_TienLui_frequency;
 
 //Aileron_TraiPhai (trai - phai) - goc Roll
-int32_t IC_Aileron_TraiPhai1, IC_Aileron_TraiPhai2, IC_Aileron_TraiPhai3;
+int32_t IC_Aileron_TraiPhai1, IC_Aileron_TraiPhai2;
 int16_t IC_Aileron_TraiPhai_flag_capture_number;
 int16_t IC_Aileron_TraiPhai_pusle_width;
 int16_t IC_Aileron_TraiPhai_cycle_time;
@@ -173,11 +183,18 @@ int main(void)
 		pwm_speed=800;			
 		IC_Throttle1 = 0;
 		IC_Throttle2 = 0; 
-		IC_Throttle3 = 0; 
 		IC_Throttle_pusle_width = 0;
 		IC_Throttle_cycle_time = 0;
 		IC_Throttle_frequency = 0;
 		IC_Throttle_flag_capture_number=0;
+	
+		IC_Elevator_TienLui1 = 0;
+		IC_Elevator_TienLui2 = 0; 
+		IC_Elevator_TienLui_pusle_width = 0;
+		IC_Elevator_TienLui_cycle_time = 0;
+		IC_Elevator_TienLui_frequency = 0;
+		IC_Elevator_TienLui_flag_capture_number=0;
+	
 		IC_counter_register_timer = 0;
 		IC_interrupt_numbers_timer = 0;
 		who_i_am_reg_value_MPU6050 = 0;
@@ -197,6 +214,8 @@ int main(void)
 		__TIM1_CLK_ENABLE(); 
 		__TIM2_CLK_ENABLE(); 
 		__TIM3_CLK_ENABLE(); 
+		__TIM4_CLK_ENABLE(); 
+		__TIM5_CLK_ENABLE(); 
 		__I2C1_CLK_ENABLE();						
 		
 		//----------------------------------------------------
@@ -252,6 +271,8 @@ int main(void)
 		//---------------------------------------------------
 		Init_Receiver_TIM_PWM_Capture_TIM1();			
 		Init_Receiver_TIM_PWM_Capture_TIM2();
+		Init_Receiver_TIM_PWM_Capture_TIM4();
+		Init_Receiver_TIM_PWM_Capture_TIM5();
 		
 		
 			
@@ -359,7 +380,7 @@ void Init_Receiver_TIM_PWM_Capture_TIM2(void)
 	
 	HAL_NVIC_SetPriority(TIM2_IRQn, 0, 0);
 	HAL_NVIC_EnableIRQ(TIM2_IRQn);
-	
+	//PA5 ->TIM2_CH1
 	GPIO_PWM_InputCapture.Pin 			= GPIO_PIN_5;
 	GPIO_PWM_InputCapture.Mode 			= GPIO_MODE_AF_PP; 
 	GPIO_PWM_InputCapture.Pull 			= GPIO_NOPULL;
@@ -370,7 +391,7 @@ void Init_Receiver_TIM_PWM_Capture_TIM2(void)
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 84-1;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 0xFFFF;
+  htim2.Init.Period = 65535;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   HAL_TIM_Base_Init(&htim2);
 
@@ -394,8 +415,6 @@ void Init_Receiver_TIM_PWM_Capture_TIM2(void)
   sConfigIC.ICPrescaler = TIM_ICPSC_DIV1;
   sConfigIC.ICFilter = 0;
   HAL_TIM_IC_ConfigChannel(&htim2, &sConfigIC, TIM_CHANNEL_1);
-	//__HAL_TIM_ENABLE_IT(&htim1, TIM_IT_UPDATE);
-	//__HAL_TIM_ENABLE_IT(&htim1, TIM_IT_CC1);
 	if(HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1) != HAL_OK)		{							Error_Handler();			}
 }	
 
@@ -409,18 +428,18 @@ void Init_Receiver_TIM_PWM_Capture_TIM4(void)
 	
 	HAL_NVIC_SetPriority(TIM4_IRQn, 0, 0);
 	HAL_NVIC_EnableIRQ(TIM4_IRQn);
-	
-	GPIO_PWM_InputCapture.Pin 			= GPIO_PIN_5;
+	//PB8 -> TIM4_CH3
+	GPIO_PWM_InputCapture.Pin 			= GPIO_PIN_8;
 	GPIO_PWM_InputCapture.Mode 			= GPIO_MODE_AF_PP; 
 	GPIO_PWM_InputCapture.Pull 			= GPIO_NOPULL;
 	GPIO_PWM_InputCapture.Speed 		= GPIO_SPEED_FAST;
 	GPIO_PWM_InputCapture.Alternate = GPIO_AF2_TIM4;
-	//HAL_GPIO_Init(GPIOA, &GPIO_PWM_InputCapture);
+	HAL_GPIO_Init(GPIOB, &GPIO_PWM_InputCapture);
 
   htim4.Instance = TIM4;
   htim4.Init.Prescaler = 84-1;
   htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim4.Init.Period = 0xFFFF;
+  htim4.Init.Period = 65535;
   htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   HAL_TIM_Base_Init(&htim4);
 
@@ -443,10 +462,9 @@ void Init_Receiver_TIM_PWM_Capture_TIM4(void)
   sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
   sConfigIC.ICPrescaler = TIM_ICPSC_DIV1;
   sConfigIC.ICFilter = 0;
-  HAL_TIM_IC_ConfigChannel(&htim4, &sConfigIC, TIM_CHANNEL_1);
-	//__HAL_TIM_ENABLE_IT(&htim1, TIM_IT_UPDATE);
-	//__HAL_TIM_ENABLE_IT(&htim1, TIM_IT_CC1);
-	if(HAL_TIM_IC_Start_IT(&htim4, TIM_CHANNEL_1) != HAL_OK)		{							Error_Handler();			}
+	//PB8 -> TIM4_CH3
+  HAL_TIM_IC_ConfigChannel(&htim4, &sConfigIC, TIM_CHANNEL_3);
+	if(HAL_TIM_IC_Start_IT(&htim4, TIM_CHANNEL_3) != HAL_OK)		{							Error_Handler();			}
 }
 void Init_Receiver_TIM_PWM_Capture_TIM5(void)
 {
@@ -459,17 +477,18 @@ void Init_Receiver_TIM_PWM_Capture_TIM5(void)
 	HAL_NVIC_SetPriority(TIM5_IRQn, 0, 0);
 	HAL_NVIC_EnableIRQ(TIM5_IRQn);
 	
-	GPIO_PWM_InputCapture.Pin 			= GPIO_PIN_5;
+	//PA1 -> TIM5_CH2
+	GPIO_PWM_InputCapture.Pin 			= GPIO_PIN_1;
 	GPIO_PWM_InputCapture.Mode 			= GPIO_MODE_AF_PP; 
 	GPIO_PWM_InputCapture.Pull 			= GPIO_NOPULL;
 	GPIO_PWM_InputCapture.Speed 		= GPIO_SPEED_FAST;
-	GPIO_PWM_InputCapture.Alternate = GPIO_AF1_TIM2;
-	//HAL_GPIO_Init(GPIOA, &GPIO_PWM_InputCapture);
+	GPIO_PWM_InputCapture.Alternate = GPIO_AF2_TIM5;
+	HAL_GPIO_Init(GPIOA, &GPIO_PWM_InputCapture);
 
   htim5.Instance = TIM5;
   htim5.Init.Prescaler = 84-1;
   htim5.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim5.Init.Period = 0xFFFF;
+  htim5.Init.Period = 65535;
   htim5.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   HAL_TIM_Base_Init(&htim5);
 
@@ -492,112 +511,17 @@ void Init_Receiver_TIM_PWM_Capture_TIM5(void)
   sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
   sConfigIC.ICPrescaler = TIM_ICPSC_DIV1;
   sConfigIC.ICFilter = 0;
-  HAL_TIM_IC_ConfigChannel(&htim5, &sConfigIC, TIM_CHANNEL_1);
-	//__HAL_TIM_ENABLE_IT(&htim1, TIM_IT_UPDATE);
-	//__HAL_TIM_ENABLE_IT(&htim1, TIM_IT_CC1);
-	if(HAL_TIM_IC_Start_IT(&htim5, TIM_CHANNEL_1) != HAL_OK)		{							Error_Handler();			}
+	//PA1->TIM5_CH2
+  HAL_TIM_IC_ConfigChannel(&htim5, &sConfigIC, TIM_CHANNEL_2);
+	if(HAL_TIM_IC_Start_IT(&htim5, TIM_CHANNEL_2) != HAL_OK)		{							Error_Handler();			}
 }	
 
 
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *handle)
-{	
-	
-}
+{}
 
-
-void TIM2_IRQHandler(void)
-{
-		if(__HAL_TIM_GET_ITSTATUS(&htim2, TIM_IT_CC1) == SET)
-			{		
-						__HAL_TIM_CLEAR_IT(&htim2, TIM_IT_CC1);
-						__HAL_TIM_CLEAR_FLAG(&htim2, TIM_IT_CC1);		
-						if(IC_Throttle_flag_capture_number==0)
-						{					
-									IC_Throttle1 = HAL_TIM_ReadCapturedValue(&htim2, TIM_CHANNEL_1);
-									IC_Throttle_flag_capture_number = 1;
-										
-						}else if(IC_Throttle_flag_capture_number==1)
-						{
-									IC_Throttle2 = HAL_TIM_ReadCapturedValue(&htim2, TIM_CHANNEL_1);
-									IC_Throttle_pusle_width		= (IC_Throttle2 - IC_Throttle1);
-									IC_Throttle_flag_capture_number = 2;	
-											
-						}
-						else if(IC_Throttle_flag_capture_number==2)
-						{
-									IC_Throttle3 = HAL_TIM_ReadCapturedValue(&htim2, TIM_CHANNEL_1);
-									IC_Throttle_cycle_time = (IC_Throttle3 - IC_Throttle1);
-									IC_Throttle_flag_capture_number = 3;
-						}else if(IC_Throttle_flag_capture_number==3)
-						{
-									IC_Throttle_flag_capture_number=0;
-									TIM2->CNT = 0;
-						}						
-			}
-}
-void TIM4_IRQHandler(void)
-{
-			if(__HAL_TIM_GET_ITSTATUS(&htim4, TIM_IT_CC1) == SET)
-			{		
-						__HAL_TIM_CLEAR_IT(&htim4, TIM_IT_CC1);
-						__HAL_TIM_CLEAR_FLAG(&htim4, TIM_IT_CC1);		
-						if(IC_Throttle_flag_capture_number==0)
-						{					
-									IC_Throttle1 = HAL_TIM_ReadCapturedValue(&htim4, TIM_CHANNEL_1);
-									IC_Throttle_flag_capture_number = 1;
-										
-						}else if(IC_Throttle_flag_capture_number==1)
-						{
-									IC_Throttle2 = HAL_TIM_ReadCapturedValue(&htim4, TIM_CHANNEL_1);
-									IC_Throttle_pusle_width		= (IC_Throttle2 - IC_Throttle1);
-									IC_Throttle_flag_capture_number = 2;	
-											
-						}
-						else if(IC_Throttle_flag_capture_number==2)
-						{
-									IC_Throttle3 = HAL_TIM_ReadCapturedValue(&htim4, TIM_CHANNEL_1);
-									IC_Throttle_cycle_time = (IC_Throttle3 - IC_Throttle1);
-									IC_Throttle_flag_capture_number = 3;
-						}else if(IC_Throttle_flag_capture_number==3)
-						{
-									IC_Throttle_flag_capture_number=0;
-									TIM4->CNT = 0;
-						}						
-			}
-}
-void TIM5_IRQHandler(void)
-{
-			if(__HAL_TIM_GET_ITSTATUS(&htim5, TIM_IT_CC1) == SET)
-			{		
-						__HAL_TIM_CLEAR_IT(&htim5, TIM_IT_CC1);
-						__HAL_TIM_CLEAR_FLAG(&htim5, TIM_IT_CC1);		
-						if(IC_Throttle_flag_capture_number==0)
-						{					
-									IC_Throttle1 = HAL_TIM_ReadCapturedValue(&htim5, TIM_CHANNEL_1);
-									IC_Throttle_flag_capture_number = 1;
-										
-						}else if(IC_Throttle_flag_capture_number==1)
-						{
-									IC_Throttle2 = HAL_TIM_ReadCapturedValue(&htim5, TIM_CHANNEL_1);
-									IC_Throttle_pusle_width		= (IC_Throttle2 - IC_Throttle1);
-									IC_Throttle_flag_capture_number = 2;	
-											
-						}
-						else if(IC_Throttle_flag_capture_number==2)
-						{
-									IC_Throttle3 = HAL_TIM_ReadCapturedValue(&htim5, TIM_CHANNEL_1);
-									IC_Throttle_cycle_time = (IC_Throttle3 - IC_Throttle1);
-									IC_Throttle_flag_capture_number = 3;
-						}else if(IC_Throttle_flag_capture_number==3)
-						{
-									IC_Throttle_flag_capture_number=0;
-									TIM5->CNT = 0;
-						}						
-			}
-}
 void TIM1_CC_IRQHandler(void)
 {
-		
 					//khi co interrup la TIM_IT_CC1, co su kien capture canh	
 						if(__HAL_TIM_GET_ITSTATUS(&htim1, TIM_IT_CC1) == SET)
 						{		
@@ -617,8 +541,7 @@ void TIM1_CC_IRQHandler(void)
 									}
 									else if(IC_Throttle_flag_capture_number==2)
 									{
-												IC_Throttle3 = HAL_TIM_ReadCapturedValue(&htim1, TIM_CHANNEL_1);
-												IC_Throttle_cycle_time = (IC_Throttle3 - IC_Throttle1);
+												IC_Throttle_cycle_time = (HAL_TIM_ReadCapturedValue(&htim1, TIM_CHANNEL_1) - IC_Throttle1);
 												IC_Throttle_flag_capture_number = 3;
 									}else if(IC_Throttle_flag_capture_number==3)
 									{
@@ -627,6 +550,98 @@ void TIM1_CC_IRQHandler(void)
 									}						
 						}
 }
+
+void TIM2_IRQHandler(void)
+{
+	//PA5 ->TIM2_CH1  //Rudder (xoay theo truc z) - goc Yaw
+		if(__HAL_TIM_GET_ITSTATUS(&htim2, TIM_IT_CC1) == SET)
+			{		
+						__HAL_TIM_CLEAR_IT(&htim2, TIM_IT_CC1);
+						__HAL_TIM_CLEAR_FLAG(&htim2, TIM_IT_CC1);		
+						if(IC_Rudder_Xoay_flag_capture_number==0)
+						{					
+									IC_Rudder_Xoay1 = HAL_TIM_ReadCapturedValue(&htim2, TIM_CHANNEL_1);
+									IC_Rudder_Xoay_flag_capture_number = 1;
+										
+						}else if(IC_Rudder_Xoay_flag_capture_number==1)
+						{
+									IC_Rudder_Xoay2 = HAL_TIM_ReadCapturedValue(&htim2, TIM_CHANNEL_1);
+									IC_Rudder_Xoay_pusle_width		= (IC_Rudder_Xoay2 - IC_Rudder_Xoay1);
+									IC_Rudder_Xoay_flag_capture_number = 2;	
+											
+						}
+						else if(IC_Rudder_Xoay_flag_capture_number==2)
+						{
+									IC_Rudder_Xoay_cycle_time = (HAL_TIM_ReadCapturedValue(&htim2, TIM_CHANNEL_1) - IC_Rudder_Xoay1);
+									IC_Rudder_Xoay_flag_capture_number = 3;
+						}else if(IC_Rudder_Xoay_flag_capture_number==3)
+						{
+									IC_Rudder_Xoay_flag_capture_number=0;
+									TIM2->CNT = 0;
+						}						
+			}
+}
+void TIM4_IRQHandler(void)
+{ 
+	//PB8 ->TIM4_CH3  //Elevator (tien - lui) - goc Pitch
+			if(__HAL_TIM_GET_ITSTATUS(&htim4, TIM_IT_CC3) == SET)
+			{		
+						__HAL_TIM_CLEAR_IT(&htim4, TIM_IT_CC3);
+						__HAL_TIM_CLEAR_FLAG(&htim4, TIM_IT_CC3);		
+						if(IC_Elevator_TienLui_flag_capture_number ==0)
+						{					
+									IC_Elevator_TienLui1 = HAL_TIM_ReadCapturedValue(&htim4, TIM_CHANNEL_3);
+									IC_Elevator_TienLui_flag_capture_number = 1;
+										
+						}else if(IC_Elevator_TienLui_flag_capture_number==1)
+						{
+									IC_Elevator_TienLui2 = HAL_TIM_ReadCapturedValue(&htim4, TIM_CHANNEL_3);
+									IC_Elevator_TienLui_pusle_width = (IC_Elevator_TienLui2 - IC_Elevator_TienLui1);
+									IC_Elevator_TienLui_flag_capture_number = 2;	
+											
+						}
+						else if(IC_Elevator_TienLui_flag_capture_number==2)
+						{
+									IC_Elevator_TienLui_cycle_time = (HAL_TIM_ReadCapturedValue(&htim4, TIM_CHANNEL_3) - IC_Elevator_TienLui1);
+									IC_Elevator_TienLui_flag_capture_number = 3;
+						}else if(IC_Elevator_TienLui_flag_capture_number==3)
+						{
+									IC_Elevator_TienLui_flag_capture_number=0;
+									TIM4->CNT = 0;
+						}						
+			}
+}
+void TIM5_IRQHandler(void)
+{
+	//PA1 ->TIM5_CH2  ////Aileron_TraiPhai (trai - phai) - goc Roll
+			if(__HAL_TIM_GET_ITSTATUS(&htim5, TIM_IT_CC2) == SET)
+			{		
+						__HAL_TIM_CLEAR_IT(&htim5, TIM_IT_CC2);
+						__HAL_TIM_CLEAR_FLAG(&htim5, TIM_IT_CC2);		
+						if(IC_Aileron_TraiPhai_flag_capture_number ==0)
+						{					
+									IC_Aileron_TraiPhai1 = HAL_TIM_ReadCapturedValue(&htim5, TIM_CHANNEL_2);
+									IC_Aileron_TraiPhai_flag_capture_number = 1;
+										
+						}else if(IC_Aileron_TraiPhai_flag_capture_number==1)
+						{
+									IC_Aileron_TraiPhai2 = HAL_TIM_ReadCapturedValue(&htim5, TIM_CHANNEL_2);
+									IC_Aileron_TraiPhai_pusle_width		= (IC_Aileron_TraiPhai2 - IC_Aileron_TraiPhai1);
+									IC_Aileron_TraiPhai_flag_capture_number = 2;	
+											
+						}
+						else if(IC_Aileron_TraiPhai_flag_capture_number==2)
+						{
+									IC_Aileron_TraiPhai_cycle_time = (HAL_TIM_ReadCapturedValue(&htim5, TIM_CHANNEL_2) - IC_Aileron_TraiPhai1);
+									IC_Aileron_TraiPhai_flag_capture_number = 3;
+						}else if(IC_Aileron_TraiPhai_flag_capture_number==3)
+						{
+									IC_Aileron_TraiPhai_flag_capture_number=0;
+									TIM5->CNT = 0;
+						}						
+			}
+}
+
 //
 //End Timer 1 PWM input capture
 //
