@@ -19,8 +19,8 @@ PORT E: PE9 																	=> TIM1_CH1 InputCaptrue
 InputCaptrue PIN
 PE9 ->TIM1_CH1  //Throttle (can ga) tang giam toc do quay
 PA5 ->TIM2_CH1  //Rudder (xoay theo truc z) - goc Yaw
-PB8 ->TIM4_CH3  //Elevator (tien - lui) - goc Pitch
-PA1 ->TIM5_CH2  //Aileron_TraiPhai (trai - phai) - goc Roll
+PB8 ->TIM4_CH3  //Elevator (tien - lui) - goc Pitch. 						keo len la +, keo xuong la -
+PA1 ->TIM5_CH2  //Aileron_TraiPhai (trai - phai) - goc Roll     keo qua trai +, keo qua phai -
 				
 */
 /*
@@ -47,9 +47,10 @@ TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim4;
 TIM_HandleTypeDef htim5;
+TIM_HandleTypeDef htim6;
 
 //Throttle (can ga) tang giam toc do quay
-int32_t IC_Throttle1, IC_Throttle2;
+int16_t IC_Throttle1, IC_Throttle2;
 int16_t IC_Throttle_flag_capture_number;
 int16_t IC_Throttle_pusle_width;
 int16_t IC_Throttle_cycle_time;
@@ -58,7 +59,7 @@ int32_t IC_counter_register_timer;
 int32_t IC_interrupt_numbers_timer;
 
 //Rudder (xoay theo truc z) - goc Yaw
-int32_t IC_Rudder_Xoay1, IC_Rudder_Xoay2;
+int16_t IC_Rudder_Xoay1, IC_Rudder_Xoay2;
 int16_t IC_Rudder_Xoay_flag_capture_number;
 int16_t IC_Rudder_Xoay_pusle_width;
 int16_t IC_Rudder_Xoay_cycle_time;
@@ -66,32 +67,30 @@ int16_t IC_Rudder_Xoay_frequency;
 
 
 //Elevator (tien - lui) - goc Pitch
-int32_t IC_Elevator_TienLui1, IC_Elevator_TienLui2;
+int16_t IC_Elevator_TienLui1, IC_Elevator_TienLui2;
 int16_t IC_Elevator_TienLui_flag_capture_number;
 int16_t IC_Elevator_TienLui_pusle_width;
 int16_t IC_Elevator_TienLui_cycle_time;
 int16_t IC_Elevator_TienLui_frequency;
 
 //Aileron_TraiPhai (trai - phai) - goc Roll
-int32_t IC_Aileron_TraiPhai1, IC_Aileron_TraiPhai2;
+int16_t IC_Aileron_TraiPhai1, IC_Aileron_TraiPhai2;
 int16_t IC_Aileron_TraiPhai_flag_capture_number;
 int16_t IC_Aileron_TraiPhai_pusle_width;
 int16_t IC_Aileron_TraiPhai_cycle_time;
 int16_t IC_Aileron_TraiPhai_frequency;
 
 
-//PWM
-int16_t pwm_speed, pwm_left, pwm_right, pwm_front, pwm_back;	
+//PWM 4 motor
+int16_t pwm_motor_1; //  Motor1           Motor2
+int16_t pwm_motor_2; //            ^^  Head(dau quadrotor)
+int16_t pwm_motor_3; //            ||
+int16_t pwm_motor_4; //            ||
+										 //  Motor4           Motor3
 
 //cam bien MPU6050
 uint8_t who_i_am_reg_value_MPU6050;
 float rotation_x, rotation_y, rotation_z;
-
-//InputCapture PWM
-long input_capture_timer1_ch1;
-long input_capture_timer1_ch2;
-long input_capture_timer1_ch3;
-long input_capture_timer1_ch4;
 
 
 //------------------------------
@@ -104,10 +103,7 @@ long input_capture_timer1_ch4;
 															#endif
 															#ifdef RTE_CMSIS_RTOS_RTX
 																extern uint32_t os_time;
-																uint32_t HAL_GetTick(void) 
-																{ 
-																	return os_time; 
-																}
+																uint32_t HAL_GetTick(void) { return os_time; }
 															#endif
 
 //------------------------------------------------------------------
@@ -125,7 +121,6 @@ void SANG_2_LED(int8_t type);
 void SANG_4_LED(void);
 void SANG_4_LED_FOREVER(void);
 void SANG_4_LED_OFF(void);
-															
 void KiemTraCodeOK(void);
 															
 //Khoi Tao LED, BUTTON USER
@@ -144,6 +139,15 @@ void Init_Receiver_TIM_PWM_Capture_TIM4(void);
 void Init_Receiver_TIM_PWM_Capture_TIM5(void);
 
 
+//Dieu chinh huong bay qua receiver
+void SetInitDataQuadrotor(void);
+void SetPWM_4_Motor(int16_t value);
+void SetPWM_1_Motor(int16_t numberMotor, int16_t newValue);
+void SetPWM_Motor_Tang(int16_t numberMotor, int16_t changeValue);
+void SetPWM_Motor_Giam(int16_t numberMotor, int16_t changeValue);
+void DieuChinhHuongBay_Qua_Receiver(void);
+
+
 //i2c chip mpu6050 10truc
 void Init_I2C_GPIO_PortB(void);
 void Init_I2C_Handle_10truc(void);
@@ -156,7 +160,6 @@ void TM_I2C_WRITE( uint8_t device_address, uint8_t register_address, uint8_t dat
 void TM_I2C_READ_MULTI( uint8_t device_address, uint8_t register_address, uint8_t* data, uint16_t count);
 void TM_I2C_READ(  uint8_t device_address, uint8_t register_address, uint8_t* data);
 void TM_MPU6050_ReadAll( uint8_t device_address, TM_MPU6050_t* output );
-
 void Calculate_Accel_X_Angles(TM_MPU6050_t* output, float* angel_x);
 void Calculate_Accel_Y_Angles(TM_MPU6050_t* output, float* angel_y);
 void Calculate_Accel_Z_Angles(TM_MPU6050_t* output, float* angel_z);
@@ -166,39 +169,14 @@ void Sang_Led_By_MPU6050_Values(float angel_x, float angel_y, float angel_z );
 
 //ham delay default
 volatile uint32_t g_iSysTicks = 0;
-void SysTick_Handler()
-{
-	g_iSysTicks++;
-}
-void delay_ms(uint32_t piMillis)
-{
-	uint32_t iStartTime = g_iSysTicks;
-	while( (g_iSysTicks - iStartTime ) < piMillis)
-	{}
-}			
+void SysTick_Handler(){	g_iSysTicks++;}
+void delay_ms(uint32_t piMillis){	uint32_t iStartTime = g_iSysTicks;	while( (g_iSysTicks - iStartTime ) < piMillis)	{}}			
 
-
+	
 int main(void)
 {	
-		TM_MPU6050_t output;
-		pwm_speed=800;			
-		IC_Throttle1 = 0;
-		IC_Throttle2 = 0; 
-		IC_Throttle_pusle_width = 0;
-		IC_Throttle_cycle_time = 0;
-		IC_Throttle_frequency = 0;
-		IC_Throttle_flag_capture_number=0;
-	
-		IC_Elevator_TienLui1 = 0;
-		IC_Elevator_TienLui2 = 0; 
-		IC_Elevator_TienLui_pusle_width = 0;
-		IC_Elevator_TienLui_cycle_time = 0;
-		IC_Elevator_TienLui_frequency = 0;
-		IC_Elevator_TienLui_flag_capture_number=0;
-	
-		IC_counter_register_timer = 0;
-		IC_interrupt_numbers_timer = 0;
-		who_i_am_reg_value_MPU6050 = 0;
+		TM_MPU6050_t output;			
+		SetInitDataQuadrotor();
 	
 																			/* code default cua ARM co san						*/
 																			#ifdef RTE_CMSIS_RTOS                   
@@ -207,16 +185,10 @@ int main(void)
 																			HAL_Init();
 																			SystemClock_Config();	
 		//cap xung clock
-		__GPIOA_CLK_ENABLE();	
-		__GPIOB_CLK_ENABLE();	
-		__GPIOC_CLK_ENABLE();	
-		__GPIOD_CLK_ENABLE();	
-		__GPIOE_CLK_ENABLE();
-		__TIM1_CLK_ENABLE(); 
-		__TIM2_CLK_ENABLE(); 
-		__TIM3_CLK_ENABLE(); 
-		__TIM4_CLK_ENABLE(); 
-		__TIM5_CLK_ENABLE(); 
+		__GPIOA_CLK_ENABLE();			__GPIOB_CLK_ENABLE();			__GPIOC_CLK_ENABLE();	
+		__GPIOD_CLK_ENABLE();			__GPIOE_CLK_ENABLE();		
+		__TIM1_CLK_ENABLE(); 		__TIM2_CLK_ENABLE(); 
+		__TIM3_CLK_ENABLE(); 		__TIM4_CLK_ENABLE(); 		__TIM5_CLK_ENABLE(); 
 		__I2C1_CLK_ENABLE();						
 		
 		//----------------------------------------------------
@@ -229,11 +201,17 @@ int main(void)
 		Init_TIM3_OUTPUT_COMPARE();//cau hinh timer 3 voi mode output PWM
 		
 		
-		//Khoi dong PWM motor
+		//Output compare PWM. Khoi dong PWM motor
 		HAL_TIM_Base_Start_IT(&Tim3_Handle_PWM); 
-		HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_1);		//HAL_TIM_PWM_Start(&handle_timer_3, TIM_CHANNEL_2);
+		HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_1);		
 		HAL_TIMEx_PWMN_Start(&Tim3_Handle_PWM,TIM_CHANNEL_1);	
-		
+		HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_2);		
+		HAL_TIMEx_PWMN_Start(&Tim3_Handle_PWM,TIM_CHANNEL_2);	
+		HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_3);		
+		HAL_TIMEx_PWMN_Start(&Tim3_Handle_PWM,TIM_CHANNEL_3);	
+		HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_4);		
+		HAL_TIMEx_PWMN_Start(&Tim3_Handle_PWM,TIM_CHANNEL_4);	
+			
 		
 		SANG_4_LED();	
 		delay_ms(2000); 
@@ -243,11 +221,11 @@ int main(void)
 		SANG_4_LED_OFF();	
 		delay_ms(500); 
 		__HAL_TIM_SetCompare(&Tim3_Handle_PWM, TIM_CHANNEL_1, 800);
-		//TIM3->CCR1 = 800;			
+		//TIM3->CCR1 = 800;	
 		
 		
 		
-		//---------------------------------------------------			
+		//MPU6050---------------------------------------------------			
 		Init_I2C_GPIO_PortB();											//cau hinh PB6, PB7 doc cam bien mpu6050
 		
 		Init_I2C_Handle_10truc();	//khoi tao I2C handle
@@ -301,16 +279,16 @@ int main(void)
 				while(HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_0)== GPIO_PIN_SET)
 				{	//khi nhan buttun USER ma chua tha ra -> khong lam gi
 				}
-				HAL_GPIO_TogglePin(GPIOD,GPIO_PIN_13);
-				pwm_speed = pwm_speed + 50;
 				
-				if(pwm_speed >= 2000)
-				{
-					pwm_speed = 800;
-				}
+				//pwm_speed = pwm_speed + 50;
+				
+				//if(pwm_speed >= 2000)
+				//{
+				//	pwm_speed = 800;
+				//}
 			}
-			TIM3->CCR1 = pwm_speed;
-			__HAL_TIM_SetCompare(&Tim3_Handle_PWM,TIM_CHANNEL_1, pwm_speed);
+			//TIM3->CCR1 = pwm_speed;
+			//__HAL_TIM_SetCompare(&Tim3_Handle_PWM,TIM_CHANNEL_1, pwm_speed);
 			//END------------PWM--------------------------------------------------
 			
 		}
@@ -318,6 +296,41 @@ int main(void)
 		//End while(1)
 }
 
+void SetInitDataQuadrotor(void)
+{
+		IC_Throttle1 = 0;
+		IC_Throttle2 = 0; 
+		IC_Throttle_pusle_width = 0;
+		IC_Throttle_cycle_time = 0;
+		IC_Throttle_frequency = 0;
+		IC_Throttle_flag_capture_number=0;
+	
+		IC_Elevator_TienLui1 = 0;
+		IC_Elevator_TienLui2 = 0; 
+		IC_Elevator_TienLui_pusle_width = 0;
+		IC_Elevator_TienLui_cycle_time = 0;
+		IC_Elevator_TienLui_frequency = 0;
+		IC_Elevator_TienLui_flag_capture_number=0;
+	
+		IC_Aileron_TraiPhai1 = 0;
+		IC_Aileron_TraiPhai2 = 0;
+		IC_Aileron_TraiPhai_pusle_width = 0;
+		IC_Aileron_TraiPhai_cycle_time = 0;
+		IC_Aileron_TraiPhai_frequency = 0;
+		IC_Aileron_TraiPhai_flag_capture_number = 0;
+	
+		IC_Rudder_Xoay1 = 0;
+		IC_Rudder_Xoay2 = 0;
+		IC_Rudder_Xoay_pusle_width = 0;
+		IC_Rudder_Xoay_cycle_time = 0;
+		IC_Rudder_Xoay_frequency = 0;
+		IC_Rudder_Xoay_flag_capture_number = 0;
+		
+		IC_counter_register_timer = 0;
+		IC_interrupt_numbers_timer = 0;
+		who_i_am_reg_value_MPU6050 = 0;
+		SetPWM_4_Motor(0);
+}
 //
 //
 //Timer 1 PWM input capture
@@ -470,10 +483,10 @@ void Init_Receiver_TIM_PWM_Capture_TIM4(void)
 void Init_Receiver_TIM_PWM_Capture_TIM5(void)
 {
 	GPIO_InitTypeDef 						GPIO_PWM_InputCapture;	
-	TIM_ClockConfigTypeDef sClockSourceConfig;
-  TIM_SlaveConfigTypeDef sSlaveConfig;
-  TIM_MasterConfigTypeDef sMasterConfig;
-  TIM_IC_InitTypeDef sConfigIC;
+	TIM_ClockConfigTypeDef 			sClockSourceConfig;
+  TIM_SlaveConfigTypeDef 			sSlaveConfig;
+  TIM_MasterConfigTypeDef 		sMasterConfig;
+  TIM_IC_InitTypeDef 					sConfigIC;
 	
 	HAL_NVIC_SetPriority(TIM5_IRQn, 0, 0);
 	HAL_NVIC_EnableIRQ(TIM5_IRQn);
@@ -487,7 +500,7 @@ void Init_Receiver_TIM_PWM_Capture_TIM5(void)
 	HAL_GPIO_Init(GPIOA, &GPIO_PWM_InputCapture);
 
   htim5.Instance = TIM5;
-  htim5.Init.Prescaler = 84-1;
+  htim5.Init.Prescaler = 84-1; //84-1;
   htim5.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim5.Init.Period = 65535;
   htim5.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -622,6 +635,8 @@ void TIM5_IRQHandler(void)
 						if(IC_Aileron_TraiPhai_flag_capture_number ==0)
 						{					
 									IC_Aileron_TraiPhai1 = HAL_TIM_ReadCapturedValue(&htim5, TIM_CHANNEL_2);
+									//IC_Aileron_TraiPhai_flag_capture_number = 0;
+									//TIM5->CNT = 0;
 									IC_Aileron_TraiPhai_flag_capture_number = 1;
 										
 						}else if(IC_Aileron_TraiPhai_flag_capture_number==1)
@@ -644,7 +659,7 @@ void TIM5_IRQHandler(void)
 }
 
 //
-//End Timer 1 PWM input capture
+//End PWM input capture
 //
 
 //
@@ -693,7 +708,7 @@ void Init_PWM_GPIO_PORT_C_4Channel(void)
 {
 	//Init PWM GPIOC cho 4 channel
 		GPIO_InitTypeDef GPIO_PWM_PORTC_6789;			
-		GPIO_PWM_PORTC_6789.Pin = GPIO_PIN_9 | GPIO_PIN_8 | GPIO_PIN_7 | GPIO_PIN_6;
+		GPIO_PWM_PORTC_6789.Pin = GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8 | GPIO_PIN_9;
 		GPIO_PWM_PORTC_6789.Mode = GPIO_MODE_AF_PP;
 		GPIO_PWM_PORTC_6789.Pull = GPIO_NOPULL;
 		GPIO_PWM_PORTC_6789.Speed = GPIO_SPEED_FAST;
@@ -720,6 +735,9 @@ void Init_TIM3_OUTPUT_COMPARE()
 		TIM_Output_compare.OCPolarity = TIM_OCPOLARITY_HIGH;
 		TIM_Output_compare.OCFastMode = TIM_OCFAST_ENABLE;		
 		HAL_TIM_PWM_ConfigChannel(&Tim3_Handle_PWM, &TIM_Output_compare, TIM_CHANNEL_1); //config PWM cho channel 1 (PORTC.6)
+		HAL_TIM_PWM_ConfigChannel(&Tim3_Handle_PWM, &TIM_Output_compare, TIM_CHANNEL_2);
+		HAL_TIM_PWM_ConfigChannel(&Tim3_Handle_PWM, &TIM_Output_compare, TIM_CHANNEL_3);
+		HAL_TIM_PWM_ConfigChannel(&Tim3_Handle_PWM, &TIM_Output_compare, TIM_CHANNEL_4);
 		HAL_TIM_PWM_Init(&Tim3_Handle_PWM);
 		HAL_TIM_PWM_MspInit(&Tim3_Handle_PWM);
 }
@@ -956,8 +974,206 @@ void Calculate_Accel_Z_Angles(TM_MPU6050_t* output, float* angel_z)
 //
 
 
+//
+//Lay gia tri cua Receiver de dieu khien 4 motor
+//
+//
+void SetPWM_4_Motor(int16_t value)
+{
+	if(value==0)
+	{
+					pwm_motor_1 = 0;					pwm_motor_2 = 0;					pwm_motor_3 = 0;					pwm_motor_4 = 0;
+		
+	}
+	else{
+			if(value <= PWM_Throtte_Min)
+			{
+					pwm_motor_1 = PWM_Throtte_Min;					pwm_motor_2 = PWM_Throtte_Min;					
+					pwm_motor_3 = PWM_Throtte_Min;					pwm_motor_4 = PWM_Throtte_Min;
+			}else if(value >= PWM_Throtte_Max)
+			{
+					pwm_motor_1 = PWM_Throtte_Max;					pwm_motor_2 = PWM_Throtte_Max;
+					pwm_motor_3 = PWM_Throtte_Max;					pwm_motor_4 = PWM_Throtte_Max;
+			}else{
+					pwm_motor_1 = value;										pwm_motor_2 = value;
+					pwm_motor_3 = value;										pwm_motor_4 = value;
+			}	
+	}
+}
+
+		
+void SetPWM_1_Motor(int16_t numberMotor, int16_t newValue)
+{
+	switch(numberMotor) 
+	{
+		 case 1  :
+				if(newValue <= PWM_Throtte_Min)							{	pwm_motor_1 = PWM_Throtte_Min;}
+				else if (newValue >= PWM_Throtte_Max)				{ pwm_motor_1 = PWM_Throtte_Max;}
+				else 																				{pwm_motor_1 = newValue;					}
+				break; 
+		
+		 case 2  :
+				if(newValue <= PWM_Throtte_Min)							{pwm_motor_2 = PWM_Throtte_Min;}
+				else if (newValue >= PWM_Throtte_Max)				{pwm_motor_2 = PWM_Throtte_Max;}
+				else 																				{pwm_motor_2 = newValue;	}
+				break; 
+		 
+		 case 3  :
+				if(newValue <= PWM_Throtte_Min)							{pwm_motor_3 = PWM_Throtte_Min;}
+				else if (newValue >= PWM_Throtte_Max)				{pwm_motor_3 = PWM_Throtte_Max;}
+				else 																				{pwm_motor_3 = newValue;	}
+				break; 
+		
+		 case 4  :
+				if(newValue <= PWM_Throtte_Min)							{pwm_motor_4 = PWM_Throtte_Min;}
+				else if (newValue >= PWM_Throtte_Max)				{pwm_motor_4 = PWM_Throtte_Max;}
+				else 																				{pwm_motor_4 = newValue;	}
+				break; 
+	}
+}
 
 
+
+void SetPWM_Motor_Tang(int16_t numberMotor, int16_t changeValue)
+{
+	if(changeValue > 0)
+	{
+			switch(numberMotor) 
+			{
+				 case 1  :
+						SetPWM_1_Motor(1, (pwm_motor_1 + changeValue) );
+						break; 
+				
+				 case 2  :
+						SetPWM_1_Motor(2, (pwm_motor_2 + changeValue) );
+						break; 
+				 
+				 case 3  :
+						SetPWM_1_Motor(3, (pwm_motor_3 + changeValue) );
+						break; 
+				
+				 case 4  :
+						SetPWM_1_Motor(4, (pwm_motor_4 + changeValue) );
+						break; 
+			}
+	}
+}
+
+void SetPWM_Motor_Giam(int16_t numberMotor, int16_t changeValue)
+{
+	switch(numberMotor) 
+	{
+		 case 1  :
+				if( (pwm_motor_1 - changeValue) > 0 )
+					SetPWM_1_Motor(1, (pwm_motor_1 - changeValue) );
+				break; 
+		
+		 case 2  :
+				if( (pwm_motor_2 - changeValue) > 0 )
+					SetPWM_1_Motor(2, (pwm_motor_2 - changeValue) );
+				break; 
+		 
+		 case 3  :
+				if( (pwm_motor_3 - changeValue) > 0 )
+					SetPWM_1_Motor(3, (pwm_motor_3 - changeValue) );
+				break; 
+		
+		 case 4  :
+				if( (pwm_motor_4 - changeValue) > 0 )
+					SetPWM_1_Motor(4, (pwm_motor_4 - changeValue) );
+				break; 
+	}
+}
+
+void DieuChinhHuongBay_Qua_Receiver(void)
+{
+	int16_t chenhLechGiaTri = 0;
+	//Ga, tang-giam Ga
+	if(IC_Throttle_pusle_width >= 1000 && IC_Throttle_pusle_width <= 2000)
+	{
+		SetPWM_4_Motor(IC_Throttle_pusle_width);
+	}
+	
+	//Tien - Lui
+	if(IC_Elevator_TienLui_pusle_width >= 1000 && IC_Elevator_TienLui_pusle_width <= 2000)
+	{
+		if(IC_Elevator_TienLui_pusle_width <= PWM_Effect_Min )
+		{
+			//Tien ve truoc, giam dong co 1+2 va tang dong co 3+4			
+			chenhLechGiaTri = PWM_Avg - IC_Elevator_TienLui_pusle_width;
+			SetPWM_Motor_Giam(1,chenhLechGiaTri);
+			SetPWM_Motor_Giam(2,chenhLechGiaTri);
+			SetPWM_Motor_Tang(3,chenhLechGiaTri);
+			SetPWM_Motor_Tang(4,chenhLechGiaTri);
+			
+		}else if(IC_Elevator_TienLui_pusle_width >= PWM_Effect_Max )
+		{
+			//Lui ve phia sau, giam dong co 3+4 va tang dong co 1+2
+			chenhLechGiaTri = IC_Elevator_TienLui_pusle_width - PWM_Avg;
+			SetPWM_Motor_Giam(3,chenhLechGiaTri);
+			SetPWM_Motor_Giam(4,chenhLechGiaTri);
+			SetPWM_Motor_Tang(1,chenhLechGiaTri);
+			SetPWM_Motor_Tang(2,chenhLechGiaTri);
+			
+		}
+		//trong khoang 1470 - 1530 khong lam gi		
+		else	{	}			
+		
+	}
+	
+	//Trai - Phai
+	if(IC_Aileron_TraiPhai_pusle_width >= 1000 && IC_Aileron_TraiPhai_pusle_width <= 2000)
+	{
+		if(IC_Aileron_TraiPhai_pusle_width <= PWM_Effect_Min )
+		{
+			//qua Trai, giam dong co 1+4 va tang dong co 2+3			
+			chenhLechGiaTri = PWM_Avg - IC_Aileron_TraiPhai_pusle_width;
+			SetPWM_Motor_Giam(1,chenhLechGiaTri);
+			SetPWM_Motor_Giam(4,chenhLechGiaTri);
+			SetPWM_Motor_Tang(2,chenhLechGiaTri);
+			SetPWM_Motor_Tang(3,chenhLechGiaTri);
+			
+		}else if(IC_Aileron_TraiPhai_pusle_width >= PWM_Effect_Max )
+		{
+			//qua Phai, giam dong co 2+3 va tang dong co 1+4
+			chenhLechGiaTri = IC_Aileron_TraiPhai_pusle_width - PWM_Avg;
+			SetPWM_Motor_Giam(2,chenhLechGiaTri);
+			SetPWM_Motor_Giam(3,chenhLechGiaTri);
+			SetPWM_Motor_Tang(1,chenhLechGiaTri);
+			SetPWM_Motor_Tang(4,chenhLechGiaTri);
+			
+		}
+		//trong khoang 1470 - 1530 khong lam gi		
+		else	{	}		
+		
+	}
+	
+	//Xoay
+	if(IC_Rudder_Xoay_pusle_width >= 1000 && IC_Rudder_Xoay_pusle_width <= 2000)
+	{		
+		if(IC_Rudder_Xoay_pusle_width <= PWM_Effect_Min )
+		{
+			//Xoay cung chieu kim dong ho, giam dong co 1+3 va tang dong co 2+4			
+			chenhLechGiaTri = PWM_Avg - IC_Rudder_Xoay_pusle_width;
+			SetPWM_Motor_Giam(1,chenhLechGiaTri);
+			SetPWM_Motor_Giam(3,chenhLechGiaTri);
+			SetPWM_Motor_Tang(2,chenhLechGiaTri);
+			SetPWM_Motor_Tang(4,chenhLechGiaTri);
+			
+		}else if(IC_Rudder_Xoay_pusle_width >= PWM_Effect_Max )
+		{
+			//Xoay nguoc chieu kim dong ho, giam dong co 2+4 va tang dong co 1+3
+			chenhLechGiaTri = IC_Rudder_Xoay_pusle_width - PWM_Avg;
+			SetPWM_Motor_Giam(2,chenhLechGiaTri);
+			SetPWM_Motor_Giam(4,chenhLechGiaTri);
+			SetPWM_Motor_Tang(1,chenhLechGiaTri);
+			SetPWM_Motor_Tang(3,chenhLechGiaTri);			
+		}
+		//trong khoang 1470 - 1530 khong lam gi		
+		else	{	}	
+		
+	}
+}
 
 
 
