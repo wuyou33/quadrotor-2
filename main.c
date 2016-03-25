@@ -34,6 +34,7 @@ http://www.farrellf.com/projects/hardware/2012-08-11_STM32F4_Basics:_Timers_(Par
 #include "main.h"
 #include "common.h"
 #include "nguyen_mpu6050.h"
+#include "kalman_filter.h"
 
 //I2C handle, dung de doc value cua cam bien MPU6050
 I2C_HandleTypeDef I2C_Handle_10truc;
