@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <math.h>
-#define PI							(float)3.141592
 	
 
 //----------------------//

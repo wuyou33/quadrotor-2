@@ -966,7 +966,6 @@ void Calculate_Accel_Z_Angles(TM_MPU6050_t* output, float* angel_z)
 		float ACCEL_ZOUT = (float)(output->Accelerometer_Z/MPU6050_ACCE_SENS_2);
 		_sqrt= (float)sqrt( ACCEL_YOUT*ACCEL_YOUT + ACCEL_XOUT*ACCEL_XOUT );
 		*angel_z = (float)(mot_180_do_chia_pi * atan(_sqrt/ACCEL_ZOUT));
-		
 }
 //end Accelerametor 10truc
 //
