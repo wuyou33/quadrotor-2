@@ -227,22 +227,62 @@
         <Ww>
           <count>5</count>
           <WinNumber>1</WinNumber>
-          <ItemText>IC_Throttle_frequency,0x0A</ItemText>
+          <ItemText>IC_Elevator_TienLui1,0x0A</ItemText>
         </Ww>
         <Ww>
           <count>6</count>
           <WinNumber>1</WinNumber>
-          <ItemText>IC_Throttle_flag_capture_number,0x0A</ItemText>
+          <ItemText>IC_Elevator_TienLui2,0x0A</ItemText>
         </Ww>
         <Ww>
           <count>7</count>
           <WinNumber>1</WinNumber>
-          <ItemText>IC_counter_register_timer,0x0A</ItemText>
+          <ItemText>IC_Elevator_TienLui_pusle_width,0x0A</ItemText>
         </Ww>
         <Ww>
           <count>8</count>
           <WinNumber>1</WinNumber>
-          <ItemText>IC_interrupt_numbers_timer,0x0A</ItemText>
+          <ItemText>IC_Elevator_TienLui_cycle_time,0x0A</ItemText>
+        </Ww>
+        <Ww>
+          <count>9</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>IC_Aileron_TraiPhai1,0x0A</ItemText>
+        </Ww>
+        <Ww>
+          <count>10</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>IC_Aileron_TraiPhai2,0x0A</ItemText>
+        </Ww>
+        <Ww>
+          <count>11</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>IC_Aileron_TraiPhai_pusle_width,0x0A</ItemText>
+        </Ww>
+        <Ww>
+          <count>12</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>IC_Aileron_TraiPhai_cycle_time,0x0A</ItemText>
+        </Ww>
+        <Ww>
+          <count>13</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>IC_Rudder_Xoay1,0x0A</ItemText>
+        </Ww>
+        <Ww>
+          <count>14</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>IC_Rudder_Xoay2,0x0A</ItemText>
+        </Ww>
+        <Ww>
+          <count>15</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>IC_Rudder_Xoay_pusle_width,0x0A</ItemText>
+        </Ww>
+        <Ww>
+          <count>16</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>IC_Rudder_Xoay_cycle_time,0x0A</ItemText>
         </Ww>
       </WatchWindow1>
       <WatchWindow2>
@@ -250,31 +290,6 @@
           <count>0</count>
           <WinNumber>2</WinNumber>
           <ItemText>\\PWM_TIMER_Test\main.c\count_user,0x0A</ItemText>
-        </Ww>
-        <Ww>
-          <count>1</count>
-          <WinNumber>2</WinNumber>
-          <ItemText>IC_Elevator_TienLui1,0x0A</ItemText>
-        </Ww>
-        <Ww>
-          <count>2</count>
-          <WinNumber>2</WinNumber>
-          <ItemText>IC_Elevator_TienLui2,0x0A</ItemText>
-        </Ww>
-        <Ww>
-          <count>3</count>
-          <WinNumber>2</WinNumber>
-          <ItemText>IC_Elevator_TienLui_pusle_width,0x0A</ItemText>
-        </Ww>
-        <Ww>
-          <count>4</count>
-          <WinNumber>2</WinNumber>
-          <ItemText>IC_Elevator_TienLui_cycle_time,0x0A</ItemText>
-        </Ww>
-        <Ww>
-          <count>5</count>
-          <WinNumber>2</WinNumber>
-          <ItemText>IC_Elevator_TienLui_flag_capture_number,0x0A</ItemText>
         </Ww>
       </WatchWindow2>
       <MemoryWindow1>
@@ -316,7 +331,7 @@
         <aLa>0</aLa>
         <aPa1>0</aPa1>
         <AscS4>1</AscS4>
-        <aSer4>1</aSer4>
+        <aSer4>0</aSer4>
         <StkLoc>0</StkLoc>
         <TrcWin>0</TrcWin>
         <newCpu>0</newCpu>
@@ -341,6 +356,10 @@
         <Entry>
           <Name>System Viewer\TIM3</Name>
           <WinId>35903</WinId>
+        </Entry>
+        <Entry>
+          <Name>System Viewer\TIM9</Name>
+          <WinId>35901</WinId>
         </Entry>
       </SystemViewers>
     </TargetOption>

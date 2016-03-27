@@ -22,6 +22,8 @@
 #define PWM_Avg									1500
 #define PWM_Effect_Min					1480
 #define PWM_Effect_Max					1520
+#define PWM_START_MIN						1090
+#define PWM_START_MAX						1110
 
 //float radiToDegree(float radians) {    return radians * (180.0 / M_PI); }
 //float degreeToRadi(float degree) {    return degree * (M_PI / 180.0); }
