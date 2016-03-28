@@ -31,6 +31,7 @@ PA3 ->TIM5_CH4  //Aileron_TraiPhai (trai - phai) - goc Roll     keo qua trai +, 
 
 #include "stdio.h"
 #include "math.h"
+#include "stdlib.h"
 #include "main.h"
 #include "common.h"
 #include "nguyen_mpu6050.h"
@@ -90,7 +91,7 @@ int16_t FlyState; // 0: May bay ngung hoat dong, 1:may bay dang bay
 
 uint8_t who_i_am_reg_value_MPU6050;
 float angelX, angelY, angelZ;
-
+float Kalman_angelX, Kalman_angelY, Kalman_angelZ;
 
 //------------------------------
 															//...code default of ARM
@@ -106,6 +107,12 @@ float angelX, angelY, angelZ;
 															#endif
 
 //------------------------------------------------------------------
+//Kalman filter
+float kalman_single(float z, float measure_noise, float process_noise);
+float random_kalman;
+float signal_kalman;
+																
+																
 //ham handle error						
 static void SystemClock_Config(void);
 static void Error_Handler(void); 
@@ -258,8 +265,15 @@ int main(void)
 			TM_MPU6050_ReadAll( MPU6050_I2C_ADDR, &output);
 			Calculate_Accel_X_Angles(&output, &angelX);
 			Calculate_Accel_Y_Angles(&output, &angelY);
-			Calculate_Accel_Z_Angles(&output, &angelZ);
-			Sang_Led_By_MPU6050_Values(angelX, angelY, angelZ);
+			Calculate_Accel_Z_Angles(&output, &angelZ);		
+			Sang_Led_By_MPU6050_Values(angelX, angelY, angelZ);			
+			
+			//tinh goc (angel) qua kalman filter
+			random_kalman = (float)rand()/1000000;
+			signal_kalman = kalman_single(random_kalman, 500, 1);
+			Kalman_angelX = kalman_single(angelX, 0.01, 0.003);
+			Kalman_angelY = kalman_single(angelY, 0.01, 0.003);			
+			
 			//END MPU6050----------
 			
 			if(HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_0)==GPIO_PIN_SET)
@@ -1400,6 +1414,88 @@ void SANG_4_LED_OFF()
 		LED_D_14_LOW;
 		LED_D_15_LOW;
 }
+
+//3 bo loc: bo loc thong thap (tanso thap) LPF, bo loc thong cao (tan so cao)HPF, bo loc Kalman
+float LPF(float x, float CUTOFF,float SAMPLE_RATE)
+{
+			float RC, dt, alpha, y;
+			static float ylast=0;
+			RC = 1.0/(CUTOFF*2*3.14);
+			dt = 1.0/SAMPLE_RATE;
+			alpha = dt/(RC+dt);
+			y = ylast + alpha * ( x - ylast ); 
+			ylast = y;
+			return y;
+}
+
+float HPF(float x, float CUTOFF,float SAMPLE_RATE)
+{
+			float RC = 1.0/(CUTOFF*2*3.14);
+			float dt = 1.0/SAMPLE_RATE;
+			float alpha = RC/(RC+dt);
+			float y;
+			static float xlast=0, ylast=0;
+			y = alpha * ( ylast + x - xlast); 
+			ylast = y;
+			xlast = x;
+			return y;
+}
+float kalman_single(float z, float measure_noise, float process_noise)
+{
+			//z tin hieu bi nhieu~
+			//measure_noise: nhieu he thong'
+			//process_noise: nhieu do luong`
+			const float R = measure_noise*measure_noise;
+			const float Q = process_noise*process_noise; 
+			static float x_hat,P;
+			float P_,K;
+
+			/********* noi suy kalman ***************/
+				P_ = P + Q;                     // P_ = A*P*A' + Q;
+				K = P_/(P_ + R);                // K = P_*H'*inv(H*P_*H' + R);
+				x_hat = x_hat + K*(z - x_hat);  // x_hat = x_hat + K*(z - H*x_hat);
+				P = ( 1 - K)*P_ ;               // P = ( 1 - K*H)*P_ ;
+			/****************************************/ 
+			return x_hat;
+}
+
+/*
+// KasBot V1  -  Kalman filter module
+
+    float Q_angle  =  0.01; //0.001    //0.005
+    float Q_gyro   =  0.0003;  //0.003  //0.0003
+    float R_angle  =  0.01;  //0.03     //0.008
+
+    float x_bias = 0;
+    float P_00 = 0, P_01 = 0, P_10 = 0, P_11 = 0;	
+    float  y, S;
+    float K_0, K_1;
+
+  float kalmanCalculate(float newAngle, float newRate,int looptime)
+  {
+    float dt = float(looptime)/1000; 
+    x_angle += dt * (newRate - x_bias);
+    P_00 +=  - dt * (P_10 + P_01) + Q_angle * dt;
+    P_01 +=  - dt * P_11;
+    P_10 +=  - dt * P_11;
+    P_11 +=  + Q_gyro * dt;
+    
+    y = newAngle - x_angle;
+    S = P_00 + R_angle;
+    K_0 = P_00 / S;
+    K_1 = P_10 / S;
+    
+    x_angle +=  K_0 * y;
+    x_bias  +=  K_1 * y;
+    P_00 -= K_0 * P_00;
+    P_01 -= K_0 * P_01;
+    P_10 -= K_1 * P_00;
+    P_11 -= K_1 * P_01;
+    
+    return x_angle;
+  }
+*/
+
 #ifdef  USE_FULL_ASSERT
 
 /**
