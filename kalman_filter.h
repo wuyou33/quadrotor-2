@@ -1,11 +1,28 @@
 /*
 http://icviet.vn/bai-hoc/thiet-ke-bo-loc-thong-thap-thong-cao-va-kalman-voi-stm32f4.html
+http://codientu.org/threads/11413/
 */
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <math.h>
 
+typedef struct _Kalman_Setting {
+	float Q_angle ;
+	float Q_gyro  ;
+	float R_angle ;
+
+	float bias ;
+	float angle;
+	float P_00 ;
+	float P_01 ;
+	float P_10 ;
+	float P_11 ;
+	float y; 
+	float S;
+	float K_0;
+	float K_1;
+} Kalman_Setting;
 
 /*
 #ifndef _Kalman_h
@@ -96,7 +113,12 @@ public:
 
 
 
-
+//
+//
+//-----------------------------------------------------------------------------------------------------------------------
+//
+//
+//
 
 
 
@@ -147,6 +169,12 @@ float kalmanCalculate(float newAngle, float newRate, int looptime)
 */
 
 
+//
+//
+//-----------------------------------------------------------------------------------------------------------------------
+//
+//
+//
 
 
 
@@ -154,12 +182,27 @@ float kalmanCalculate(float newAngle, float newRate, int looptime)
 
 
 
+
+
+
+
+
+//
+//
+//-----------------------------------------------------------------------------------------------------------------------
+//
+//
+//
+
+
+
+/*
 //The complementary filter - BO LOC BU
 //http://www.pieter-jan.com/node/11
 #define ACCELEROMETER_SENSITIVITY 		8192.0
 #define GYROSCOPE_SENSITIVITY 				65.536 
 #define M_PI 													3.14159265359	    
-#define dt 0.01							// 10 ms sample rate!    
+#define dt 0.01												// 10 ms sample rate!    
  
 void ComplementaryFilter(short accData[3], short gyrData[3], float *pitch, float *roll)
 {
@@ -185,3 +228,61 @@ void ComplementaryFilter(short accData[3], short gyrData[3], float *pitch, float
         *roll = *roll * 0.98 + rollAcc * 0.02;
     }
 } 
+*/
+
+
+//
+//
+//-----------------------------------------------------------------------------------------------------------------------
+//
+//
+//
+
+
+
+
+/*
+//3 bo loc: bo loc thong thap (tanso thap) LPF, bo loc thong cao (tan so cao)HPF, bo loc Kalman
+float LPF(float x, float CUTOFF,float SAMPLE_RATE)
+{
+			float RC, dt, alpha, y;
+			static float ylast=0;
+			RC = 1.0/(CUTOFF*2*3.14);
+			dt = 1.0/SAMPLE_RATE;
+			alpha = dt/(RC+dt);
+			y = ylast + alpha * ( x - ylast ); 
+			ylast = y;
+			return y;
+}
+
+float HPF(float x, float CUTOFF,float SAMPLE_RATE)
+{
+			float RC = 1.0/(CUTOFF*2*3.14);
+			float dt = 1.0/SAMPLE_RATE;
+			float alpha = RC/(RC+dt);
+			float y;
+			static float xlast=0, ylast=0;
+			y = alpha * ( ylast + x - xlast); 
+			ylast = y;
+			xlast = x;
+			return y;
+}
+float kalman_single(float z, float measure_noise, float process_noise)
+{
+			//z tin hieu bi nhieu~
+			//measure_noise: nhieu he thong'
+			//process_noise: nhieu do luong`
+			const float R = measure_noise*measure_noise;
+			const float Q = process_noise*process_noise; 
+			static float x_hat,P;
+			float P_,K;
+
+			// noi suy kalman ***************
+				P_ = P + Q;                     // P_ = A*P*A' + Q;
+				K = P_/(P_ + R);                // K = P_*H'*inv(H*P_*H' + R);
+				x_hat = x_hat + K*(z - x_hat);  // x_hat = x_hat + K*(z - H*x_hat);
+				P = ( 1 - K)*P_ ;               // P = ( 1 - K*H)*P_ ;
+				
+			return x_hat;
+}
+*/

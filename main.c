@@ -89,9 +89,18 @@ int16_t pwm_motor_4; //            ||
 										 //  Motor4           Motor3
 int16_t FlyState; // 0: May bay ngung hoat dong, 1:may bay dang bay
 
+//
+//
+//
 uint8_t who_i_am_reg_value_MPU6050;
-float angelX, angelY, angelZ;
-float Kalman_angelX, Kalman_angelY, Kalman_angelZ;
+int32_t timer;
+double accX_angle, accY_angle, accZ_angle;
+double gyroX_angle, gyroY_angle, gyroZ_angle;
+double Kalman_angelX, Kalman_angelY, Kalman_angelZ;
+
+double gyroXrate, gyroYrate, gyroZrate;
+
+
 
 //------------------------------
 															//...code default of ARM
@@ -108,9 +117,7 @@ float Kalman_angelX, Kalman_angelY, Kalman_angelZ;
 
 //------------------------------------------------------------------
 //Kalman filter
-float kalman_single(float z, float measure_noise, float process_noise);
-float random_kalman;
-float signal_kalman;
+float kalmanCalculate(Kalman_Setting *kalman, float newAngle, float newRate);
 																
 																
 //ham handle error						
@@ -179,7 +186,29 @@ void delay_ms(uint32_t piMillis){	uint32_t iStartTime = g_iSysTicks;	while( (g_i
 	
 int main(void)
 {		
-		TM_MPU6050_t output;			
+		TM_MPU6050_t output;	
+		Kalman_Setting kalmanX;
+		Kalman_Setting kalmanY;
+	
+		kalmanX.Q_angle  =  0.001;  //0.001    //0.005
+		kalmanX.Q_gyro   =  0.003;  //0.003    //0.0003
+		kalmanX.R_angle  =  0.03;  //0.03     //0.008
+		kalmanX.bias = 0;
+		kalmanX.P_00 = 0;
+		kalmanX.P_01 = 0;
+		kalmanX.P_10 = 0; 
+		kalmanX.P_11 = 0;
+	
+		kalmanY.Q_angle  =  0.001;  //0.001    //0.005
+		kalmanY.Q_gyro   =  0.003;  //0.003    //0.0003
+		kalmanY.R_angle  =  0.03;  //0.03     //0.008
+		kalmanY.bias = 0;
+		kalmanY.P_00 = 0;
+		kalmanY.P_01 = 0;
+		kalmanY.P_10 = 0; 
+		kalmanY.P_11 = 0;
+
+
 		SetInitDataQuadrotor();
 	
 																			/* code default cua ARM co san						*/
@@ -228,7 +257,14 @@ int main(void)
 		delay_ms(500); 
 		__HAL_TIM_SetCompare(&Tim3_Handle_PWM, TIM_CHANNEL_1, 800);
 		TIM3->CCR1 = 800;
-		*/		
+		*/
+		
+
+		//---------------------------------------------------
+		Init_Receiver_TIM_PWM_Capture_TIM1(); //PE9 ->TIM1_CH1  //Throttle (can ga)
+		Init_Receiver_TIM_PWM_Capture_TIM2(); //PA5 ->TIM2_CH1  //Rudder  (xoay)
+		Init_Receiver_TIM_PWM_Capture_TIM4(); //PB8 ->TIM4_CH3  //Elevator (tien - lui)
+		Init_Receiver_TIM_PWM_Capture_TIM5(); //PA3 - TIM5_CH4  //Ailenron (trai - phai)
 		
 		
 		//MPU6050---------------------------------------------------			
@@ -249,11 +285,15 @@ int main(void)
 		TM_MPU6050_ReadAll( MPU6050_I2C_ADDR, &output);
 		
 		
-		//---------------------------------------------------
-		Init_Receiver_TIM_PWM_Capture_TIM1(); //PE9 ->TIM1_CH1  //Throttle (can ga)
-		Init_Receiver_TIM_PWM_Capture_TIM2(); //PA5 ->TIM2_CH1  //Rudder  (xoay)
-		Init_Receiver_TIM_PWM_Capture_TIM4(); //PB8 ->TIM4_CH3  //Elevator (tien - lui)
-		Init_Receiver_TIM_PWM_Capture_TIM5(); //PA3 - TIM5_CH4  //Ailenron (trai - phai)			
+		accX_angle  = atan(output.Accelerometer_Y / sqrt(output.Accelerometer_X * output.Accelerometer_X + output.Accelerometer_Z * output.Accelerometer_Z)) * RAD_TO_DEG;
+		accY_angle = atan2(-output.Accelerometer_X, output.Accelerometer_Z) * RAD_TO_DEG;
+		
+		
+		
+		//accX_angle = atan2(output.Accelerometer_Y, output.Accelerometer_Z) * RAD_TO_DEG;		
+		//accY_angle = atan(-output.Accelerometer_X / sqrt(output.Accelerometer_Y * output.Accelerometer_Y + output.Accelerometer_Z * output.Accelerometer_Z)) * RAD_TO_DEG;		
+		gyroX_angle = accX_angle; //set goc gyroX_angle = accX_angle;
+		//timer = HAL_GetTick();	
 																//.... code dafault cua ARM		// when using CMSIS RTOS	// start thread execution 
 																#ifdef RTE_CMSIS_RTOS 
 																	osKernelStart();     
@@ -263,17 +303,25 @@ int main(void)
 		{				
 			//MPU6050-------------
 			TM_MPU6050_ReadAll( MPU6050_I2C_ADDR, &output);
-			Calculate_Accel_X_Angles(&output, &angelX);
-			Calculate_Accel_Y_Angles(&output, &angelY);
-			Calculate_Accel_Z_Angles(&output, &angelZ);		
-			Sang_Led_By_MPU6050_Values(angelX, angelY, angelZ);			
 			
-			//tinh goc (angel) qua kalman filter
-			random_kalman = (float)rand()/1000000;
-			signal_kalman = kalman_single(random_kalman, 500, 1);
-			Kalman_angelX = kalman_single(angelX, 0.01, 0.003);
-			Kalman_angelY = kalman_single(angelY, 0.01, 0.003);			
+			accX_angle  = atan(output.Accelerometer_Y / sqrt(output.Accelerometer_X * output.Accelerometer_X + output.Accelerometer_Z * output.Accelerometer_Z)) * RAD_TO_DEG;
+			accY_angle = atan2(-output.Accelerometer_X, output.Accelerometer_Z) * RAD_TO_DEG;
 			
+			//accX_angle = (atan2(output.Accelerometer_Y, output.Accelerometer_Z)+PI)*RAD_TO_DEG;
+			//accY_angle = atan(-output.Accelerometer_X / sqrt(output.Accelerometer_Y * output.Accelerometer_Y + output.Accelerometer_Z * output.Accelerometer_Z)) * RAD_TO_DEG;
+			
+			gyroXrate = (double)output.Gyroscope_X/131.0;
+			gyroYrate = (double)output.Gyroscope_Y/131.0;
+
+			gyroX_angle += gyroXrate*DT;
+			gyroY_angle += gyroYrate*DT;
+			
+			Kalman_angelX = kalmanCalculate(&kalmanX, accX_angle, gyroXrate);
+			Kalman_angelY = kalmanCalculate(&kalmanY, accY_angle, gyroY_angle);
+			
+							
+					
+			Sang_Led_By_MPU6050_Values(Kalman_angelX, Kalman_angelY, Kalman_angelZ);			
 			//END MPU6050----------
 			
 			if(HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_0)==GPIO_PIN_SET)
@@ -291,9 +339,7 @@ int main(void)
 						(IC_Elevator_TienLui_pusle_width >= PWM_START_MIN && IC_Elevator_TienLui_pusle_width <= PWM_START_MAX) 
 				)
 				{
-						SANG_4_LED(); delay_ms(500); SANG_4_LED_OFF(); delay_ms(500);
-						SANG_4_LED(); delay_ms(500); SANG_4_LED_OFF(); delay_ms(500);
-						SANG_4_LED(); delay_ms(500); KiemTraCodeOK();
+						SANG_4_LED(); delay_ms(5000); SANG_4_LED_OFF();
 						if( (IC_Throttle_pusle_width         >= PWM_START_MIN && IC_Throttle_pusle_width         <= PWM_START_MAX) && 
 								(IC_Aileron_TraiPhai_pusle_width >= PWM_START_MIN && IC_Aileron_TraiPhai_pusle_width <= PWM_START_MAX) && 
 								(IC_Elevator_TienLui_pusle_width >= PWM_START_MIN && IC_Elevator_TienLui_pusle_width <= PWM_START_MAX) 
@@ -311,15 +357,15 @@ int main(void)
 				//Khoi dong may bay	
 				if( (IC_Throttle_pusle_width >= PWM_START_MIN && IC_Throttle_pusle_width <= PWM_START_MAX) && 
 						(IC_Aileron_TraiPhai_pusle_width >= PWM_START_MIN && IC_Aileron_TraiPhai_pusle_width <=PWM_START_MAX) && 
-						(IC_Elevator_TienLui_pusle_width >= PWM_START_MIN && IC_Elevator_TienLui_pusle_width <= PWM_START_MAX) 
+						(IC_Elevator_TienLui_pusle_width >= PWM_START_MIN && IC_Elevator_TienLui_pusle_width <= PWM_START_MAX) && 
+						(IC_Rudder_Xoay_pusle_width >= PWM_START_MIN && IC_Rudder_Xoay_pusle_width <= PWM_START_MAX)
 				)
 				{
-						SANG_4_LED(); delay_ms(500); SANG_4_LED_OFF(); delay_ms(500);
-						SANG_4_LED(); delay_ms(500); SANG_4_LED_OFF(); delay_ms(500);
-						SANG_4_LED(); delay_ms(500); KiemTraCodeOK();
+						SANG_4_LED(); delay_ms(5000); SANG_4_LED_OFF();
 						if( (IC_Throttle_pusle_width >= PWM_START_MIN && IC_Throttle_pusle_width <= PWM_START_MAX) && 
 								(IC_Aileron_TraiPhai_pusle_width >= PWM_START_MIN && IC_Aileron_TraiPhai_pusle_width <=PWM_START_MAX) && 
-								(IC_Elevator_TienLui_pusle_width >= PWM_START_MIN && IC_Elevator_TienLui_pusle_width <= PWM_START_MAX) 
+								(IC_Elevator_TienLui_pusle_width >= PWM_START_MIN && IC_Elevator_TienLui_pusle_width <= PWM_START_MAX) &&
+								(IC_Rudder_Xoay_pusle_width >= PWM_START_MIN && IC_Rudder_Xoay_pusle_width <= PWM_START_MAX)
 						)
 						{
 								SANG_4_LED_OFF();
@@ -1415,86 +1461,39 @@ void SANG_4_LED_OFF()
 		LED_D_15_LOW;
 }
 
-//3 bo loc: bo loc thong thap (tanso thap) LPF, bo loc thong cao (tan so cao)HPF, bo loc Kalman
-float LPF(float x, float CUTOFF,float SAMPLE_RATE)
+
+
+float kalmanCalculate(Kalman_Setting *kalman, float newAngle, float newRate)
 {
-			float RC, dt, alpha, y;
-			static float ylast=0;
-			RC = 1.0/(CUTOFF*2*3.14);
-			dt = 1.0/SAMPLE_RATE;
-			alpha = dt/(RC+dt);
-			y = ylast + alpha * ( x - ylast ); 
-			ylast = y;
-			return y;
+			float dt = (float)DT;	
+			kalman->angle += dt * (newRate - kalman->bias);
+
+		//!    P_00 +=  - dt * (P_10 + P_01) + Q_angle * dt;
+			kalman->P_00 += dt * (dt*kalman->P_11 - kalman->P_01 - kalman->P_10 + kalman->Q_angle);
+		//!    P_01 +=  - dt * P_11;
+			kalman->P_01 -= dt * kalman->P_11;    
+		//!    P_10 +=  - dt * P_11;
+			kalman->P_10 -= dt * kalman->P_11;
+		//!    P_11 +=  + Q_gyro * dt;
+			kalman->P_11 += kalman->Q_gyro * dt;
+
+			kalman->S = kalman->P_00 + kalman->R_angle;
+			
+			kalman->K_0 = kalman->P_00 / kalman->S;
+			kalman->K_1 = kalman->P_10 / kalman->S;
+			
+			kalman->y = newAngle - kalman->angle;
+			
+			kalman->angle +=  kalman->K_0 * kalman->y;
+			kalman->bias  +=  kalman->K_1 * kalman->y;
+
+			kalman->P_00 -= kalman->K_0 * kalman->P_00;
+			kalman->P_01 -= kalman->K_0 * kalman->P_01;
+			kalman->P_10 -= kalman->K_1 * kalman->P_00;
+			kalman->P_11 -= kalman->K_1 * kalman->P_01;
+			
+			return kalman->angle;
 }
-
-float HPF(float x, float CUTOFF,float SAMPLE_RATE)
-{
-			float RC = 1.0/(CUTOFF*2*3.14);
-			float dt = 1.0/SAMPLE_RATE;
-			float alpha = RC/(RC+dt);
-			float y;
-			static float xlast=0, ylast=0;
-			y = alpha * ( ylast + x - xlast); 
-			ylast = y;
-			xlast = x;
-			return y;
-}
-float kalman_single(float z, float measure_noise, float process_noise)
-{
-			//z tin hieu bi nhieu~
-			//measure_noise: nhieu he thong'
-			//process_noise: nhieu do luong`
-			const float R = measure_noise*measure_noise;
-			const float Q = process_noise*process_noise; 
-			static float x_hat,P;
-			float P_,K;
-
-			/********* noi suy kalman ***************/
-				P_ = P + Q;                     // P_ = A*P*A' + Q;
-				K = P_/(P_ + R);                // K = P_*H'*inv(H*P_*H' + R);
-				x_hat = x_hat + K*(z - x_hat);  // x_hat = x_hat + K*(z - H*x_hat);
-				P = ( 1 - K)*P_ ;               // P = ( 1 - K*H)*P_ ;
-			/****************************************/ 
-			return x_hat;
-}
-
-/*
-// KasBot V1  -  Kalman filter module
-
-    float Q_angle  =  0.01; //0.001    //0.005
-    float Q_gyro   =  0.0003;  //0.003  //0.0003
-    float R_angle  =  0.01;  //0.03     //0.008
-
-    float x_bias = 0;
-    float P_00 = 0, P_01 = 0, P_10 = 0, P_11 = 0;	
-    float  y, S;
-    float K_0, K_1;
-
-  float kalmanCalculate(float newAngle, float newRate,int looptime)
-  {
-    float dt = float(looptime)/1000; 
-    x_angle += dt * (newRate - x_bias);
-    P_00 +=  - dt * (P_10 + P_01) + Q_angle * dt;
-    P_01 +=  - dt * P_11;
-    P_10 +=  - dt * P_11;
-    P_11 +=  + Q_gyro * dt;
-    
-    y = newAngle - x_angle;
-    S = P_00 + R_angle;
-    K_0 = P_00 / S;
-    K_1 = P_10 / S;
-    
-    x_angle +=  K_0 * y;
-    x_bias  +=  K_1 * y;
-    P_00 -= K_0 * P_00;
-    P_01 -= K_0 * P_01;
-    P_10 -= K_1 * P_00;
-    P_11 -= K_1 * P_01;
-    
-    return x_angle;
-  }
-*/
 
 #ifdef  USE_FULL_ASSERT
 
