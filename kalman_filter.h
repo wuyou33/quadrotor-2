@@ -1,6 +1,15 @@
 /*
 http://icviet.vn/bai-hoc/thiet-ke-bo-loc-thong-thap-thong-cao-va-kalman-voi-stm32f4.html
 http://codientu.org/threads/11413/
+
+//Code kalman filter
+http://blog.tkjelectronics.dk/2012/09/a-practical-approach-to-kalman-filter-and-how-to-implement-it/
+https://github.com/TKJElectronics/KalmanFilter
+https://github.com/TKJElectronics/KalmanFilter/blob/master/Kalman.cpp
+https://github.com/TKJElectronics/KalmanFilter/blob/master/Kalman.h
+https://github.com/TKJElectronics/KalmanFilter/blob/master/examples/MPU6050/MPU6050.ino
+https://github.com/TKJElectronics/Example-Sketch-for-IMU-including-Kalman-filter/blob/master/IMU/MPU6050/MPU6050.ino
+
 */
 #include <stdio.h>
 #include <stdint.h>
@@ -135,13 +144,7 @@ float  y, S;
 float K_0, K_1;
 
 
-//Code kalman filter
-//http://blog.tkjelectronics.dk/2012/09/a-practical-approach-to-kalman-filter-and-how-to-implement-it/
-//https://github.com/TKJElectronics/KalmanFilter
-//https://github.com/TKJElectronics/KalmanFilter/blob/master/Kalman.cpp
 
-//http://www.instructables.com/id/Guide-to-gyro-and-accelerometer-with-Arduino-inclu/
-//https://github.com/TKJElectronics/QuadCopter_STM32F4
 
 float kalmanCalculate(float newAngle, float newRate, int looptime)
 {
