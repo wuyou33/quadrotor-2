@@ -421,6 +421,11 @@
               <FileType>1</FileType>
               <FilePath>.\main.c</FilePath>
             </File>
+            <File>
+              <FileName>kalman_filter.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\kalman_filter.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
