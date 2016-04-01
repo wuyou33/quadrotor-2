@@ -97,8 +97,10 @@ int32_t timer;
 double accX_angle, accY_angle, accZ_angle;
 double gyroX_angle, gyroY_angle, gyroZ_angle;
 double Kalman_angelX, Kalman_angelY, Kalman_angelZ;
-
 double gyroXrate, gyroYrate, gyroZrate;
+Kalman_Setting kalmanX;
+Kalman_Setting kalmanY;
+TM_MPU6050_t output;
 
 
 
@@ -185,33 +187,9 @@ void delay_ms(uint32_t piMillis){	uint32_t iStartTime = g_iSysTicks;	while( (g_i
 
 	
 int main(void)
-{		
-		TM_MPU6050_t output;	
-		Kalman_Setting kalmanX;
-		Kalman_Setting kalmanY;
-	
-		kalmanX.Q_angle  =  0.001;  //0.001    //0.005
-		kalmanX.Q_gyro   =  0.003;  //0.003    //0.0003
-		kalmanX.R_angle  =  0.03;  //0.03     //0.008
-		kalmanX.bias = 0;
-		kalmanX.P_00 = 0;
-		kalmanX.P_01 = 0;
-		kalmanX.P_10 = 0; 
-		kalmanX.P_11 = 0;
-	
-		kalmanY.Q_angle  =  0.001;  //0.001    //0.005
-		kalmanY.Q_gyro   =  0.003;  //0.003    //0.0003
-		kalmanY.R_angle  =  0.03;  //0.03     //0.008
-		kalmanY.bias = 0;
-		kalmanY.P_00 = 0;
-		kalmanY.P_01 = 0;
-		kalmanY.P_10 = 0; 
-		kalmanY.P_11 = 0;
-
-
+{				
 		SetInitDataQuadrotor();
-	
-																			/* code default cua ARM co san						*/
+																				/* code default cua ARM co san						*/
 																			#ifdef RTE_CMSIS_RTOS                   
 																				osKernelInitialize();                 
 																			#endif		
@@ -247,17 +225,19 @@ int main(void)
 		HAL_TIMEx_PWMN_Start(&Tim3_Handle_PWM,TIM_CHANNEL_4);	
 			
 		
-		/* //Code config cho motor, luc dau tao clock PWM max 2000ms trong vong 2s, sau do giam xuong 700ms
+		//Code config cho motor, luc dau tao clock PWM max 2000ms trong vong 2s, sau do giam xuong 700ms
+		TIM3->CCR1 = 2000; 
+		TIM3->CCR2 = 2000;
+		TIM3->CCR3 = 2000;
+		TIM3->CCR4 = 2000;
 		SANG_4_LED();	
-		delay_ms(2000); 
-		__HAL_TIM_SetCompare(&Tim3_Handle_PWM, TIM_CHANNEL_1, 700);
-		TIM3->CCR1 = 700;
-		
-		SANG_4_LED_OFF();	
-		delay_ms(500); 
-		__HAL_TIM_SetCompare(&Tim3_Handle_PWM, TIM_CHANNEL_1, 800);
-		TIM3->CCR1 = 800;
-		*/
+		delay_ms(2000); 		
+		TIM3->CCR1 = 700; //__HAL_TIM_SetCompare(&Tim3_Handle_PWM, TIM_CHANNEL_1, 700);
+		TIM3->CCR2 = 700;
+		TIM3->CCR3 = 700;
+		TIM3->CCR4 = 700;		
+		SANG_4_LED_OFF();
+		//cau hinh xong toc do cho 4 motor
 		
 
 		//---------------------------------------------------
@@ -385,6 +365,24 @@ int main(void)
 
 void SetInitDataQuadrotor(void)
 {
+		kalmanX.Q_angle  =  0.001;  //0.001    //0.005
+		kalmanX.Q_gyro   =  0.003;  //0.003    //0.0003
+		kalmanX.R_angle  =  0.03;  //0.03     //0.008
+		kalmanX.bias = 0;
+		kalmanX.P_00 = 0;
+		kalmanX.P_01 = 0;
+		kalmanX.P_10 = 0; 
+		kalmanX.P_11 = 0;
+	
+		kalmanY.Q_angle  =  0.001;  //0.001    //0.005
+		kalmanY.Q_gyro   =  0.003;  //0.003    //0.0003
+		kalmanY.R_angle  =  0.03;  //0.03     //0.008
+		kalmanY.bias = 0;
+		kalmanY.P_00 = 0;
+		kalmanY.P_01 = 0;
+		kalmanY.P_10 = 0; 
+		kalmanY.P_11 = 0;
+	
 		IC_Throttle1 = 0;
 		IC_Throttle2 = 0; 
 		IC_Throttle_pusle_width = 0;
@@ -811,11 +809,12 @@ void Init_PWM_TIM3_Handle()
 void Init_TIM3_OUTPUT_COMPARE()
 {
 		TIM_OC_InitTypeDef  TIM_Output_compare;
-		TIM_Output_compare.OCMode = TIM_OCMODE_PWM1;
-		TIM_Output_compare.OCIdleState = TIM_OCIDLESTATE_SET;
-		TIM_Output_compare.Pulse = 2000;											//set dutty cycle = Pulse*100/Period = 2000*100 / 20000 = 10%
-		TIM_Output_compare.OCPolarity = TIM_OCPOLARITY_HIGH;
-		TIM_Output_compare.OCFastMode = TIM_OCFAST_ENABLE;		
+		TIM_Output_compare.OCMode 				= TIM_OCMODE_PWM1;
+		TIM_Output_compare.OCIdleState 		= TIM_OCIDLESTATE_SET;
+		TIM_Output_compare.Pulse 					= 2000;											//set dutty cycle = Pulse*100/Period = 2000*100 / 20000 = 10%
+		TIM_Output_compare.OCPolarity 		= TIM_OCPOLARITY_HIGH;
+		TIM_Output_compare.OCFastMode 		= TIM_OCFAST_ENABLE;		
+	
 		HAL_TIM_PWM_ConfigChannel(&Tim3_Handle_PWM, &TIM_Output_compare, TIM_CHANNEL_1); //config PWM cho channel 1 (PORTC.6)
 		HAL_TIM_PWM_ConfigChannel(&Tim3_Handle_PWM, &TIM_Output_compare, TIM_CHANNEL_2);
 		HAL_TIM_PWM_ConfigChannel(&Tim3_Handle_PWM, &TIM_Output_compare, TIM_CHANNEL_3);
@@ -1063,11 +1062,7 @@ void SetPWM_4_Motor(int16_t value)
 {
 	if(value==0)
 	{
-					pwm_motor_1 = 0;					
-					pwm_motor_2 = 0;					
-					pwm_motor_3 = 0;					
-					pwm_motor_4 = 0;
-		
+					pwm_motor_1 = 0;	pwm_motor_2 = 0;		pwm_motor_3 = 0;		pwm_motor_4 = 0;		
 	}
 	else{
 			if(value <= PWM_Throtte_Min)
@@ -1083,10 +1078,14 @@ void SetPWM_4_Motor(int16_t value)
 					pwm_motor_3 = value;										pwm_motor_4 = value;
 			}	
 	}
-	TIM3->CCR1 = pwm_motor_1;
-	TIM3->CCR2 = pwm_motor_2;
-	TIM3->CCR3 = pwm_motor_3;
-	TIM3->CCR4 = pwm_motor_4;
+	if(pwm_motor_1 != 0)
+		TIM3->CCR1 = pwm_motor_1;
+	if(pwm_motor_2 != 0)
+		TIM3->CCR2 = pwm_motor_2;
+	if(pwm_motor_3 != 0)
+		TIM3->CCR3 = pwm_motor_3;
+	if(pwm_motor_4 != 0)
+		TIM3->CCR4 = pwm_motor_4;
 }
 
 		
