@@ -237,6 +237,10 @@ int main(void)
 		TIM3->CCR3 = 700;
 		TIM3->CCR4 = 700;		
 		SANG_4_LED_OFF();
+		delay_ms(1000);
+		SANG_4_LED();
+		delay_ms(1000); 		
+		SANG_4_LED_OFF();
 		//cau hinh xong toc do cho 4 motor
 		
 
@@ -266,9 +270,7 @@ int main(void)
 		
 		
 		accX_angle  = atan(output.Accelerometer_Y / sqrt(output.Accelerometer_X * output.Accelerometer_X + output.Accelerometer_Z * output.Accelerometer_Z)) * RAD_TO_DEG;
-		accY_angle = atan2(-output.Accelerometer_X, output.Accelerometer_Z) * RAD_TO_DEG;
-		
-		
+		accY_angle = atan2(-output.Accelerometer_X, output.Accelerometer_Z) * RAD_TO_DEG;		
 		
 		//accX_angle = atan2(output.Accelerometer_Y, output.Accelerometer_Z) * RAD_TO_DEG;		
 		//accY_angle = atan(-output.Accelerometer_X / sqrt(output.Accelerometer_Y * output.Accelerometer_Y + output.Accelerometer_Z * output.Accelerometer_Z)) * RAD_TO_DEG;		
@@ -286,9 +288,6 @@ int main(void)
 			
 			accX_angle  = atan(output.Accelerometer_Y / sqrt(output.Accelerometer_X * output.Accelerometer_X + output.Accelerometer_Z * output.Accelerometer_Z)) * RAD_TO_DEG;
 			accY_angle = atan2(-output.Accelerometer_X, output.Accelerometer_Z) * RAD_TO_DEG;
-			
-			//accX_angle = (atan2(output.Accelerometer_Y, output.Accelerometer_Z)+PI)*RAD_TO_DEG;
-			//accY_angle = atan(-output.Accelerometer_X / sqrt(output.Accelerometer_Y * output.Accelerometer_Y + output.Accelerometer_Z * output.Accelerometer_Z)) * RAD_TO_DEG;
 			
 			gyroXrate = (double)output.Gyroscope_X/131.0;
 			gyroYrate = (double)output.Gyroscope_Y/131.0;
