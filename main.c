@@ -286,6 +286,7 @@ int main(void)
 			
 			accX_angle  = atan(output.Accelerometer_Y / sqrt(output.Accelerometer_X * output.Accelerometer_X + output.Accelerometer_Z * output.Accelerometer_Z)) * RAD_TO_DEG;
 			accY_angle = atan2(-output.Accelerometer_X, output.Accelerometer_Z) * RAD_TO_DEG;
+			//ypr[2] = atan2(gy, sqrt(gx*gx + gz*gz));
 			//accZ_angle = atan(output.Accelerometer_Z/sqrt(output.Accelerometer_X*output.Accelerometer_X + output.Accelerometer_Z*output.Accelerometer_Z)) * RAD_TO_DEG;
 			//accZ_angle = output.Gyroscope_Z*DT; //angel Z (yaww) = tocdo_goc*thoigian;
 			if ((accY_angle < -90 && Kalman_angelY > 90) || (accY_angle > 90 && Kalman_angelY < -90)) 
