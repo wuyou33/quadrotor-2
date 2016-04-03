@@ -426,6 +426,16 @@
               <FileType>1</FileType>
               <FilePath>.\kalman_filter.c</FilePath>
             </File>
+            <File>
+              <FileName>nguyen_pid.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\nguyen_pid.c</FilePath>
+            </File>
+            <File>
+              <FileName>nguyen_pid.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\nguyen_pid.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

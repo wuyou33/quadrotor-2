@@ -35,7 +35,9 @@ PA3 ->TIM5_CH4  //Aileron_TraiPhai (trai - phai) - goc Roll     keo qua trai +, 
 #include "main.h"
 #include "common.h"
 #include "nguyen_mpu6050.h"
+#include "nguyen_pid.h"
 #include "kalman_filter.h"
+
 
 //I2C handle, dung de doc value cua cam bien MPU6050
 I2C_HandleTypeDef I2C_Handle_10truc;
@@ -100,6 +102,7 @@ double Kalman_angelX, Kalman_angelY, Kalman_angelZ;
 double gyroXrate, gyroYrate, gyroZrate;
 Kalman_Setting kalmanX;
 Kalman_Setting kalmanY;
+Kalman_Setting kalmanZ;
 TM_MPU6050_t output;
 
 
@@ -226,16 +229,10 @@ int main(void)
 			
 		
 		//Code config cho motor, luc dau tao clock PWM max 2000ms trong vong 2s, sau do giam xuong 700ms
-		TIM3->CCR1 = 2000; 
-		TIM3->CCR2 = 2000;
-		TIM3->CCR3 = 2000;
-		TIM3->CCR4 = 2000;
+		TIM3->CCR1 = 2000; 		TIM3->CCR2 = 2000;		TIM3->CCR3 = 2000;		TIM3->CCR4 = 2000;
 		SANG_4_LED();	
 		delay_ms(2000); 		
-		TIM3->CCR1 = 700; //__HAL_TIM_SetCompare(&Tim3_Handle_PWM, TIM_CHANNEL_1, 700);
-		TIM3->CCR2 = 700;
-		TIM3->CCR3 = 700;
-		TIM3->CCR4 = 700;		
+		TIM3->CCR1 = 700; 		TIM3->CCR2 = 700;		TIM3->CCR3 = 700;		TIM3->CCR4 = 700;		
 		SANG_4_LED_OFF();
 		delay_ms(1000);
 		SANG_4_LED();
@@ -252,8 +249,7 @@ int main(void)
 		
 		
 		//MPU6050---------------------------------------------------			
-		Init_I2C_GPIO_PortB();											//cau hinh PB6, PB7 doc cam bien mpu6050
-		
+		Init_I2C_GPIO_PortB();											//cau hinh PB6, PB7 doc cam bien mpu6050		
 		Init_I2C_Handle_10truc();	
 		TM_I2C_IS_DEVICE_CONNECTED();	
 				
@@ -270,7 +266,9 @@ int main(void)
 		
 		
 		accX_angle  = atan(output.Accelerometer_Y / sqrt(output.Accelerometer_X * output.Accelerometer_X + output.Accelerometer_Z * output.Accelerometer_Z)) * RAD_TO_DEG;
-		accY_angle = atan2(-output.Accelerometer_X, output.Accelerometer_Z) * RAD_TO_DEG;		
+		accY_angle = atan2(-output.Accelerometer_X, output.Accelerometer_Z) * RAD_TO_DEG;
+		//accZ_angle = atan(output.Accelerometer_Z/sqrt(output.Accelerometer_X*output.Accelerometer_X + output.Accelerometer_Z*output.Accelerometer_Z)) * RAD_TO_DEG;		
+		//accZ_angle = output.Gyroscope_Z*DT; //angel Z (yaww) = tocdo_goc*thoigian;
 		
 		//accX_angle = atan2(output.Accelerometer_Y, output.Accelerometer_Z) * RAD_TO_DEG;		
 		//accY_angle = atan(-output.Accelerometer_X / sqrt(output.Accelerometer_Y * output.Accelerometer_Y + output.Accelerometer_Z * output.Accelerometer_Z)) * RAD_TO_DEG;		
@@ -288,15 +286,37 @@ int main(void)
 			
 			accX_angle  = atan(output.Accelerometer_Y / sqrt(output.Accelerometer_X * output.Accelerometer_X + output.Accelerometer_Z * output.Accelerometer_Z)) * RAD_TO_DEG;
 			accY_angle = atan2(-output.Accelerometer_X, output.Accelerometer_Z) * RAD_TO_DEG;
+			//accZ_angle = atan(output.Accelerometer_Z/sqrt(output.Accelerometer_X*output.Accelerometer_X + output.Accelerometer_Z*output.Accelerometer_Z)) * RAD_TO_DEG;
+			//accZ_angle = output.Gyroscope_Z*DT; //angel Z (yaww) = tocdo_goc*thoigian;
+			if ((accY_angle < -90 && Kalman_angelY > 90) || (accY_angle > 90 && Kalman_angelY < -90)) 
+				{
+					kalmanY.angle = accY_angle;
+					Kalman_angelY = accY_angle;
+					gyroY_angle = accY_angle;
+			} else
+				Kalman_angelY = kalmanCalculate(&kalmanY, accY_angle, gyroYrate);// Calculate the angle using a Kalman filter
+
+			if (abs(Kalman_angelY) > 90)
+				gyroXrate = -gyroXrate; // Invert rate, so it fits the restriced accelerometer reading
+			Kalman_angelX = kalmanCalculate(&kalmanX, accX_angle, gyroXrate); // Calculate the angle using a Kalman filter
+	
 			
 			gyroXrate = (double)output.Gyroscope_X/131.0;
 			gyroYrate = (double)output.Gyroscope_Y/131.0;
+			gyroZrate = (double)output.Gyroscope_Z/131.0;
 
-			gyroX_angle += gyroXrate*DT;
-			gyroY_angle += gyroYrate*DT;
+			gyroX_angle += gyroXrate * DT; // Calculate gyro angle without any filter
+			gyroY_angle += gyroYrate * DT; // Calculate gyro angle without any filter
+			gyroZ_angle += gyroZrate * DT; // Calculate gyro angle without any filter
 			
-			Kalman_angelX = kalmanCalculate(&kalmanX, accX_angle, gyroXrate);
-			Kalman_angelY = kalmanCalculate(&kalmanY, accY_angle, gyroY_angle);
+			//Kalman_angelX = kalmanCalculate(&kalmanX, accX_angle, gyroXrate);
+			//Kalman_angelY = kalmanCalculate(&kalmanY, accY_angle, gyroYrate);
+			//Kalman_angelZ = kalmanCalculate(&kalmanZ, gyroZ_angle, gyroZrate);
+			
+			if (gyroX_angle < -180 || gyroX_angle > 180)
+				gyroX_angle = Kalman_angelX;
+			if (gyroY_angle < -180 || gyroY_angle > 180)
+				gyroY_angle = Kalman_angelY;
 			
 							
 					
@@ -349,7 +369,8 @@ int main(void)
 						{
 								SANG_4_LED_OFF();
 								FlyState = 0;
-								SetPWM_4_Motor(0);
+								SetPWM_4_Motor(1000); //stop all motor
+								//SetPWM_4_Motor(0);
 						}
 				}
 				else
@@ -381,6 +402,15 @@ void SetInitDataQuadrotor(void)
 		kalmanY.P_01 = 0;
 		kalmanY.P_10 = 0; 
 		kalmanY.P_11 = 0;
+		
+		kalmanZ.Q_angle  =  0.001;  //0.001    //0.005
+		kalmanZ.Q_gyro   =  0.003;  //0.003    //0.0003
+		kalmanZ.R_angle  =  0.03;  //0.03     //0.008
+		kalmanZ.bias = 0;
+		kalmanZ.P_00 = 0;
+		kalmanZ.P_01 = 0;
+		kalmanZ.P_10 = 0; 
+		kalmanZ.P_11 = 0;
 	
 		IC_Throttle1 = 0;
 		IC_Throttle2 = 0; 
@@ -1260,7 +1290,6 @@ void DieuChinhHuongBay_Qua_Receiver(void)
 		//trong khoang 1470 - 1530 khong lam gi				
 	}
 }
-
 
 
 
