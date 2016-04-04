@@ -17,6 +17,52 @@
 #define YAW_PID_MIN  100.0
 #define YAW_PID_MAX  100.0
 
+
+//Khai bao struct 
+typedef struct 
+{
+		double setpoint; 		//gia tri dat(mong muon). vidu goc lech roll->setpoint = 0
+    double kP; 					//proportional_gain; he so ti le kP
+    double kI; 					//integral_gain;     he so ti le tich phan kI
+    double kD; 					//derivative_gain;   he so ti le vi phan(dao ham) kD
+	
+    double last_error;    			//
+    double integral_error;     	// error cua tich phan
+		double diff_error;         	//do lech error giua 2 lan loop time(dt)
+    double output;							//output cua PID controller - tin hieu dieu khien
+		
+} PID;
+void pid_setup_gain(PID* pid, double kP, double kI, double kD)
+{
+	pid->kP = kP;
+	pid->kI = kI;
+	pid->kD = kD;
+}
+void pid_setup_error(PID* pid) 
+{
+    pid->last_error = 0;
+    pid->integral_error = 0;
+		pid->diff_error = 0;
+}
+ 
+void pid_compute(PID* pid, double Input, double dt) 
+{
+		//curr_error la do lech so voi gia tri dat, vi du goc roll lech 5 do (gia tri dat - mong muon = 0 do)
+		double error = pid->setpoint - Input;
+		
+		pid->integral_error +=  error * dt;
+		pid->diff_error = (error - pid->last_error)/dt;
+  
+		//Compute PID Output
+		//cong thuc tinh output(control)
+		//output = Kp * err + (Ki * int * dt) + (Kd * der /dt);
+		pid->output = (pid->kP*error) + (pid->kI * pid->integral_error) + (pid->kD * pid->diff_error);
+	
+		pid->last_error = error;
+}
+ 
+
+
 //-------------------------
 // https://github.com/benripley/Arduino-Quadcopter/tree/master/Quadcopter
 // http://yameb.blogspot.com/2013/05/my-first-quadrotor-control-overview-and.html
