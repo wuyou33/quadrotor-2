@@ -119,9 +119,135 @@ typedef struct _TM_MPU6050_t {
 } TM_MPU6050_t;
 
 
+/*double getZAngle()
+{
+	double Vx = 0;
+	double Vy = 0;
+	double Vz = 0;
+	double Fx = 0;
+	double Fy = 0;
+	double Fz = 0;
+	double F = 0;
+	Vx = readAcc(VxPin);
+	Vy = readAcc(VyPin);
+	Vz = readAcc(VzPin);
+	Vx -= VXzero;
+	Vy -= VYzero;
+	Vz -= VZzero;
+	Fx = Vx/sensitivity;
+	Fy = Vy/sensitivity;
+	Fz = Vz/sensitivity;
+	F = sqrt(sq(Fx)+sq(Fy)+sq(Fz));
+	return asin(Fz/F)*(180/PI);
+}
+*/
+
+
+/*
+http://www.hobbytronics.co.uk/accelerometer-info
+void calc_xy_angles(void){
+   // Using x y and z from accelerometer, calculate x and y angles
+   float x_val, y_val, z_val, result;
+   unsigned short long x2, y2, z2; //24 bit
+
+   // Lets get the deviations from our baseline
+   x_val = (float)accel_value_x-(float)accel_center_x;
+   y_val = (float)accel_value_y-(float)accel_center_y;
+   z_val = (float)accel_value_z-(float)accel_center_z;
+
+   // Work out the squares 
+   x2 = (unsigned short long)(x_val*x_val);
+   y2 = (unsigned short long)(y_val*y_val);
+   z2 = (unsigned short long)(z_val*z_val);
+
+   //X Axis
+   result=sqrt(y2+z2);
+   result=x_val/result;
+   accel_angle_x = atan(result);
+
+   //Y Axis
+   result=sqrt(x2+z2);
+   result=y_val/result;
+   accel_angle_y = atan(result);
+}
+*/
 
 
 
+/*
+//--- Function to obtain angles based on accelerometer readings ---//
+float IMU::acceDeg(int axisSelect) {
+  float Ax=ToG(acceX());
+  float Ay=ToG(acceY());
+  float Az=ToG(acceZ());
+  
+  float ADegX, ADegY, ADegZ;
+  
+  
+  switch (axisSelect)
+  {
+    case 0:
+	ADegX=((atan(Ax/(sqrt((Ay*Ay)+(Az*Az)))))/PI)*180;
+    return ADegX;
+    break;
+    case 1:
+	ADegY=((atan(Ay/(sqrt((Ax*Ax)+(Az*Az)))))/PI)*180;
+    return ADegY;
+    break;
+    case 2:
+	ADegZ=((atan((sqrt((Ax*Ax)+(Ay*Ay)))/Az))/PI)*180;
+    return ADegZ;
+    break;
+  }
+}
+
+
+//--- Function to obtain angles based on gyroscope readings ---//
+float IMU::gyroDeg(int axisSelect) {
+  time_old=time;
+  time=millis();
+  float dt=time-time_old;
+  if (dt>=1000)
+  {
+    dt=0;
+  }
+  float Gx;
+  float Gy;
+  float Gz;
+  
+  
+  
+  switch (axisSelect)
+  {
+    case 0:
+	{
+		Gx=ToD(gyroX());
+		if (Gx>0 && Gx<1.4)
+		{
+			Gx=0;
+		}
+		angleX+=Gx*(dt/1000);
+		return angleX;
+	}
+    break;
+    case 1:
+	{
+		Gy=ToD(gyroY());
+		angleY+=Gy*(dt/1000);
+		return angleY;
+	}
+    break;
+    case 2:
+	{
+		Gz=ToD(gyroZ());
+		angleZ+=Gz*(dt/1000);
+		return angleZ;
+	}
+    break;
+  }
+}
+
+*/
 
 
 

@@ -22,8 +22,10 @@
 #define PWM_Throtte_Min					1100
 #define PWM_Throtte_Max					1900
 #define PWM_Avg									1500
-#define PWM_Effect_Min					1480
-#define PWM_Effect_Max					1520
+#define PWM_Effect_Min					1470
+#define PWM_Effect_Max					1530
+
+//dung de khoi dong/tat quadrotor
 #define PWM_START_MIN						1090
 #define PWM_START_MAX						1110
 

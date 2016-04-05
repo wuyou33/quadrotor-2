@@ -189,6 +189,16 @@ double update(double x,double dx)
      return command;  
    }  
 
+
+
+
+
+
+
+
+
+
+http://www.benripley.com/development/quadcopter-source-code-from-scratch/
 */
 
 

@@ -40,72 +40,73 @@ PA3 ->TIM5_CH4  //Aileron_TraiPhai (trai - phai) - goc Roll     keo qua trai +, 
 
 
 //I2C handle, dung de doc value cua cam bien MPU6050
-I2C_HandleTypeDef I2C_Handle_10truc;
+I2C_HandleTypeDef 								I2C_Handle_10truc;
 
 //timer 3 dung de output PWM ra 4 channel
-TIM_HandleTypeDef Tim3_Handle_PWM;		
+TIM_HandleTypeDef 								Tim3_Handle_PWM;		
 
 
-TIM_HandleTypeDef htim1; //PE9 ->TIM1_CH1  //Throttle (can ga)
-TIM_HandleTypeDef htim2; //PA5 ->TIM2_CH1  //Rudder
-TIM_HandleTypeDef htim4; //PB8 ->TIM4_CH3  //Elevator
-TIM_HandleTypeDef htim5; //PA3 - TIM5_CH4
+TIM_HandleTypeDef 								htim1; //PE9 ->TIM1_CH1  //Throttle (can ga)
+TIM_HandleTypeDef 								htim2; //PA5 ->TIM2_CH1  //Rudder
+TIM_HandleTypeDef 								htim4; //PB8 ->TIM4_CH3  //Elevator
+TIM_HandleTypeDef 								htim5; //PA3 - TIM5_CH4
 
 //Throttle (can ga) tang giam toc do quay
-int16_t IC_Throttle1, IC_Throttle2;
-int16_t IC_Throttle_flag_capture_number;
-int16_t IC_Throttle_pusle_width;
-int16_t IC_Throttle_cycle_time;
-int16_t IC_Throttle_frequency;
-int32_t IC_counter_register_timer;
-int32_t IC_interrupt_numbers_timer;
+int16_t 													IC_Throttle1, IC_Throttle2;
+int16_t 													IC_Throttle_flag_capture_number;
+int16_t 													IC_Throttle_pusle_width;
+int16_t 													IC_Throttle_cycle_time;
+int16_t 													IC_Throttle_frequency;
+int32_t 													IC_counter_register_timer;
+int32_t 													IC_interrupt_numbers_timer;
 
 //Rudder (xoay theo truc z) - goc Yaw
-int16_t IC_Rudder_Xoay1, IC_Rudder_Xoay2;
-int16_t IC_Rudder_Xoay_flag_capture_number;
-int16_t IC_Rudder_Xoay_pusle_width;
-int16_t IC_Rudder_Xoay_cycle_time;
-int16_t IC_Rudder_Xoay_frequency;
+int16_t 													IC_Rudder_Xoay1, IC_Rudder_Xoay2;
+int16_t 													IC_Rudder_Xoay_flag_capture_number;
+int16_t 													IC_Rudder_Xoay_pusle_width;
+int16_t 													IC_Rudder_Xoay_cycle_time;
+int16_t 													IC_Rudder_Xoay_frequency;
 
 
 //Elevator (tien - lui) - goc Pitch
-int16_t IC_Elevator_TienLui1, IC_Elevator_TienLui2;
-int16_t IC_Elevator_TienLui_flag_capture_number;
-int16_t IC_Elevator_TienLui_pusle_width;
-int16_t IC_Elevator_TienLui_cycle_time;
-int16_t IC_Elevator_TienLui_frequency;
+int16_t 													IC_Elevator_TienLui1, IC_Elevator_TienLui2;
+int16_t 													IC_Elevator_TienLui_flag_capture_number;
+int16_t 													IC_Elevator_TienLui_pusle_width;
+int16_t 													IC_Elevator_TienLui_cycle_time;
+int16_t 													IC_Elevator_TienLui_frequency;
 
 //Aileron_TraiPhai (trai - phai) - goc Roll
-int16_t IC_Aileron_TraiPhai1, IC_Aileron_TraiPhai2;
-int16_t IC_Aileron_TraiPhai_flag_capture_number;
-int16_t IC_Aileron_TraiPhai_pusle_width;
-int16_t IC_Aileron_TraiPhai_cycle_time;
-int16_t IC_Aileron_TraiPhai_frequency;
+int16_t 													IC_Aileron_TraiPhai1, IC_Aileron_TraiPhai2;
+int16_t 													IC_Aileron_TraiPhai_flag_capture_number;
+int16_t 													IC_Aileron_TraiPhai_pusle_width;
+int16_t 													IC_Aileron_TraiPhai_cycle_time;
+int16_t 													IC_Aileron_TraiPhai_frequency;
 
 
 //PWM 4 motor
-int16_t pwm_motor_1; //  Motor1           Motor2
-int16_t pwm_motor_2; //            ^^  Head(dau quadrotor)
-int16_t pwm_motor_3; //            ||
-int16_t pwm_motor_4; //            ||
-										 //  Motor4           Motor3
-int16_t FlyState; // 0: May bay ngung hoat dong, 1:may bay dang bay
+int16_t 													pwm_motor_1; //  Motor1           Motor2
+int16_t 													pwm_motor_2; //            ^^  Head(dau quadrotor)
+int16_t 													pwm_motor_3; //            ||
+int16_t 													pwm_motor_4; //            ||
+																							 //  Motor4           Motor3
+int16_t 													FlyState; // 0: May bay ngung hoat dong, 1:may bay dang bay
 
 //
 //
 //
-uint8_t who_i_am_reg_value_MPU6050;
-int32_t timer;
-double accX_angle, accY_angle, accZ_angle;
-double gyroX_angle, gyroY_angle, gyroZ_angle;
-double Kalman_angelX, Kalman_angelY, Kalman_angelZ;
-double gyroXrate, gyroYrate, gyroZrate;
-Kalman_Setting kalmanX;
-Kalman_Setting kalmanY;
-Kalman_Setting kalmanZ;
-TM_MPU6050_t output;
+uint8_t 									who_i_am_reg_value_MPU6050;
+int32_t 									timer;
+double 										accX_angle, accY_angle, accZ_angle;
+double 										gyroX_angle, gyroY_angle, gyroZ_angle;
+double 										Kalman_angelX, Kalman_angelY, Kalman_angelZ;
+double 										gyroXrate, gyroYrate, gyroZrate;
+Kalman_Setting 						kalmanX,	kalmanY,   kalmanZ;
+TM_MPU6050_t 							output;
 
-
+//
+//PID controller
+//
+PID 											pid_roll, pid_pitch, pid_yaw;
 
 //------------------------------
 															//...code default of ARM
@@ -126,67 +127,68 @@ float kalmanCalculate(Kalman_Setting *kalman, float newAngle, float newRate);
 																
 																
 //ham handle error						
-static void SystemClock_Config(void);
-static void Error_Handler(void); 
-void Error_Handler1(void); 
-void Error_Handler2(void);
-void Error_Handler3(void); 
-void Error_Handler4(void);
+static void 			SystemClock_Config(void);
+static void 			Error_Handler(void); 
+void 							Error_Handler1(void); 
+void 							Error_Handler2(void);
+void 							Error_Handler3(void); 
+void 							Error_Handler4(void);
 															
 //ham Led Sang
-void SANG_1_LED(int8_t pin);
-void SANG_2_LED(int8_t type);
-void SANG_4_LED(void);
-void SANG_4_LED_FOREVER(void);
-void SANG_4_LED_OFF(void);
-void KiemTraCodeOK(void);
+void 							SANG_1_LED(int8_t pin);
+void 							SANG_2_LED(int8_t type);
+void 							SANG_4_LED(void);
+void 							SANG_4_LED_FOREVER(void);
+void 							SANG_4_LED_OFF(void);
+void 							KiemTraCodeOK(void);
 															
 //Khoi Tao LED, BUTTON USER
-void Init_LEDSANG_PORTD_12_13_14_15(void);
-void Init_BUTTON_USER_PORT_A_0(void);
+void 							Init_LEDSANG_PORTD_12_13_14_15(void);
+void 							Init_BUTTON_USER_PORT_A_0(void);
 															
 //Khoi tao TIMER3 output PWM											
-void Init_PWM_GPIO_PORT_C_4Channel(void);
-void Init_PWM_TIM3_Handle(void);
-void Init_TIM3_OUTPUT_COMPARE(void);
+void 							Init_PWM_GPIO_PORT_C_4Channel(void);
+void 							Init_PWM_TIM3_Handle(void);
+void 							Init_TIM3_OUTPUT_COMPARE(void);
 															
 //timer 1 & 2 inputcapture for RF module
-void Init_Receiver_TIM_PWM_Capture_TIM1(void); //PE9 ->TIM1_CH1  //Throttle (can ga)
-void Init_Receiver_TIM_PWM_Capture_TIM2(void); //PA5 ->TIM2_CH1  //Rudder  (xoay)
-void Init_Receiver_TIM_PWM_Capture_TIM4(void); //PB8 ->TIM4_CH3  //Elevator (tien - lui)
-void Init_Receiver_TIM_PWM_Capture_TIM5(void); //PA3 - TIM5_CH4  //Ailenron (trai - phai)
+void 							Init_Receiver_TIM_PWM_Capture_TIM1(void); //PE9 ->TIM1_CH1  //Throttle (can ga)
+void 							Init_Receiver_TIM_PWM_Capture_TIM2(void); //PA5 ->TIM2_CH1  //Rudder  (xoay)
+void 							Init_Receiver_TIM_PWM_Capture_TIM4(void); //PB8 ->TIM4_CH3  //Elevator (tien - lui)
+void 							Init_Receiver_TIM_PWM_Capture_TIM5(void); //PA3 - TIM5_CH4  //Ailenron (trai - phai)
 
 //Dieu chinh huong bay qua receiver
-void SetInitDataQuadrotor(void);
-void SetPWM_4_Motor(int16_t value);
-void SetPWM_1_Motor(int16_t numberMotor, int16_t newValue);
-void SetPWM_Motor_Tang(int16_t numberMotor, int16_t changeValue);
-void SetPWM_Motor_Giam(int16_t numberMotor, int16_t changeValue);
-void DieuChinhHuongBay_Qua_Receiver(void);
+void 							SetInitDataQuadrotor(void);
+void 							SetPWM_4_Motor(int16_t value);
+void 							SetPWM_4_Motor_By_Each_PWM(void);
+void 							SetPWM_1_Motor(int16_t numberMotor, int16_t newValue);
+void 							SetPWM_Motor_Tang(int16_t numberMotor, int16_t changeValue);
+void 							SetPWM_Motor_Giam(int16_t numberMotor, int16_t changeValue);
+void 							DieuChinhHuongBay_Qua_Receiver(void);
 
 
 //i2c chip mpu6050 10truc
-void Init_I2C_GPIO_PortB(void);
-void Init_I2C_Handle_10truc(void);
-void TM_I2C_IS_DEVICE_CONNECTED(void);
-uint8_t TM_I2C_WHO_I_AM( uint8_t device_address, uint8_t register_address);
-void TM_MPU6050_SetDataRate(uint8_t device_address, uint8_t register_address, uint8_t rate);
-void TM_MPU6050_SetAccelerometer(uint8_t device_address, uint8_t register_address, uint8_t Acc_8G_Value);
-void TM_MPU6050_SetGyroscope(uint8_t device_address, uint8_t register_address, uint8_t Gyro_250s_Value); 
-void TM_I2C_WRITE( uint8_t device_address, uint8_t register_address, uint8_t data);
-void TM_I2C_READ_MULTI( uint8_t device_address, uint8_t register_address, uint8_t* data, uint16_t count);
-void TM_I2C_READ(  uint8_t device_address, uint8_t register_address, uint8_t* data);
-void TM_MPU6050_ReadAll( uint8_t device_address, TM_MPU6050_t* output );
-void Calculate_Accel_X_Angles(TM_MPU6050_t* output, float* angel_x);
-void Calculate_Accel_Y_Angles(TM_MPU6050_t* output, float* angel_y);
-void Calculate_Accel_Z_Angles(TM_MPU6050_t* output, float* angel_z);
-void Sang_Led_By_MPU6050_Values(float angel_x, float angel_y, float angel_z );
+void 							Init_I2C_GPIO_PortB(void);
+void 							Init_I2C_Handle_10truc(void);
+void 							TM_I2C_IS_DEVICE_CONNECTED(void);
+uint8_t 					TM_I2C_WHO_I_AM( uint8_t device_address, uint8_t register_address);
+void 							TM_MPU6050_SetDataRate(uint8_t device_address, uint8_t register_address, uint8_t rate);
+void 							TM_MPU6050_SetAccelerometer(uint8_t device_address, uint8_t register_address, uint8_t Acc_8G_Value);
+void 							TM_MPU6050_SetGyroscope(uint8_t device_address, uint8_t register_address, uint8_t Gyro_250s_Value); 
+void 							TM_I2C_WRITE( uint8_t device_address, uint8_t register_address, uint8_t data);
+void 							TM_I2C_READ_MULTI( uint8_t device_address, uint8_t register_address, uint8_t* data, uint16_t count);
+void 							TM_I2C_READ(  uint8_t device_address, uint8_t register_address, uint8_t* data);
+void 							TM_MPU6050_ReadAll( uint8_t device_address, TM_MPU6050_t* output );
+void 							Calculate_Accel_X_Angles(TM_MPU6050_t* output, float* angel_x);
+void 							Calculate_Accel_Y_Angles(TM_MPU6050_t* output, float* angel_y);
+void 							Calculate_Accel_Z_Angles(TM_MPU6050_t* output, float* angel_z);
+void 							Sang_Led_By_MPU6050_Values(float angel_x, float angel_y, float angel_z );
 
 
 //ham delay default
-volatile uint32_t g_iSysTicks = 0;
-void SysTick_Handler(){	g_iSysTicks++;}
-void delay_ms(uint32_t piMillis){	uint32_t iStartTime = g_iSysTicks;	while( (g_iSysTicks - iStartTime ) < piMillis)	{}}			
+volatile 					uint32_t g_iSysTicks = 0;
+void 							SysTick_Handler(){	g_iSysTicks++;}
+void 							delay_ms(uint32_t piMillis){	uint32_t iStartTime = g_iSysTicks;	while( (g_iSysTicks - iStartTime ) < piMillis)	{}}			
 
 	
 int main(void)
@@ -265,6 +267,29 @@ int main(void)
 		TM_MPU6050_ReadAll( MPU6050_I2C_ADDR, &output);
 		
 		
+		
+		
+		//Roll = atan2(Y, Z) * 180/M_PI;
+		//Pitch = atan2(-X, sqrt(Y*Y + Z*Z)) * 180/M_PI;
+		
+		//Roll  = atan2( Y,   sign* sqrt(Z*Z+ miu*X*X));
+		//sign  = 1 if accZ>0, -1 otherwise 
+		//miu = 0.001
+		
+		//roll = atan2(y_Buff , z_Buff) * 57.3;
+		//pitch = atan2((- x_Buff) , sqrt(y_Buff * y_Buff + z_Buff * z_Buff)) * 57.3;
+		
+		
+		//https://sites.google.com/site/myimuestimationexperience/sensors/magnetometer
+		//pitch=atan2(accx,sqrt(accy^2+accz^2))
+		//roll=atan2(accy,sqrt(accx^2+accz^2))
+		//Heading (or yaw) =atan2( (-ymag*cos(Roll) + zmag*sin(Roll) ) , (xmag*cos(Pitch) + ymag*sin(Pitch)*sin(Roll)+ zmag*sin(Pitch)*cos(Roll)) ) 
+
+
+		//compAngleX = 0.93 * (compAngleX + gyroXrate * dt) + 0.07 * roll; // Calculate the angle using a Complimentary filter
+		//compAngleY = 0.93 * (compAngleY + gyroYrate * dt) + 0.07 * pitch;
+
+
 		accX_angle  = atan(output.Accelerometer_Y / sqrt(output.Accelerometer_X * output.Accelerometer_X + output.Accelerometer_Z * output.Accelerometer_Z)) * RAD_TO_DEG;
 		accY_angle = atan2(-output.Accelerometer_X, output.Accelerometer_Z) * RAD_TO_DEG;
 		//accZ_angle = atan(output.Accelerometer_Z/sqrt(output.Accelerometer_X*output.Accelerometer_X + output.Accelerometer_Z*output.Accelerometer_Z)) * RAD_TO_DEG;		
@@ -289,7 +314,7 @@ int main(void)
 			//ypr[2] = atan2(gy, sqrt(gx*gx + gz*gz));
 			//accZ_angle = atan(output.Accelerometer_Z/sqrt(output.Accelerometer_X*output.Accelerometer_X + output.Accelerometer_Z*output.Accelerometer_Z)) * RAD_TO_DEG;
 			//accZ_angle = output.Gyroscope_Z*DT; //angel Z (yaww) = tocdo_goc*thoigian;
-			if ((accY_angle < -90 && Kalman_angelY > 90) || (accY_angle > 90 && Kalman_angelY < -90)) 
+			/*if ((accY_angle < -90 && Kalman_angelY > 90) || (accY_angle > 90 && Kalman_angelY < -90)) 
 				{
 					kalmanY.angle = accY_angle;
 					Kalman_angelY = accY_angle;
@@ -300,7 +325,9 @@ int main(void)
 			if (abs(Kalman_angelY) > 90)
 				gyroXrate = -gyroXrate; // Invert rate, so it fits the restriced accelerometer reading
 			Kalman_angelX = kalmanCalculate(&kalmanX, accX_angle, gyroXrate); // Calculate the angle using a Kalman filter
-	
+			*/
+			
+			
 			
 			gyroXrate = (double)output.Gyroscope_X/131.0;
 			gyroYrate = (double)output.Gyroscope_Y/131.0;
@@ -310,14 +337,17 @@ int main(void)
 			gyroY_angle += gyroYrate * DT; // Calculate gyro angle without any filter
 			gyroZ_angle += gyroZrate * DT; // Calculate gyro angle without any filter
 			
-			//Kalman_angelX = kalmanCalculate(&kalmanX, accX_angle, gyroXrate);
-			//Kalman_angelY = kalmanCalculate(&kalmanY, accY_angle, gyroYrate);
+			Kalman_angelX = kalmanCalculate(&kalmanX, accX_angle, gyroXrate);
+			Kalman_angelY = kalmanCalculate(&kalmanY, accY_angle, gyroYrate);
 			//Kalman_angelZ = kalmanCalculate(&kalmanZ, gyroZ_angle, gyroZrate);
 			
-			if (gyroX_angle < -180 || gyroX_angle > 180)
-				gyroX_angle = Kalman_angelX;
-			if (gyroY_angle < -180 || gyroY_angle > 180)
-				gyroY_angle = Kalman_angelY;
+			//if (gyroX_angle < -180 || gyroX_angle > 180)
+			//	gyroX_angle = Kalman_angelX;
+			//if (gyroY_angle < -180 || gyroY_angle > 180)
+			//	gyroY_angle = Kalman_angelY;
+			
+			
+			
 			
 							
 					
@@ -345,6 +375,7 @@ int main(void)
 								(IC_Elevator_TienLui_pusle_width >= PWM_START_MIN && IC_Elevator_TienLui_pusle_width <= PWM_START_MAX) 
 						)
 						{
+								//Khoi dong quadrotor
 								SANG_4_LED_OFF();
 								FlyState = 1;
 								SetPWM_4_Motor(800);
@@ -354,7 +385,7 @@ int main(void)
 			else if(FlyState == 1)
 			{
 				//khi ga nho nhat, keo can gat 5s thi tat may bay
-				//Khoi dong may bay	
+				//Tat Quadrotor
 				if( (IC_Throttle_pusle_width >= PWM_START_MIN && IC_Throttle_pusle_width <= PWM_START_MAX) && 
 						(IC_Aileron_TraiPhai_pusle_width >= PWM_START_MIN && IC_Aileron_TraiPhai_pusle_width <=PWM_START_MAX) && 
 						(IC_Elevator_TienLui_pusle_width >= PWM_START_MIN && IC_Elevator_TienLui_pusle_width <= PWM_START_MAX) && 
@@ -368,14 +399,34 @@ int main(void)
 								(IC_Rudder_Xoay_pusle_width >= PWM_START_MIN && IC_Rudder_Xoay_pusle_width <= PWM_START_MAX)
 						)
 						{
+								//tat quadrotor
 								SANG_4_LED_OFF();
 								FlyState = 0;
 								SetPWM_4_Motor(1000); //stop all motor
 								//SetPWM_4_Motor(0);
 						}
 				}
+				//trang thai Can Bang, k co tac dong cua receiver
+				else if( (IC_Aileron_TraiPhai_pusle_width >= PWM_Throtte_Min && IC_Aileron_TraiPhai_pusle_width <= PWM_Throtte_Max ) &&
+								 (IC_Elevator_TienLui_pusle_width >= PWM_Throtte_Min && IC_Elevator_TienLui_pusle_width <= PWM_Throtte_Max) &&
+								 (IC_Rudder_Xoay_pusle_width >= PWM_Throtte_Min && IC_Rudder_Xoay_pusle_width <= PWM_Throtte_Max)
+					)
+				{
+							////vao trang thai can bang, k co tac dong tu receiver, PID controller dieu chinh can bang
+							//roll_pid_value = pid_roll.output
+							pwm_motor_1 = IC_Throttle_pusle_width + pid_roll.output; // - yawpid;
+							pwm_motor_3 = IC_Throttle_pusle_width - pid_roll.output; //- yawpid;
+							pwm_motor_2 = IC_Throttle_pusle_width + pid_pitch.output; // + yawpid;
+							pwm_motor_4 = IC_Throttle_pusle_width - pid_pitch.output; // + yawpid;
+							SetPWM_1_Motor(1, pwm_motor_1);
+							SetPWM_1_Motor(2, pwm_motor_2);
+							SetPWM_1_Motor(3, pwm_motor_3);
+							SetPWM_1_Motor(4, pwm_motor_4);
+							////
+				}
 				else
 				{
+						//co tac dong tu receiver, k phai trang thanh CAN BANG
 						DieuChinhHuongBay_Qua_Receiver();
 				}
 				
@@ -1118,6 +1169,17 @@ void SetPWM_4_Motor(int16_t value)
 		TIM3->CCR4 = pwm_motor_4;
 }
 
+void SetPWM_4_Motor_By_Each_PWM(void)
+{
+	if(pwm_motor_1 != 0)
+		TIM3->CCR1 = pwm_motor_1;
+	if(pwm_motor_2 != 0)
+		TIM3->CCR2 = pwm_motor_2;
+	if(pwm_motor_3 != 0)
+		TIM3->CCR3 = pwm_motor_3;
+	if(pwm_motor_4 != 0)
+		TIM3->CCR4 = pwm_motor_4;
+}
 		
 void SetPWM_1_Motor(int16_t numberMotor, int16_t newValue)
 {
