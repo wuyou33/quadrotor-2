@@ -286,9 +286,15 @@ int main(void)
 		//Heading (or yaw) =atan2( (-ymag*cos(Roll) + zmag*sin(Roll) ) , (xmag*cos(Pitch) + ymag*sin(Pitch)*sin(Roll)+ zmag*sin(Pitch)*cos(Roll)) ) 
 
 
-		//compAngleX = 0.93 * (compAngleX + gyroXrate * dt) + 0.07 * roll; // Calculate the angle using a Complimentary filter
-		//compAngleY = 0.93 * (compAngleY + gyroYrate * dt) + 0.07 * pitch;
+		
 
+
+		//http://theccontinuum.com/2012/09/24/arduino-imu-pitch-roll-from-accelerometer
+		//Roll & Pitch Equations
+    //roll  = (atan2(-Accelerometer_Y, Accelerometer_Z)*180.0)/M_PI; //roll equation provides [-180, 180] range
+    //pitch = (atan2(Accelerometer_X, sqrt(Accelerometer_Y*Accelerometer_Y + Accelerometer_Z*Accelerometer_Z))*180.0)/M_PI; //[-90, 90] range, which is exactly what is expected for the pitch angle
+		
+		
 
 		accX_angle  = atan(output.Accelerometer_Y / sqrt(output.Accelerometer_X * output.Accelerometer_X + output.Accelerometer_Z * output.Accelerometer_Z)) * RAD_TO_DEG;
 		accY_angle = atan2(-output.Accelerometer_X, output.Accelerometer_Z) * RAD_TO_DEG;
@@ -340,6 +346,8 @@ int main(void)
 			Kalman_angelX = kalmanCalculate(&kalmanX, accX_angle, gyroXrate);
 			Kalman_angelY = kalmanCalculate(&kalmanY, accY_angle, gyroYrate);
 			//Kalman_angelZ = kalmanCalculate(&kalmanZ, gyroZ_angle, gyroZrate);
+			//compAngleX = 0.93 * (compAngleX + gyroXrate * dt) + 0.07 * roll; // Calculate the angle using a Complimentary filter
+			//compAngleY = 0.93 * (compAngleY + gyroYrate * dt) + 0.07 * pitch;
 			
 			//if (gyroX_angle < -180 || gyroX_angle > 180)
 			//	gyroX_angle = Kalman_angelX;
