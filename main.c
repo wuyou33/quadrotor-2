@@ -268,16 +268,13 @@ int main(void)
 		
 		
 		
-		
+		//-----------------------------------------------------------------------------------
 		//Roll = atan2(Y, Z) * 180/M_PI;
 		//Pitch = atan2(-X, sqrt(Y*Y + Z*Z)) * 180/M_PI;
 		
 		//Roll  = atan2( Y,   sign* sqrt(Z*Z+ miu*X*X));
 		//sign  = 1 if accZ>0, -1 otherwise 
 		//miu = 0.001
-		
-		//roll = atan2(y_Buff , z_Buff) * 57.3;
-		//pitch = atan2((- x_Buff) , sqrt(y_Buff * y_Buff + z_Buff * z_Buff)) * 57.3;
 		
 		
 		//https://sites.google.com/site/myimuestimationexperience/sensors/magnetometer
@@ -286,13 +283,12 @@ int main(void)
 		//Heading (or yaw) =atan2( (-ymag*cos(Roll) + zmag*sin(Roll) ) , (xmag*cos(Pitch) + ymag*sin(Pitch)*sin(Roll)+ zmag*sin(Pitch)*cos(Roll)) ) 
 
 
-		
-
-
 		//http://theccontinuum.com/2012/09/24/arduino-imu-pitch-roll-from-accelerometer
 		//Roll & Pitch Equations
-    //roll  = (atan2(-Accelerometer_Y, Accelerometer_Z)*180.0)/M_PI; //roll equation provides [-180, 180] range
-    //pitch = (atan2(Accelerometer_X, sqrt(Accelerometer_Y*Accelerometer_Y + Accelerometer_Z*Accelerometer_Z))*180.0)/M_PI; //[-90, 90] range, which is exactly what is expected for the pitch angle
+		//roll equation provides [-180, 180] range
+    //roll  = (atan2(-Accelerometer_Y, Accelerometer_Z)*180.0)/M_PI; 
+		//[-90, 90] range, which is exactly what is expected for the pitch angle
+    //pitch = (atan2(Accelerometer_X, sqrt(Accelerometer_Y*Accelerometer_Y + Accelerometer_Z*Accelerometer_Z))*180.0)/M_PI;
 		
 		
 
@@ -300,11 +296,9 @@ int main(void)
 		accY_angle = atan2(-output.Accelerometer_X, output.Accelerometer_Z) * RAD_TO_DEG;
 		//accZ_angle = atan(output.Accelerometer_Z/sqrt(output.Accelerometer_X*output.Accelerometer_X + output.Accelerometer_Z*output.Accelerometer_Z)) * RAD_TO_DEG;		
 		//accZ_angle = output.Gyroscope_Z*DT; //angel Z (yaww) = tocdo_goc*thoigian;
-		
-		//accX_angle = atan2(output.Accelerometer_Y, output.Accelerometer_Z) * RAD_TO_DEG;		
-		//accY_angle = atan(-output.Accelerometer_X / sqrt(output.Accelerometer_Y * output.Accelerometer_Y + output.Accelerometer_Z * output.Accelerometer_Z)) * RAD_TO_DEG;		
 		gyroX_angle = accX_angle; //set goc gyroX_angle = accX_angle;
-		//timer = HAL_GetTick();	
+		//timer = HAL_GetTick();
+		//-----------------------------------------------------------------------------------		
 																//.... code dafault cua ARM		// when using CMSIS RTOS	// start thread execution 
 																#ifdef RTE_CMSIS_RTOS 
 																	osKernelStart();     
@@ -315,23 +309,12 @@ int main(void)
 			//MPU6050-------------
 			TM_MPU6050_ReadAll( MPU6050_I2C_ADDR, &output);
 			
-			accX_angle  = atan(output.Accelerometer_Y / sqrt(output.Accelerometer_X * output.Accelerometer_X + output.Accelerometer_Z * output.Accelerometer_Z)) * RAD_TO_DEG;
-			accY_angle = atan2(-output.Accelerometer_X, output.Accelerometer_Z) * RAD_TO_DEG;
-			//ypr[2] = atan2(gy, sqrt(gx*gx + gz*gz));
-			//accZ_angle = atan(output.Accelerometer_Z/sqrt(output.Accelerometer_X*output.Accelerometer_X + output.Accelerometer_Z*output.Accelerometer_Z)) * RAD_TO_DEG;
-			//accZ_angle = output.Gyroscope_Z*DT; //angel Z (yaww) = tocdo_goc*thoigian;
-			/*if ((accY_angle < -90 && Kalman_angelY > 90) || (accY_angle > 90 && Kalman_angelY < -90)) 
-				{
-					kalmanY.angle = accY_angle;
-					Kalman_angelY = accY_angle;
-					gyroY_angle = accY_angle;
-			} else
-				Kalman_angelY = kalmanCalculate(&kalmanY, accY_angle, gyroYrate);// Calculate the angle using a Kalman filter
-
-			if (abs(Kalman_angelY) > 90)
-				gyroXrate = -gyroXrate; // Invert rate, so it fits the restriced accelerometer reading
-			Kalman_angelX = kalmanCalculate(&kalmanX, accX_angle, gyroXrate); // Calculate the angle using a Kalman filter
-			*/
+			//-----------------------------------------------------------------------------------
+			//roll equation provides [-180, 180] range
+			accX_angle  = atan2(-output.Accelerometer_Y, output.Accelerometer_Z)*RAD_TO_DEG; 
+			//[-90, 90] range, which is exactly what is expected for the pitch angle
+			accY_angle = atan2(output.Accelerometer_X, sqrt(output.Accelerometer_Y*output.Accelerometer_Y + output.Accelerometer_Z*output.Accelerometer_Z))*RAD_TO_DEG;
+			
 			
 			
 			
@@ -347,17 +330,8 @@ int main(void)
 			Kalman_angelY = kalmanCalculate(&kalmanY, accY_angle, gyroYrate);
 			//Kalman_angelZ = kalmanCalculate(&kalmanZ, gyroZ_angle, gyroZrate);
 			//compAngleX = 0.93 * (compAngleX + gyroXrate * dt) + 0.07 * roll; // Calculate the angle using a Complimentary filter
-			//compAngleY = 0.93 * (compAngleY + gyroYrate * dt) + 0.07 * pitch;
-			
-			//if (gyroX_angle < -180 || gyroX_angle > 180)
-			//	gyroX_angle = Kalman_angelX;
-			//if (gyroY_angle < -180 || gyroY_angle > 180)
-			//	gyroY_angle = Kalman_angelY;
-			
-			
-			
-			
-							
+			//-----------------------------------------------------------------------------------
+	
 					
 			Sang_Led_By_MPU6050_Values(Kalman_angelX, Kalman_angelY, Kalman_angelZ);			
 			//END MPU6050----------
@@ -419,9 +393,12 @@ int main(void)
 								 (IC_Elevator_TienLui_pusle_width >= PWM_Throtte_Min && IC_Elevator_TienLui_pusle_width <= PWM_Throtte_Max) &&
 								 (IC_Rudder_Xoay_pusle_width >= PWM_Throtte_Min && IC_Rudder_Xoay_pusle_width <= PWM_Throtte_Max)
 					)
-				{
+				{			//-----------------------------------------------------------------------------------
 							////vao trang thai can bang, k co tac dong tu receiver, PID controller dieu chinh can bang
 							//roll_pid_value = pid_roll.output
+							pid_compute(&pid_roll,Kalman_angelX,DT);
+							pid_compute(&pid_pitch,Kalman_angelY,DT);
+					
 							pwm_motor_1 = IC_Throttle_pusle_width + pid_roll.output; // - yawpid;
 							pwm_motor_3 = IC_Throttle_pusle_width - pid_roll.output; //- yawpid;
 							pwm_motor_2 = IC_Throttle_pusle_width + pid_pitch.output; // + yawpid;
@@ -431,6 +408,7 @@ int main(void)
 							SetPWM_1_Motor(3, pwm_motor_3);
 							SetPWM_1_Motor(4, pwm_motor_4);
 							////
+							//-----------------------------------------------------------------------------------
 				}
 				else
 				{
@@ -505,6 +483,10 @@ void SetInitDataQuadrotor(void)
 		who_i_am_reg_value_MPU6050 = 0;
 		SetPWM_4_Motor(0);
 		FlyState = 0;
+		pid_setup_gain(&pid_roll,ROLL_PID_KP, ROLL_PID_KI, ROLL_PID_KD);
+		pid_setup_gain(&pid_pitch,PITCH_PID_KP, PITCH_PID_KP, PITCH_PID_KP);
+		pid_setup_error(&pid_roll);
+		pid_setup_error(&pid_pitch);
 }
 //
 //
