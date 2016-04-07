@@ -16,7 +16,8 @@
 #define M_PI 										(float)3.1415926535
 #define PI											(float)3.141592
 #define RAD_TO_DEG 							(180/PI)
-#define DT 											0.01
+//#define DT 											0.01
+#define DT 											100
 //--------------------------------
 
 #define PWM_Throtte_Min					1100

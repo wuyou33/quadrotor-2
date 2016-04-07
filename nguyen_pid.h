@@ -1,3 +1,15 @@
+//https://github.com/klaslofstedt/stm32f4_quadcopter/blob/master/inc/PID.h
+#define Kp 0.0060
+#define Ki 0.0
+#define Kd 0.0018
+
+//good PID https://www.youtube.com/watch?v=UBgYEstAfvY&nohtml5=False
+//#define P 4.7
+//#define I .048
+//#define D 36
+
+//kp = .5,ki=0.00005 ,kd=.01,prerror,dt=100;
+
 //-------PID Config----------
 #define ROLL_PID_KP  0.250
 #define ROLL_PID_KI  0.950

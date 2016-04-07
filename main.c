@@ -398,10 +398,14 @@ int main(void)
 							pid_compute(&pid_roll  ,Kalman_angelX, DT);
 							pid_compute(&pid_pitch ,Kalman_angelY, DT);
 					
-							pwm_motor_1 = IC_Throttle_pusle_width + pid_roll.output; // - yawpid;
-							pwm_motor_3 = IC_Throttle_pusle_width - pid_roll.output; //- yawpid;
-							pwm_motor_2 = IC_Throttle_pusle_width + pid_pitch.output; // + yawpid;
-							pwm_motor_4 = IC_Throttle_pusle_width - pid_pitch.output; // + yawpid;
+							pwm_motor_1 = IC_Throttle_pusle_width + pid_roll.output + pid_pitch.output; // - yawpid;
+							pwm_motor_3 = IC_Throttle_pusle_width - pid_roll.output - pid_pitch.output; // - yawpid;					
+							pwm_motor_2 = IC_Throttle_pusle_width + pid_roll.output - pid_pitch.output; // + yawpid;
+							pwm_motor_4 = IC_Throttle_pusle_width - pid_roll.output + pid_pitch.output; // + yawpid;
+						/*esc2->speed = thrust - pitch + roll; // - yawValue;
+						esc1->speed = thrust + pitch + roll; // + yawValue;
+						esc4->speed = thrust + pitch - roll; // - yawValue;
+						esc3->speed = thrust - pitch - roll; // + yawValue;*/
 							SetPWM_1_Motor(1, pwm_motor_1);
 							SetPWM_1_Motor(2, pwm_motor_2);
 							SetPWM_1_Motor(3, pwm_motor_3);
@@ -411,7 +415,7 @@ int main(void)
 				}
 				else
 				{
-						//co tac dong tu receiver, k phai trang thanh CAN BANG
+						//co tac dong tu receiver, k phai trang thai CAN BANG
 						DieuChinhHuongBay_Qua_Receiver();
 				}
 				
