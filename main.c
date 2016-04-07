@@ -160,7 +160,7 @@ void 							Init_Receiver_TIM_PWM_Capture_TIM5(void); //PA3 - TIM5_CH4  //Ailenr
 //Dieu chinh huong bay qua receiver
 void 							SetInitDataQuadrotor(void);
 void 							SetPWM_4_Motor(int16_t value);
-void 							SetPWM_4_Motor_By_Each_PWM(void);
+void 							UpdatePWM_4_Motor(void);
 void 							SetPWM_1_Motor(int16_t numberMotor, int16_t newValue);
 void 							SetPWM_Motor_Tang(int16_t numberMotor, int16_t changeValue);
 void 							SetPWM_Motor_Giam(int16_t numberMotor, int16_t changeValue);
@@ -384,7 +384,7 @@ int main(void)
 								//tat quadrotor
 								SANG_4_LED_OFF();
 								FlyState = 0;
-								SetPWM_4_Motor(1000); //stop all motor
+								SetPWM_4_Motor(500); //stop all motor
 								//SetPWM_4_Motor(0);
 						}
 				}
@@ -395,9 +395,8 @@ int main(void)
 					)
 				{			//-----------------------------------------------------------------------------------
 							////vao trang thai can bang, k co tac dong tu receiver, PID controller dieu chinh can bang
-							//roll_pid_value = pid_roll.output
-							pid_compute(&pid_roll,Kalman_angelX,DT);
-							pid_compute(&pid_pitch,Kalman_angelY,DT);
+							pid_compute(&pid_roll  ,Kalman_angelX, DT);
+							pid_compute(&pid_pitch ,Kalman_angelY, DT);
 					
 							pwm_motor_1 = IC_Throttle_pusle_width + pid_roll.output; // - yawpid;
 							pwm_motor_3 = IC_Throttle_pusle_width - pid_roll.output; //- yawpid;
@@ -1129,11 +1128,12 @@ void Calculate_Accel_Z_Angles(TM_MPU6050_t* output, float* angel_z)
 //Lay gia tri cua Receiver de dieu khien 4 motor
 //
 //
-void SetPWM_4_Motor(int16_t value)
+void SetPWM_4_Motor(int16_t value) //set 4 motor cung 1 speed
 {
 	if(value==0)
 	{
 					pwm_motor_1 = 0;	pwm_motor_2 = 0;		pwm_motor_3 = 0;		pwm_motor_4 = 0;		
+					UpdatePWM_4_Motor();
 	}
 	else{
 			if(value <= PWM_Throtte_Min)
@@ -1148,37 +1148,26 @@ void SetPWM_4_Motor(int16_t value)
 					pwm_motor_1 = value;										pwm_motor_2 = value;
 					pwm_motor_3 = value;										pwm_motor_4 = value;
 			}	
+			UpdatePWM_4_Motor();
 	}
-	if(pwm_motor_1 != 0)
-		TIM3->CCR1 = pwm_motor_1;
-	if(pwm_motor_2 != 0)
-		TIM3->CCR2 = pwm_motor_2;
-	if(pwm_motor_3 != 0)
-		TIM3->CCR3 = pwm_motor_3;
-	if(pwm_motor_4 != 0)
-		TIM3->CCR4 = pwm_motor_4;
 }
 
-void SetPWM_4_Motor_By_Each_PWM(void)
+void UpdatePWM_4_Motor(void) //update lai speed
 {
-	if(pwm_motor_1 != 0)
 		TIM3->CCR1 = pwm_motor_1;
-	if(pwm_motor_2 != 0)
 		TIM3->CCR2 = pwm_motor_2;
-	if(pwm_motor_3 != 0)
 		TIM3->CCR3 = pwm_motor_3;
-	if(pwm_motor_4 != 0)
 		TIM3->CCR4 = pwm_motor_4;
 }
 		
-void SetPWM_1_Motor(int16_t numberMotor, int16_t newValue)
+void SetPWM_1_Motor(int16_t numberMotor, int16_t newValue) //set speed cho moi motor rieng le
 {
 	switch(numberMotor) 
 	{
 		 case 1  :
 				if(newValue <= PWM_Throtte_Min)							{	pwm_motor_1 = PWM_Throtte_Min;}
 				else if (newValue >= PWM_Throtte_Max)				{ pwm_motor_1 = PWM_Throtte_Max;}
-				else 																				{pwm_motor_1 = newValue;					}
+				else 																				{ pwm_motor_1 = newValue;					}
 				TIM3->CCR1 = pwm_motor_1;
 				break; 
 		
@@ -1209,31 +1198,31 @@ void SetPWM_1_Motor(int16_t numberMotor, int16_t newValue)
 
 void SetPWM_Motor_Tang(int16_t numberMotor, int16_t changeValue)
 {
-	if(changeValue > 0)
+	if(changeValue <= 0 ) return;
+	switch(numberMotor) 
 	{
-			switch(numberMotor) 
-			{
-				 case 1  :
-						SetPWM_1_Motor(1, (IC_Throttle_pusle_width + changeValue) );
-						break; 
-				
-				 case 2  :
-						SetPWM_1_Motor(2, (IC_Throttle_pusle_width + changeValue) );
-						break; 
-				 
-				 case 3  :
-						SetPWM_1_Motor(3, (IC_Throttle_pusle_width + changeValue) );
-						break; 
-				
-				 case 4  :
-						SetPWM_1_Motor(4, (IC_Throttle_pusle_width + changeValue) );
-						break; 
-			}
+		 case 1  :
+				SetPWM_1_Motor(1, (IC_Throttle_pusle_width + changeValue) );
+				break; 
+		
+		 case 2  :
+				SetPWM_1_Motor(2, (IC_Throttle_pusle_width + changeValue) );
+				break; 
+		 
+		 case 3  :
+				SetPWM_1_Motor(3, (IC_Throttle_pusle_width + changeValue) );
+				break; 
+		
+		 case 4  :
+				SetPWM_1_Motor(4, (IC_Throttle_pusle_width + changeValue) );
+				break; 
 	}
+	
 }
 
 void SetPWM_Motor_Giam(int16_t numberMotor, int16_t changeValue)
 {
+	if(changeValue <= 0 ) return;
 	switch(numberMotor) 
 	{
 		 case 1  :
@@ -1261,6 +1250,7 @@ void DieuChinhHuongBay_Qua_Receiver(void)
 	if(IC_Throttle_pusle_width >= 1000 && IC_Throttle_pusle_width <= 2000)
 	{
 		SetPWM_4_Motor(IC_Throttle_pusle_width);
+		delay_ms(50);
 	}
 	
 	//Tien - Lui
@@ -1277,6 +1267,7 @@ void DieuChinhHuongBay_Qua_Receiver(void)
 					SetPWM_Motor_Giam(2,chenhLechGiaTri);
 					SetPWM_Motor_Tang(3,chenhLechGiaTri);
 					SetPWM_Motor_Tang(4,chenhLechGiaTri);
+					delay_ms(50);
 		}
 			
 		while(IC_Elevator_TienLui_pusle_width >= PWM_Effect_Max )
@@ -1287,6 +1278,7 @@ void DieuChinhHuongBay_Qua_Receiver(void)
 					SetPWM_Motor_Giam(4,chenhLechGiaTri);
 					SetPWM_Motor_Tang(1,chenhLechGiaTri);
 					SetPWM_Motor_Tang(2,chenhLechGiaTri);			
+					delay_ms(50);
 		}			
 		
 	}
@@ -1301,7 +1293,8 @@ void DieuChinhHuongBay_Qua_Receiver(void)
 					SetPWM_Motor_Giam(1,chenhLechGiaTri);
 					SetPWM_Motor_Giam(4,chenhLechGiaTri);
 					SetPWM_Motor_Tang(2,chenhLechGiaTri);
-					SetPWM_Motor_Tang(3,chenhLechGiaTri);			
+					SetPWM_Motor_Tang(3,chenhLechGiaTri);
+					delay_ms(50);
 		}
 
 		while(IC_Aileron_TraiPhai_pusle_width >= PWM_Effect_Max )
@@ -1311,7 +1304,8 @@ void DieuChinhHuongBay_Qua_Receiver(void)
 					SetPWM_Motor_Giam(2,chenhLechGiaTri);
 					SetPWM_Motor_Giam(3,chenhLechGiaTri);
 					SetPWM_Motor_Tang(1,chenhLechGiaTri);
-					SetPWM_Motor_Tang(4,chenhLechGiaTri);			
+					SetPWM_Motor_Tang(4,chenhLechGiaTri);		
+					delay_ms(50);
 		}
 		//trong khoang 1470 - 1530 khong lam gi		
 				
@@ -1328,7 +1322,7 @@ void DieuChinhHuongBay_Qua_Receiver(void)
 			SetPWM_Motor_Giam(3,chenhLechGiaTri);
 			SetPWM_Motor_Tang(2,chenhLechGiaTri);
 			SetPWM_Motor_Tang(4,chenhLechGiaTri);
-			
+			delay_ms(50);
 		}
 		
 		while(IC_Rudder_Xoay_pusle_width >= PWM_Effect_Max )
@@ -1338,7 +1332,8 @@ void DieuChinhHuongBay_Qua_Receiver(void)
 			SetPWM_Motor_Giam(2,chenhLechGiaTri);
 			SetPWM_Motor_Giam(4,chenhLechGiaTri);
 			SetPWM_Motor_Tang(1,chenhLechGiaTri);
-			SetPWM_Motor_Tang(3,chenhLechGiaTri);			
+			SetPWM_Motor_Tang(3,chenhLechGiaTri);		
+			delay_ms(50);
 		}
 		//trong khoang 1470 - 1530 khong lam gi				
 	}
