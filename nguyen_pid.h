@@ -5,10 +5,10 @@
 
 //good PID https://www.youtube.com/watch?v=UBgYEstAfvY&nohtml5=False
 //#define P 4.7
-//#define I .048
+//#define I 0.048
 //#define D 36
 
-//kp = .5,ki=0.00005 ,kd=.01,prerror,dt=100;
+//kp = .5,ki=0.00005 ,kd=.01,prerror, dt=100;
 
 //-------PID Config----------
 #define ROLL_PID_KP  0.250
@@ -46,6 +46,7 @@ typedef struct
 } PID;
 void pid_setup_gain(PID* pid, double kP, double kI, double kD)
 {
+	pid->setpoint = 0;
 	pid->kP = kP;
 	pid->kI = kI;
 	pid->kD = kD;

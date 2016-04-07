@@ -3,15 +3,7 @@
 #include <math.h>
 	
 
-//----------------------//
-//				 ORANGE							//
-//	Yellow 				Red					//
-//				  BLUE	 			//
-//----------------------//
-#define LED_YELLOW						12
-#define LED_ORANGE						13
-#define LED_RED								14
-#define LED_BLUE							15
+
 
 	
 
@@ -109,12 +101,12 @@ typedef struct _TM_MPU6050_t {
 	//uint8_t Address;         /*!< I2C address of device. Only for private use */
 	//float Gyro_Mult;         /*!< Gyroscope corrector from raw data to "degrees/s". Only for private use */
 	//float Acce_Mult;         /*!< Accelerometer corrector from raw data to "g". Only for private use */
-	int16_t Accelerometer_X; /*!< Accelerometer value X axis */
-	int16_t Accelerometer_Y; /*!< Accelerometer value Y axis */
-	int16_t Accelerometer_Z; /*!< Accelerometer value Z axis */
-	int16_t Gyroscope_X;     /*!< Gyroscope value X axis */
-	int16_t Gyroscope_Y;     /*!< Gyroscope value Y axis */
-	int16_t Gyroscope_Z;     /*!< Gyroscope value Z axis */
+	int16_t Acc_X; /*!< Accelerometer value X axis */
+	int16_t Acc_Y; /*!< Accelerometer value Y axis */
+	int16_t Acc_Z; /*!< Accelerometer value Z axis */
+	int16_t Gyro_X;     /*!< Gyroscope value X axis */
+	int16_t Gyro_Y;     /*!< Gyroscope value Y axis */
+	int16_t Gyro_Z;     /*!< Gyroscope value Z axis */
 	float Temperature;       /*!< Temperature in degrees */
 } TM_MPU6050_t;
 

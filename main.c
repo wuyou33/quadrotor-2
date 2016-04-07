@@ -101,7 +101,7 @@ double 										gyroX_angle, gyroY_angle, gyroZ_angle;
 double 										Kalman_angelX, Kalman_angelY, Kalman_angelZ;
 double 										gyroXrate, gyroYrate, gyroZrate;
 Kalman_Setting 						kalmanX,	kalmanY,   kalmanZ;
-TM_MPU6050_t 							output;
+TM_MPU6050_t 							mpu6050;
 
 //
 //PID controller
@@ -123,7 +123,7 @@ PID 											pid_roll, pid_pitch, pid_yaw;
 
 //------------------------------------------------------------------
 //Kalman filter
-float kalmanCalculate(Kalman_Setting *kalman, float newAngle, float newRate);
+float kalmanCalculate(Kalman_Setting *kalman, float newAngle, float newRate, float DT_);
 																
 																
 //ham handle error						
@@ -141,6 +141,8 @@ void 							SANG_4_LED(void);
 void 							SANG_4_LED_FOREVER(void);
 void 							SANG_4_LED_OFF(void);
 void 							KiemTraCodeOK(void);
+void 							KhoiDongQuadrotor(void);
+void 							TurnOffQuadrotor(void);
 															
 //Khoi Tao LED, BUTTON USER
 void 							Init_LEDSANG_PORTD_12_13_14_15(void);
@@ -236,10 +238,6 @@ int main(void)
 		delay_ms(2000); 		
 		TIM3->CCR1 = 700; 		TIM3->CCR2 = 700;		TIM3->CCR3 = 700;		TIM3->CCR4 = 700;		
 		SANG_4_LED_OFF();
-		delay_ms(1000);
-		SANG_4_LED();
-		delay_ms(1000); 		
-		SANG_4_LED_OFF();
 		//cau hinh xong toc do cho 4 motor
 		
 
@@ -264,7 +262,7 @@ int main(void)
 		TM_MPU6050_SetDataRate( MPU6050_I2C_ADDR, MPU6050_SMPLRT_DIV, TM_MPU6050_DataRate_1KHz); 
 		TM_MPU6050_SetAccelerometer( MPU6050_I2C_ADDR, MPU6050_ACCEL_CONFIG, TM_MPU6050_Accelerometer_2G); 
 		TM_MPU6050_SetGyroscope( MPU6050_I2C_ADDR, MPU6050_GYRO_CONFIG, TM_MPU6050_Gyroscope_250s); 
-		TM_MPU6050_ReadAll( MPU6050_I2C_ADDR, &output);
+		TM_MPU6050_ReadAll( MPU6050_I2C_ADDR, &mpu6050);
 		
 		
 		
@@ -292,8 +290,8 @@ int main(void)
 		
 		
 
-		accX_angle  = atan(output.Accelerometer_Y / sqrt(output.Accelerometer_X * output.Accelerometer_X + output.Accelerometer_Z * output.Accelerometer_Z)) * RAD_TO_DEG;
-		accY_angle = atan2(-output.Accelerometer_X, output.Accelerometer_Z) * RAD_TO_DEG;
+		accX_angle  = atan(mpu6050.Acc_Y / sqrt(mpu6050.Acc_X * mpu6050.Acc_X + mpu6050.Acc_Z * mpu6050.Acc_Z)) * RAD_TO_DEG;
+		accY_angle = atan2(-mpu6050.Acc_X, mpu6050.Acc_Z) * RAD_TO_DEG;
 		//accZ_angle = atan(output.Accelerometer_Z/sqrt(output.Accelerometer_X*output.Accelerometer_X + output.Accelerometer_Z*output.Accelerometer_Z)) * RAD_TO_DEG;		
 		//accZ_angle = output.Gyroscope_Z*DT; //angel Z (yaww) = tocdo_goc*thoigian;
 		gyroX_angle = accX_angle; //set goc gyroX_angle = accX_angle;
@@ -305,29 +303,35 @@ int main(void)
 																#endif					
 		KiemTraCodeOK();		
 		while(1)
-		{				
-			//MPU6050-------------
-			TM_MPU6050_ReadAll( MPU6050_I2C_ADDR, &output);
+		{	
+				while(FlyState == 0)
+				{
+					//Khoi dong may bay	
+					KhoiDongQuadrotor(); SANG_4_LED(); delay_ms(50); SANG_4_LED_OFF(); delay_ms(50);
+				}		
+				
+				
+				TM_MPU6050_ReadAll( MPU6050_I2C_ADDR, &mpu6050); ////MPU6050-------------
 			
 			//-----------------------------------------------------------------------------------
 			//roll equation provides [-180, 180] range
-			accX_angle  = atan2(-output.Accelerometer_Y, output.Accelerometer_Z)*RAD_TO_DEG; 
+			accX_angle  = atan2(-mpu6050.Acc_Y, mpu6050.Acc_Z)*RAD_TO_DEG; 
 			//[-90, 90] range, which is exactly what is expected for the pitch angle
-			accY_angle = atan2(output.Accelerometer_X, sqrt(output.Accelerometer_Y*output.Accelerometer_Y + output.Accelerometer_Z*output.Accelerometer_Z))*RAD_TO_DEG;
+			accY_angle = atan2(mpu6050.Acc_X, sqrt(mpu6050.Acc_Y*mpu6050.Acc_Y + mpu6050.Acc_Z*mpu6050.Acc_Z))*RAD_TO_DEG;
 			
 			
 			
 			
-			gyroXrate = (double)output.Gyroscope_X/131.0;
-			gyroYrate = (double)output.Gyroscope_Y/131.0;
-			gyroZrate = (double)output.Gyroscope_Z/131.0;
+			gyroXrate = (double)mpu6050.Gyro_X/131.0;
+			gyroYrate = (double)mpu6050.Gyro_Y/131.0;
+			gyroZrate = (double)mpu6050.Gyro_Z/131.0;
 
 			gyroX_angle += gyroXrate * DT; // Calculate gyro angle without any filter
 			gyroY_angle += gyroYrate * DT; // Calculate gyro angle without any filter
 			gyroZ_angle += gyroZrate * DT; // Calculate gyro angle without any filter
 			
-			Kalman_angelX = kalmanCalculate(&kalmanX, accX_angle, gyroXrate);
-			Kalman_angelY = kalmanCalculate(&kalmanY, accY_angle, gyroYrate);
+			Kalman_angelX = kalmanCalculate(&kalmanX, accX_angle, gyroXrate, DT);
+			Kalman_angelY = kalmanCalculate(&kalmanY, accY_angle, gyroYrate, DT);
 			//Kalman_angelZ = kalmanCalculate(&kalmanZ, gyroZ_angle, gyroZrate);
 			//compAngleX = 0.93 * (compAngleX + gyroXrate * dt) + 0.07 * roll; // Calculate the angle using a Complimentary filter
 			//-----------------------------------------------------------------------------------
@@ -343,55 +347,23 @@ int main(void)
 				}				
 			}
 			
-			if(FlyState == 0)
-			{
-				//Khoi dong may bay	
-				if( (IC_Throttle_pusle_width         >= PWM_START_MIN && IC_Throttle_pusle_width         <= PWM_START_MAX) && 
-						(IC_Aileron_TraiPhai_pusle_width >= PWM_START_MIN && IC_Aileron_TraiPhai_pusle_width <= PWM_START_MAX) && 
-						(IC_Elevator_TienLui_pusle_width >= PWM_START_MIN && IC_Elevator_TienLui_pusle_width <= PWM_START_MAX) 
-				)
-				{
-						SANG_4_LED(); delay_ms(5000); SANG_4_LED_OFF();
-						if( (IC_Throttle_pusle_width         >= PWM_START_MIN && IC_Throttle_pusle_width         <= PWM_START_MAX) && 
-								(IC_Aileron_TraiPhai_pusle_width >= PWM_START_MIN && IC_Aileron_TraiPhai_pusle_width <= PWM_START_MAX) && 
-								(IC_Elevator_TienLui_pusle_width >= PWM_START_MIN && IC_Elevator_TienLui_pusle_width <= PWM_START_MAX) 
-						)
-						{
-								//Khoi dong quadrotor
-								SANG_4_LED_OFF();
-								FlyState = 1;
-								SetPWM_4_Motor(800);
-						}
-				}
-			}
-			else if(FlyState == 1)
+						
+			
+			if(FlyState == 1)
 			{
 				//khi ga nho nhat, keo can gat 5s thi tat may bay
-				//Tat Quadrotor
-				if( (IC_Throttle_pusle_width >= PWM_START_MIN && IC_Throttle_pusle_width <= PWM_START_MAX) && 
-						(IC_Aileron_TraiPhai_pusle_width >= PWM_START_MIN && IC_Aileron_TraiPhai_pusle_width <=PWM_START_MAX) && 
-						(IC_Elevator_TienLui_pusle_width >= PWM_START_MIN && IC_Elevator_TienLui_pusle_width <= PWM_START_MAX) && 
-						(IC_Rudder_Xoay_pusle_width >= PWM_START_MIN && IC_Rudder_Xoay_pusle_width <= PWM_START_MAX)
+				if( (IC_Throttle_pusle_width         >= PWM_ON_OFF_MIN && IC_Throttle_pusle_width         <= PWM_ON_OFF_MAX) && 
+						(IC_Aileron_TraiPhai_pusle_width >= PWM_ON_OFF_MIN && IC_Aileron_TraiPhai_pusle_width <= PWM_ON_OFF_MAX) && 
+						(IC_Elevator_TienLui_pusle_width >= PWM_ON_OFF_MIN && IC_Elevator_TienLui_pusle_width <= PWM_ON_OFF_MAX) &&
+						(IC_Rudder_Xoay_pusle_width      >= PWM_ON_OFF_MIN && IC_Rudder_Xoay_pusle_width      <= PWM_ON_OFF_MAX)
 				)
 				{
-						SANG_4_LED(); delay_ms(5000); SANG_4_LED_OFF();
-						if( (IC_Throttle_pusle_width >= PWM_START_MIN && IC_Throttle_pusle_width <= PWM_START_MAX) && 
-								(IC_Aileron_TraiPhai_pusle_width >= PWM_START_MIN && IC_Aileron_TraiPhai_pusle_width <=PWM_START_MAX) && 
-								(IC_Elevator_TienLui_pusle_width >= PWM_START_MIN && IC_Elevator_TienLui_pusle_width <= PWM_START_MAX) &&
-								(IC_Rudder_Xoay_pusle_width >= PWM_START_MIN && IC_Rudder_Xoay_pusle_width <= PWM_START_MAX)
-						)
-						{
-								//tat quadrotor
-								SANG_4_LED_OFF();
-								FlyState = 0;
-								SetPWM_4_Motor(500); //stop all motor
-								//SetPWM_4_Motor(0);
-						}
+							TurnOffQuadrotor();
 				}
 				//trang thai Can Bang, k co tac dong cua receiver
-				else if( (IC_Aileron_TraiPhai_pusle_width >= PWM_Throtte_Min && IC_Aileron_TraiPhai_pusle_width <= PWM_Throtte_Max ) &&
-								 (IC_Elevator_TienLui_pusle_width >= PWM_Throtte_Min && IC_Elevator_TienLui_pusle_width <= PWM_Throtte_Max) &&
-								 (IC_Rudder_Xoay_pusle_width >= PWM_Throtte_Min && IC_Rudder_Xoay_pusle_width <= PWM_Throtte_Max)
+				else if( (IC_Aileron_TraiPhai_pusle_width >= PWM_Effect_Min && IC_Aileron_TraiPhai_pusle_width <= PWM_Effect_Max ) &&
+								 (IC_Elevator_TienLui_pusle_width >= PWM_Effect_Min && IC_Elevator_TienLui_pusle_width <= PWM_Effect_Max) &&
+								 (IC_Rudder_Xoay_pusle_width      >= PWM_Effect_Min && IC_Rudder_Xoay_pusle_width      <= PWM_Effect_Max)
 					)
 				{			//-----------------------------------------------------------------------------------
 							////vao trang thai can bang, k co tac dong tu receiver, PID controller dieu chinh can bang
@@ -402,10 +374,6 @@ int main(void)
 							pwm_motor_3 = IC_Throttle_pusle_width - pid_roll.output - pid_pitch.output; // - yawpid;					
 							pwm_motor_2 = IC_Throttle_pusle_width + pid_roll.output - pid_pitch.output; // + yawpid;
 							pwm_motor_4 = IC_Throttle_pusle_width - pid_roll.output + pid_pitch.output; // + yawpid;
-						/*esc2->speed = thrust - pitch + roll; // - yawValue;
-						esc1->speed = thrust + pitch + roll; // + yawValue;
-						esc4->speed = thrust + pitch - roll; // - yawValue;
-						esc3->speed = thrust - pitch - roll; // + yawValue;*/
 							SetPWM_1_Motor(1, pwm_motor_1);
 							SetPWM_1_Motor(2, pwm_motor_2);
 							SetPWM_1_Motor(3, pwm_motor_3);
@@ -486,10 +454,48 @@ void SetInitDataQuadrotor(void)
 		who_i_am_reg_value_MPU6050 = 0;
 		SetPWM_4_Motor(0);
 		FlyState = 0;
-		pid_setup_gain(&pid_roll,ROLL_PID_KP, ROLL_PID_KI, ROLL_PID_KD);
-		pid_setup_gain(&pid_pitch,PITCH_PID_KP, PITCH_PID_KP, PITCH_PID_KP);
+		pid_setup_gain(&pid_roll,   ROLL_PID_KP, ROLL_PID_KI, ROLL_PID_KD);
+		pid_setup_gain(&pid_pitch,  PITCH_PID_KP, PITCH_PID_KI, PITCH_PID_KD);
 		pid_setup_error(&pid_roll);
 		pid_setup_error(&pid_pitch);
+}
+void KhoiDongQuadrotor(void)
+{
+		if( (IC_Throttle_pusle_width             >= PWM_ON_OFF_MIN && IC_Throttle_pusle_width         <= PWM_ON_OFF_MAX) && 
+						(IC_Aileron_TraiPhai_pusle_width >= PWM_ON_OFF_MIN && IC_Aileron_TraiPhai_pusle_width <= PWM_ON_OFF_MAX) && 
+						(IC_Elevator_TienLui_pusle_width >= PWM_ON_OFF_MIN && IC_Elevator_TienLui_pusle_width <= PWM_ON_OFF_MAX) 
+				)
+				{
+						SANG_4_LED(); delay_ms(5000); SANG_4_LED_OFF();
+						if( (IC_Throttle_pusle_width         >= PWM_ON_OFF_MIN && IC_Throttle_pusle_width         <= PWM_ON_OFF_MAX) && 
+								(IC_Aileron_TraiPhai_pusle_width >= PWM_ON_OFF_MIN && IC_Aileron_TraiPhai_pusle_width <= PWM_ON_OFF_MAX) && 
+								(IC_Elevator_TienLui_pusle_width >= PWM_ON_OFF_MIN && IC_Elevator_TienLui_pusle_width <= PWM_ON_OFF_MAX) 
+						)
+						{
+								//Khoi dong quadrotor
+								SANG_4_LED_OFF();
+								FlyState = 1;
+								SetPWM_4_Motor(1100);
+						}
+				}
+		
+}
+
+void TurnOffQuadrotor(void)
+{
+		SANG_4_LED(); delay_ms(5000); SANG_4_LED_OFF();
+		if( (IC_Throttle_pusle_width         >= PWM_ON_OFF_MIN && IC_Throttle_pusle_width         <= PWM_ON_OFF_MAX) && 
+				(IC_Aileron_TraiPhai_pusle_width >= PWM_ON_OFF_MIN && IC_Aileron_TraiPhai_pusle_width <= PWM_ON_OFF_MAX) && 
+				(IC_Elevator_TienLui_pusle_width >= PWM_ON_OFF_MIN && IC_Elevator_TienLui_pusle_width <= PWM_ON_OFF_MAX) &&
+				(IC_Rudder_Xoay_pusle_width      >= PWM_ON_OFF_MIN && IC_Rudder_Xoay_pusle_width      <= PWM_ON_OFF_MAX)
+		)
+		{
+				//tat quadrotor
+				SANG_4_LED_OFF();
+				FlyState = 0;
+				SetPWM_4_Motor(500); //stop all motor
+				//SetPWM_4_Motor(0);
+		}
 }
 //
 //
@@ -1029,9 +1035,9 @@ void TM_MPU6050_ReadAccelerometer( uint8_t device_address, TM_MPU6050_t* output 
 	TM_I2C_READ_MULTI( device_address, MPU6050_ACCEL_XOUT_H, data, 6);
 	while(HAL_I2C_GetState(&I2C_Handle_10truc)!=HAL_I2C_STATE_READY){}
 		
-	output->Accelerometer_X = (int16_t)(data[0] << 8 | data[1]);
-	output->Accelerometer_Y = (int16_t)(data[2] << 8 | data[3]);
-	output->Accelerometer_Z = (int16_t)(data[4] << 8 | data[5]);
+	output->Acc_X = (int16_t)(data[0] << 8 | data[1]);
+	output->Acc_Y = (int16_t)(data[2] << 8 | data[3]);
+	output->Acc_Z = (int16_t)(data[4] << 8 | data[5]);
 }
 
 void TM_MPU6050_ReadGyroscope( uint8_t device_address, TM_MPU6050_t* output )
@@ -1040,9 +1046,9 @@ void TM_MPU6050_ReadGyroscope( uint8_t device_address, TM_MPU6050_t* output )
 	TM_I2C_READ_MULTI( device_address, MPU6050_GYRO_XOUT_H, data, 6);
 	while(HAL_I2C_GetState(&I2C_Handle_10truc)!=HAL_I2C_STATE_READY){}
 		
-	output->Gyroscope_X = (int16_t)(data[0] << 8 | data[1]);
-	output->Gyroscope_Y = (int16_t)(data[2] << 8 | data[3]);
-	output->Gyroscope_Z = (int16_t)(data[4] << 8 | data[5]);
+	output->Gyro_X = (int16_t)(data[0] << 8 | data[1]);
+	output->Gyro_Y = (int16_t)(data[2] << 8 | data[3]);
+	output->Gyro_Z = (int16_t)(data[4] << 8 | data[5]);
 }	
 
 void TM_MPU6050_ReadAll( uint8_t device_address, TM_MPU6050_t* output )
@@ -1053,48 +1059,48 @@ void TM_MPU6050_ReadAll( uint8_t device_address, TM_MPU6050_t* output )
 	TM_I2C_READ_MULTI( device_address, MPU6050_ACCEL_XOUT_H, data, 14); /* Read full raw data, 14bytes */
 	while(HAL_I2C_GetState(&I2C_Handle_10truc)!=HAL_I2C_STATE_READY){}	
 	
-	output->Accelerometer_X = (int16_t)(data[0] << 8 | data[1]);	/* Format accelerometer data */
-	output->Accelerometer_Y = (int16_t)(data[2] << 8 | data[3]);
-	output->Accelerometer_Z = (int16_t)(data[4] << 8 | data[5]);
+	output->Acc_X = (int16_t)(data[0] << 8 | data[1]);	/* Format accelerometer data */
+	output->Acc_Y = (int16_t)(data[2] << 8 | data[3]);
+	output->Acc_Z = (int16_t)(data[4] << 8 | data[5]);
 	
 	temp = (data[6] << 8 | data[7]); /* Format temperature */
 	output->Temperature = (float)((float)((int16_t)temp) / (float)340.0 + (float)36.53);
 	
-	output->Gyroscope_X = (int16_t)(data[8] << 8 | data[9]); /* Format gyroscope data */
-	output->Gyroscope_Y = (int16_t)(data[10] << 8 | data[11]);
-	output->Gyroscope_Z = (int16_t)(data[12] << 8 | data[13]);
+	output->Gyro_X = (int16_t)(data[8] << 8 | data[9]); /* Format gyroscope data */
+	output->Gyro_Y = (int16_t)(data[10] << 8 | data[11]);
+	output->Gyro_Z = (int16_t)(data[12] << 8 | data[13]);
 }
 
 
 
-void Sang_Led_By_MPU6050_Values(float angel_x, float angel_y, float angel_z )
+void Sang_Led_By_MPU6050_Values(float kalman_angel_x, float kalman_angel_y, float kalman_angel_z )
 {
 	SANG_4_LED_OFF();
-	if(angel_x > 20)
+	if(kalman_angel_x > 15)
 	{
 		SANG_1_LED(LED_YELLOW); 
-	}else if(angel_x < -20)
+	}else if(kalman_angel_x < -15)
 	{
 		SANG_1_LED(LED_RED); 	
 	}
 	
-	if(angel_y > 20)
+	if(kalman_angel_y > 15)
 	{
 		SANG_1_LED(LED_BLUE);  
-	}else if(angel_y < -20)
+	}else if(kalman_angel_y < -15)
 	{
 		SANG_1_LED(LED_ORANGE);  
 	}
 	delay_ms(50);
 }
-
+/*
 void Calculate_Accel_X_Angles(TM_MPU6050_t* output, float* angel_x)
 {
 		float _sqrt;
 		float mot_180_do_chia_pi = (float)((float)180.0/PI);	
-		float ACCEL_XOUT = (float)(output->Accelerometer_X/MPU6050_ACCE_SENS_2);
-		float ACCEL_YOUT = (float)(output->Accelerometer_Y/MPU6050_ACCE_SENS_2);
-		float ACCEL_ZOUT = (float)(output->Accelerometer_Z/MPU6050_ACCE_SENS_2);
+		float ACCEL_XOUT = (float)(output->Acc_X/MPU6050_ACCE_SENS_2);
+		float ACCEL_YOUT = (float)(output->Acc_Y/MPU6050_ACCE_SENS_2);
+		float ACCEL_ZOUT = (float)(output->Acc_Z/MPU6050_ACCE_SENS_2);
 	
 		_sqrt = (float)sqrt( ACCEL_ZOUT*ACCEL_ZOUT + ACCEL_XOUT*ACCEL_XOUT );	
 		*angel_x = (float)(mot_180_do_chia_pi * (float)atan(ACCEL_YOUT/_sqrt));
@@ -1104,9 +1110,9 @@ void Calculate_Accel_Y_Angles(TM_MPU6050_t* output, float* angel_y)
 {
 		float _sqrt;
 		float mot_180_do_chia_pi = (float)((float)180.0/PI);	
-		float ACCEL_XOUT = (float)(output->Accelerometer_X/MPU6050_ACCE_SENS_2);
-		float ACCEL_YOUT = (float)(output->Accelerometer_Y/MPU6050_ACCE_SENS_2);
-		float ACCEL_ZOUT = (float)(output->Accelerometer_Z/MPU6050_ACCE_SENS_2);
+		float ACCEL_XOUT = (float)(output->Acc_X/MPU6050_ACCE_SENS_2);
+		float ACCEL_YOUT = (float)(output->Acc_Y/MPU6050_ACCE_SENS_2);
+		float ACCEL_ZOUT = (float)(output->Acc_Z/MPU6050_ACCE_SENS_2);
 		_sqrt = (float)sqrt( ACCEL_ZOUT*ACCEL_ZOUT + ACCEL_YOUT*ACCEL_YOUT );
 		*angel_y = (float)(mot_180_do_chia_pi * (float)-atan(ACCEL_XOUT /_sqrt));
 }
@@ -1116,12 +1122,13 @@ void Calculate_Accel_Z_Angles(TM_MPU6050_t* output, float* angel_z)
 {
 		float _sqrt;
 		float mot_180_do_chia_pi = (float)((float)180.0/PI);
-		float ACCEL_XOUT = (float)(output->Accelerometer_X/MPU6050_ACCE_SENS_2);
-		float ACCEL_YOUT = (float)(output->Accelerometer_Y/MPU6050_ACCE_SENS_2);
-		float ACCEL_ZOUT = (float)(output->Accelerometer_Z/MPU6050_ACCE_SENS_2);
+		float ACCEL_XOUT = (float)(output->Acc_X/MPU6050_ACCE_SENS_2);
+		float ACCEL_YOUT = (float)(output->Acc_Y/MPU6050_ACCE_SENS_2);
+		float ACCEL_ZOUT = (float)(output->Acc_Z/MPU6050_ACCE_SENS_2);
 		_sqrt= (float)sqrt( ACCEL_YOUT*ACCEL_YOUT + ACCEL_XOUT*ACCEL_XOUT );
 		*angel_z = (float)(mot_180_do_chia_pi * atan(_sqrt/ACCEL_ZOUT));
 }
+*/
 //end Accelerametor 10truc
 //
 //
@@ -1542,9 +1549,9 @@ void SANG_4_LED_OFF()
 
 
 
-float kalmanCalculate(Kalman_Setting *kalman, float newAngle, float newRate)
+float kalmanCalculate(Kalman_Setting *kalman, float newAngle, float newRate, float DT_)
 {
-			float dt = (float)DT;	
+			float dt = (float)DT_;	
 			kalman->angle += dt * (newRate - kalman->bias);
 
 		//!    P_00 +=  - dt * (P_10 + P_01) + Q_angle * dt;
