@@ -28,7 +28,7 @@
 #define PI											(float)3.1415926535
 #define RAD_TO_DEG 							(float)(180/PI)
 
-//#define DT_S 									0.01
+#define DT_milisecond 					100 //100ms = 0.1s
 #define DT 											0.01 //10ms=0.01s hay 100ms=0.1s (10ms sample time)
 //--------------------------------
 

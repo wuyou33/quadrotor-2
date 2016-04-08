@@ -367,8 +367,8 @@ int main(void)
 					)
 				{			//-----------------------------------------------------------------------------------
 							////vao trang thai can bang, k co tac dong tu receiver, PID controller dieu chinh can bang
-							pid_compute(&pid_roll  ,Kalman_angelX, DT);
-							pid_compute(&pid_pitch ,Kalman_angelY, DT);
+							pid_compute(&pid_roll  ,Kalman_angelX, DT, -200,200);
+							pid_compute(&pid_pitch ,Kalman_angelY, DT, 200, 200);
 					
 							pwm_motor_1 = IC_Throttle_pusle_width + pid_roll.output + pid_pitch.output; // - yawpid;
 							pwm_motor_3 = IC_Throttle_pusle_width - pid_roll.output - pid_pitch.output; // - yawpid;					
@@ -466,7 +466,7 @@ void KhoiDongQuadrotor(void)
 						(IC_Elevator_TienLui_pusle_width >= PWM_ON_OFF_MIN && IC_Elevator_TienLui_pusle_width <= PWM_ON_OFF_MAX) 
 				)
 				{
-						SANG_4_LED(); delay_ms(5000); SANG_4_LED_OFF();
+						SANG_4_LED(); delay_ms(3000); SANG_4_LED_OFF();
 						if( (IC_Throttle_pusle_width         >= PWM_ON_OFF_MIN && IC_Throttle_pusle_width         <= PWM_ON_OFF_MAX) && 
 								(IC_Aileron_TraiPhai_pusle_width >= PWM_ON_OFF_MIN && IC_Aileron_TraiPhai_pusle_width <= PWM_ON_OFF_MAX) && 
 								(IC_Elevator_TienLui_pusle_width >= PWM_ON_OFF_MIN && IC_Elevator_TienLui_pusle_width <= PWM_ON_OFF_MAX) 
@@ -483,7 +483,7 @@ void KhoiDongQuadrotor(void)
 
 void TurnOffQuadrotor(void)
 {
-		SANG_4_LED(); delay_ms(5000); SANG_4_LED_OFF();
+		SANG_4_LED(); delay_ms(3000); SANG_4_LED_OFF();
 		if( (IC_Throttle_pusle_width         >= PWM_ON_OFF_MIN && IC_Throttle_pusle_width         <= PWM_ON_OFF_MAX) && 
 				(IC_Aileron_TraiPhai_pusle_width >= PWM_ON_OFF_MIN && IC_Aileron_TraiPhai_pusle_width <= PWM_ON_OFF_MAX) && 
 				(IC_Elevator_TienLui_pusle_width >= PWM_ON_OFF_MIN && IC_Elevator_TienLui_pusle_width <= PWM_ON_OFF_MAX) &&
