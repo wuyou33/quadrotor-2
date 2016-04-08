@@ -1,40 +1,35 @@
 //https://github.com/klaslofstedt/stm32f4_quadcopter/blob/master/inc/PID.h
-//#define Kp 0.0060, #define Ki 0.0, #define Kd 0.0018
-
 //good PID https://www.youtube.com/watch?v=UBgYEstAfvY&nohtml5=False
 //#define P=4.7 , I=0.048 , D= 36 
-
-#define Kp_Roll  0.13//0.0069
-#define Ki_Roll  0.00//0.000008
-#define Kd_Roll  0.00014//0.015
-
-#define Kp_Pitch  0.12//0.16 
-#define Ki_Pitch  0.0000//20//1//5//9//1//1
-#define Kd_Pitch  0.0001//14//19 //0.012
-
-//kp = 0.5,ki=0.00005 ,kd=0.01,  prerror, dt=100;
+//				P=8.0 / I=0.020 / D=15
+//				P=0.13 / I=0.00 / D=0.00014
+//				P=0.0069 / I=0.000008 / D=0.015
+//				P=0.12 / I=0.0000 / D=0.0001
+//				P = 0.5 / I=0.00005 /D=0.01
+//        P=0.0060/ I=0.0 / D=0.0018
 
 #define DT_milisecond 					10 //100ms = 0.1s
 #define DT 											0.01 //10ms=0.01s hay 100ms=0.1s (10ms sample time)
 
 //-------PID Config----------
-#define ROLL_PID_KP  2							//0.250
-#define ROLL_PID_KI  0 					//0.950
-#define ROLL_PID_KD  0							//0.011
+#define ROLL_PID_KP  8.0							//0.250
+#define ROLL_PID_KI  0.020 					//0.950
+#define ROLL_PID_KD  15							//0.011
 #define ROLL_PID_MIN  -400.0
 #define ROLL_PID_MAX  400.0
 
-#define PITCH_PID_KP  2
-#define PITCH_PID_KI  0				
-#define PITCH_PID_KD  0
+#define PITCH_PID_KP  8.0
+#define PITCH_PID_KI  0.020				
+#define PITCH_PID_KD  15
 #define PITCH_PID_MIN  -400.0
 #define PITCH_PID_MAX  400.0
 
-#define YAW_PID_KP  0.680
+/*#define YAW_PID_KP  0.680
 #define YAW_PID_KI  0.500
 #define YAW_PID_KD  0.0001
 #define YAW_PID_MIN  100.0
 #define YAW_PID_MAX  100.0
+*/
 
 //Khai bao struct 
 typedef struct 
@@ -74,8 +69,7 @@ void pid_compute(PID* pid, double Input, double dt, int16_t pid_min, int16_t pid
 		pid->integral_error 	= pid->integral_error +  (pid->kI *  error * dt);
 		pid->diff_error 			= 	(pid->kD * (error - pid->pre_error)) / dt;
   
-		//Compute PID Output
-		//output += (Kp * err) + (Ki * int * dt) + (Kd * der /dt);
+		//Compute PID Output		//output += (Kp * err) + (Ki * int * dt) + (Kd * der /dt);
 		//pid->output 					= pid->output +   (pid->kP*error) +    pid->integral_error +      pid->diff_error;
 		pid->output 					= (pid->kP*error) +    pid->integral_error +      pid->diff_error;
 		
