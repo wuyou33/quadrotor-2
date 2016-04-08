@@ -404,7 +404,7 @@ void SetInitDataQuadrotor(void)
 		who_i_am_reg_value_MPU6050 = 0;
 		SetPWM_4_Motor(0);
 		FlyState = 0;
-		pid_setup_gain(&pid_roll,   ROLL_PID_KP, ROLL_PID_KI, ROLL_PID_KD);
+		pid_setup_gain(&pid_roll,   ROLL_PID_KP,  ROLL_PID_KI,  ROLL_PID_KD);
 		pid_setup_gain(&pid_pitch,  PITCH_PID_KP, PITCH_PID_KI, PITCH_PID_KD);
 		pid_setup_error(&pid_roll);
 		pid_setup_error(&pid_pitch);

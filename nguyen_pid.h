@@ -8,19 +8,18 @@
 //				P = 0.5 / I=0.00005 /D=0.01
 //        P=0.0060/ I=0.0 / D=0.0018
 
-#define DT_milisecond 					10 //100ms = 0.1s
+//#define DT_milisecond 					10 //100ms = 0.1s
 #define DT 											0.01 //10ms=0.01s hay 100ms=0.1s (10ms sample time)
 
-//-------PID Config----------
-#define ROLL_PID_KP  8.0							//0.250
-#define ROLL_PID_KI  0.020 					//0.950
-#define ROLL_PID_KD  15							//0.011
+#define ROLL_PID_KP  0.250							//0.250
+#define ROLL_PID_KI  0.950 					//0.950
+#define ROLL_PID_KD  0.011							//0.011
 #define ROLL_PID_MIN  -400.0
 #define ROLL_PID_MAX  400.0
 
-#define PITCH_PID_KP  8.0
-#define PITCH_PID_KI  0.020				
-#define PITCH_PID_KD  15
+#define PITCH_PID_KP  0.250
+#define PITCH_PID_KI  0.950 				
+#define PITCH_PID_KD  0.011
 #define PITCH_PID_MIN  -400.0
 #define PITCH_PID_MAX  400.0
 
@@ -92,3 +91,63 @@ pre_Out = Out
 */
 
 
+/*
+void pidInit()
+{
+	pid.roll.Kp = 1.3;	//stable: 1.3
+	pid.roll.Ki = 0.05;	//stable: 0.05
+	pid.roll.Kd = 20;	//stable: 25
+	pid.roll.max = 400;	//stable: 400
+	
+	pid.pitch.Kp = pid.roll.Kp;
+	pid.pitch.Ki = pid.roll.Ki;
+	pid.pitch.Kd = pid.roll.Kd;
+	pid.pitch.max= pid.roll.max;
+	
+	pid.yaw.Kp = 4.0;  //stable: 4.0
+	pid.yaw.Ki = 0.02; //stable: 0.02
+	pid.yaw.Kd = 0.0;  //stable: 0
+	pid.yaw.max= 400;  //stable: 400
+	pidReset();
+}
+
+void calculate_pid()
+{
+	float pidError;
+	//Roll
+	pidError = gyroRate[ROL] - setPoint[ROL];
+	pidState.roll.iTerm += pid.roll.Ki * pidError;
+	pidState.roll.iTerm = limit(pidState.roll.iTerm,-pid.roll.max,pid.roll.max);
+	pidOut[ROL] = pid.roll.Kp * pidError + pidState.roll.iTerm + pid.roll.Kd * (pidError - pidState.roll.lastDErr);
+	pidOut[ROL] = limit(pidOut[ROL],-pid.roll.max,pid.roll.max);
+	pidState.roll.lastDErr = pidError;
+	
+	//pitch
+	pidError = gyroRate[PIT] - setPoint[PIT];
+	pidState.pitch.iTerm += pid.pitch.Ki * pidError;
+	pidState.pitch.iTerm = limit(pidState.pitch.iTerm, -pid.pitch.max, pid.pitch.max);
+	pidOut[PIT] = pid.pitch.Kp * pidError + pidState.pitch.iTerm + pid.pitch.Kd * (pidError - pidState.pitch.lastDErr);
+	pidOut[PIT] = limit(pidOut[PIT], -pid.pitch.max, pid.pitch.max);
+	pidState.pitch.lastDErr = pidError;
+	
+	//Yaw
+	pidError = gyroRate[YAW] - setPoint[YAW];
+	pidState.yaw.iTerm += pid.yaw.Ki * pidError;
+	pidState.yaw.iTerm = limit(pidState.yaw.iTerm, -pid.yaw.max, pid.yaw.max);
+	pidOut[YAW] = pid.yaw.Kp * pidError + pidState.yaw.iTerm + pid.yaw.Kd * (pidError - pidState.yaw.lastDErr);
+	pidOut[YAW] = limit(pidOut[YAW], -pid.yaw.max, pid.yaw.max);
+	pidState.yaw.lastDErr = pidError;
+}
+void pidReset()
+{
+	pidState.roll.iTerm = 0;
+	pidState.roll.lastDErr = 0;
+	pidState.pitch.iTerm = 0;
+	pidState.pitch.lastDErr = 0;
+	pidState.yaw.iTerm = 0;
+	pidState.yaw.lastDErr = 0;
+	setPoint[ROL] = 0;
+	setPoint[PIT] = 0;
+	setPoint[YAW] = 0;
+}
+*/
