@@ -53,35 +53,19 @@ TIM_HandleTypeDef 								htim5; //PA3 - TIM5_CH4
 
 //Throttle (can ga) tang giam toc do quay
 int16_t 													IC_Throttle1, IC_Throttle2;
-int16_t 													IC_Throttle_flag_capture_number;
 int16_t 													IC_Throttle_pusle_width;
-int16_t 													IC_Throttle_cycle_time;
-int16_t 													IC_Throttle_frequency;
-int32_t 													IC_counter_register_timer;
-int32_t 													IC_interrupt_numbers_timer;
 
 //Rudder (xoay theo truc z) - goc Yaw
 int16_t 													IC_Rudder_Xoay1, IC_Rudder_Xoay2;
-int16_t 													IC_Rudder_Xoay_flag_capture_number;
 int16_t 													IC_Rudder_Xoay_pusle_width;
-int16_t 													IC_Rudder_Xoay_cycle_time;
-int16_t 													IC_Rudder_Xoay_frequency;
-
 
 //Elevator (tien - lui) - goc Pitch
 int16_t 													IC_Elevator_TienLui1, IC_Elevator_TienLui2;
-int16_t 													IC_Elevator_TienLui_flag_capture_number;
 int16_t 													IC_Elevator_TienLui_pusle_width;
-int16_t 													IC_Elevator_TienLui_cycle_time;
-int16_t 													IC_Elevator_TienLui_frequency;
 
 //Aileron_TraiPhai (trai - phai) - goc Roll
 int16_t 													IC_Aileron_TraiPhai1, IC_Aileron_TraiPhai2;
-int16_t 													IC_Aileron_TraiPhai_flag_capture_number;
 int16_t 													IC_Aileron_TraiPhai_pusle_width;
-int16_t 													IC_Aileron_TraiPhai_cycle_time;
-int16_t 													IC_Aileron_TraiPhai_frequency;
-
 
 //PWM 4 motor
 int16_t 													pwm_motor_1; //  Motor1           Motor2
@@ -319,13 +303,19 @@ int main(void)
 									 (IC_Rudder_Xoay_pusle_width      >= PWM_Effect_Min && IC_Rudder_Xoay_pusle_width      <= PWM_Effect_Max)
 						)
 					{			//vao trang thai can bang, k co tac dong tu receiver, PID controller dieu chinh can bang
-								pid_compute(&pid_roll  ,Kalman_angelX, DT, ROLL_PID_MIN, ROLL_PID_MAX);
+								pid_compute(&pid_roll  ,Kalman_angelX, DT, ROLL_PID_MIN,  ROLL_PID_MAX);
 								pid_compute(&pid_pitch ,Kalman_angelY, DT, PITCH_PID_MIN, PITCH_PID_MAX);
-						
-								pwm_motor_1 = IC_Throttle_pusle_width + pid_roll.output + pid_pitch.output; // - yawpid;
-								pwm_motor_3 = IC_Throttle_pusle_width - pid_roll.output - pid_pitch.output; // - yawpid;					
-								pwm_motor_2 = IC_Throttle_pusle_width + pid_roll.output - pid_pitch.output; // + yawpid;
-								pwm_motor_4 = IC_Throttle_pusle_width - pid_roll.output + pid_pitch.output; // + yawpid;
+								//pid_compute(&pid_yaw ,Kalman_angelZ, DT, YAW_PID_MIN,   YAW_PID_MAX);
+								
+								//	  (1)\   /(2)
+								//        \ /				        x
+								//         X				        |
+								//        / \          y____|
+								//    (4)/   \(3)				
+								pwm_motor_1 = IC_Throttle_pusle_width - pid_roll.output - pid_pitch.output + pid_yaw.output;
+								pwm_motor_2 = IC_Throttle_pusle_width + pid_roll.output - pid_pitch.output - pid_yaw.output;				
+								pwm_motor_3 = IC_Throttle_pusle_width + pid_roll.output + pid_pitch.output + pid_yaw.output;
+								pwm_motor_4 = IC_Throttle_pusle_width - pid_roll.output + pid_pitch.output - pid_yaw.output;
 								SetPWM_1_Motor(1, pwm_motor_1);
 								SetPWM_1_Motor(2, pwm_motor_2);
 								SetPWM_1_Motor(3, pwm_motor_3);
@@ -374,33 +364,19 @@ void SetInitDataQuadrotor(void)
 		IC_Throttle1 = 0;
 		IC_Throttle2 = 0; 
 		IC_Throttle_pusle_width = 0;
-		IC_Throttle_cycle_time = 0;
-		IC_Throttle_frequency = 0;
-		IC_Throttle_flag_capture_number=0;
 	
 		IC_Elevator_TienLui1 = 0;
 		IC_Elevator_TienLui2 = 0; 
 		IC_Elevator_TienLui_pusle_width = 0;
-		IC_Elevator_TienLui_cycle_time = 0;
-		IC_Elevator_TienLui_frequency = 0;
-		IC_Elevator_TienLui_flag_capture_number=0;
 	
 		IC_Aileron_TraiPhai1 = 0;
 		IC_Aileron_TraiPhai2 = 0;
 		IC_Aileron_TraiPhai_pusle_width = 0;
-		IC_Aileron_TraiPhai_cycle_time = 0;
-		IC_Aileron_TraiPhai_frequency = 0;
-		IC_Aileron_TraiPhai_flag_capture_number = 0;
 	
 		IC_Rudder_Xoay1 = 0;
 		IC_Rudder_Xoay2 = 0;
 		IC_Rudder_Xoay_pusle_width = 0;
-		IC_Rudder_Xoay_cycle_time = 0;
-		IC_Rudder_Xoay_frequency = 0;
-		IC_Rudder_Xoay_flag_capture_number = 0;
 		
-		IC_counter_register_timer = 0;
-		IC_interrupt_numbers_timer = 0;
 		who_i_am_reg_value_MPU6050 = 0;
 		SetPWM_4_Motor(0);
 		FlyState = 0;
@@ -646,95 +622,57 @@ void Init_Receiver_TIM_PWM_Capture_TIM5(void) //PA1 - TIM5_CH2
 }	
 
 
-void TIM1_CC_IRQHandler(void)
+void TIM1_CC_IRQHandler(void) //PE9 ->TIM1_CH1
 {
 					//khi co interrup la TIM_IT_CC1, co su kien capture canh	
 						if(__HAL_TIM_GET_ITSTATUS(&htim1, TIM_IT_CC1) == SET)
 						{		
 									__HAL_TIM_CLEAR_IT(&htim1, TIM_IT_CC1);
-									__HAL_TIM_CLEAR_FLAG(&htim1, TIM_IT_CC1);		
-									if(IC_Throttle_flag_capture_number==0)
-									{					
-												IC_Throttle1 = HAL_TIM_ReadCapturedValue(&htim1, TIM_CHANNEL_1);
-												IC_Throttle_flag_capture_number = 1;
-													
-									}else if(IC_Throttle_flag_capture_number==1)
-									{
-												IC_Throttle2 = HAL_TIM_ReadCapturedValue(&htim1, TIM_CHANNEL_1);
-												IC_Throttle_pusle_width		= (IC_Throttle2 - IC_Throttle1);
-												IC_Throttle_flag_capture_number = 2;	
-														
-									}
-									else if(IC_Throttle_flag_capture_number==2)
-									{
-												IC_Throttle_cycle_time = (HAL_TIM_ReadCapturedValue(&htim1, TIM_CHANNEL_1) - IC_Throttle1);
-												IC_Throttle_flag_capture_number = 3;
-									}else if(IC_Throttle_flag_capture_number==3)
-									{
-												IC_Throttle_flag_capture_number=0;
-												TIM1->CNT = 0;
-									}						
+									__HAL_TIM_CLEAR_FLAG(&htim1, TIM_IT_CC1);	
+									if( HAL_GPIO_ReadPin(GPIOE, GPIO_PIN_9)== SET)
+									{ //ngat canh len
+										IC_Throttle1 = HAL_TIM_ReadCapturedValue(&htim1, TIM_CHANNEL_1);
+									}else if( HAL_GPIO_ReadPin(GPIOE, GPIO_PIN_9)== RESET)
+									{//ngat canh xuong
+										IC_Throttle2 = HAL_TIM_ReadCapturedValue(&htim1, TIM_CHANNEL_1);
+										IC_Throttle_pusle_width		= (IC_Throttle2 - IC_Throttle1);
+										TIM1->CNT = 0;
+									}					
 						}
 }
 
-void TIM2_IRQHandler(void)
+void TIM2_IRQHandler(void) //PA5 ->TIM2_CH1  //Rudder (xoay theo truc z) - goc Yaw
 {
-	//PA5 ->TIM2_CH1  //Rudder (xoay theo truc z) - goc Yaw
-		if(__HAL_TIM_GET_ITSTATUS(&htim2, TIM_IT_CC1) == SET)
+	if(__HAL_TIM_GET_ITSTATUS(&htim2, TIM_IT_CC1) == SET)
 			{		
 						__HAL_TIM_CLEAR_IT(&htim2, TIM_IT_CC1);
 						__HAL_TIM_CLEAR_FLAG(&htim2, TIM_IT_CC1);		
-						if(IC_Rudder_Xoay_flag_capture_number==0)
-						{					
-									IC_Rudder_Xoay1 = HAL_TIM_ReadCapturedValue(&htim2, TIM_CHANNEL_1);
-									IC_Rudder_Xoay_flag_capture_number = 1;
-										
-						}else if(IC_Rudder_Xoay_flag_capture_number==1)
-						{
-									IC_Rudder_Xoay2 = HAL_TIM_ReadCapturedValue(&htim2, TIM_CHANNEL_1);
-									IC_Rudder_Xoay_pusle_width		= (IC_Rudder_Xoay2 - IC_Rudder_Xoay1);
-									IC_Rudder_Xoay_flag_capture_number = 2;	
-											
-						}
-						else if(IC_Rudder_Xoay_flag_capture_number==2)
-						{
-									IC_Rudder_Xoay_cycle_time = (HAL_TIM_ReadCapturedValue(&htim2, TIM_CHANNEL_1) - IC_Rudder_Xoay1);
-									IC_Rudder_Xoay_flag_capture_number = 3;
-						}else if(IC_Rudder_Xoay_flag_capture_number==3)
-						{
-									IC_Rudder_Xoay_flag_capture_number=0;
-									TIM2->CNT = 0;
-						}						
+									if( HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_5)== SET)
+									{ //ngat canh len
+										IC_Rudder_Xoay1 = HAL_TIM_ReadCapturedValue(&htim2, TIM_CHANNEL_1);
+									}else if( HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_5)== RESET)
+									{//ngat canh xuong
+										IC_Rudder_Xoay2 = HAL_TIM_ReadCapturedValue(&htim2, TIM_CHANNEL_1);
+										IC_Rudder_Xoay_pusle_width		= (IC_Rudder_Xoay2 - IC_Rudder_Xoay1);
+										TIM2->CNT = 0;
+									}						
 			}
 }
-void TIM4_IRQHandler(void)
-{ 
-	//PB8 ->TIM4_CH3  //Elevator (tien - lui) - goc Pitch
+void TIM4_IRQHandler(void) //PB8 ->TIM4_CH3  //Elevator (tien - lui) - goc Pitch
+{ 	
 			if(__HAL_TIM_GET_ITSTATUS(&htim4, TIM_IT_CC3) == SET)
 			{		
 						__HAL_TIM_CLEAR_IT(&htim4, TIM_IT_CC3);
 						__HAL_TIM_CLEAR_FLAG(&htim4, TIM_IT_CC3);		
-						if(IC_Elevator_TienLui_flag_capture_number ==0)
-						{					
-									IC_Elevator_TienLui1 = HAL_TIM_ReadCapturedValue(&htim4, TIM_CHANNEL_3);
-									IC_Elevator_TienLui_flag_capture_number = 1;
-										
-						}else if(IC_Elevator_TienLui_flag_capture_number==1)
-						{
-									IC_Elevator_TienLui2 = HAL_TIM_ReadCapturedValue(&htim4, TIM_CHANNEL_3);
-									IC_Elevator_TienLui_pusle_width = (IC_Elevator_TienLui2 - IC_Elevator_TienLui1);
-									IC_Elevator_TienLui_flag_capture_number = 2;	
-											
-						}
-						else if(IC_Elevator_TienLui_flag_capture_number==2)
-						{
-									IC_Elevator_TienLui_cycle_time = (HAL_TIM_ReadCapturedValue(&htim4, TIM_CHANNEL_3) - IC_Elevator_TienLui1);
-									IC_Elevator_TienLui_flag_capture_number = 3;
-						}else if(IC_Elevator_TienLui_flag_capture_number==3)
-						{
-									IC_Elevator_TienLui_flag_capture_number=0;
-									TIM4->CNT = 0;
-						}						
+						if( HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_8)== SET)
+							{ //ngat canh len
+								IC_Elevator_TienLui1 = HAL_TIM_ReadCapturedValue(&htim4, TIM_CHANNEL_3);
+							}else if( HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_8)== RESET)
+							{//ngat canh xuong
+								IC_Elevator_TienLui2 = HAL_TIM_ReadCapturedValue(&htim4, TIM_CHANNEL_3);
+								IC_Elevator_TienLui_pusle_width = (IC_Elevator_TienLui2 - IC_Elevator_TienLui1);
+								TIM4->CNT = 0;
+							}					
 			}
 }
 void TIM5_IRQHandler(void) //PA3 - TIM5_CH4 ////Aileron_TraiPhai (trai - phai) - goc Roll
@@ -742,28 +680,16 @@ void TIM5_IRQHandler(void) //PA3 - TIM5_CH4 ////Aileron_TraiPhai (trai - phai) -
 			if(__HAL_TIM_GET_ITSTATUS(&htim5, TIM_IT_CC4) == SET)
 			{		
 						__HAL_TIM_CLEAR_IT(&htim5, TIM_IT_CC4);
-					__HAL_TIM_CLEAR_FLAG(&htim5, TIM_IT_CC4);		
-						if(IC_Aileron_TraiPhai_flag_capture_number ==0)
-						{					
-									IC_Aileron_TraiPhai1 = HAL_TIM_ReadCapturedValue(&htim5, TIM_CHANNEL_4);
-									IC_Aileron_TraiPhai_flag_capture_number = 1;
-										
-						}else if(IC_Aileron_TraiPhai_flag_capture_number==1)
-						{
-									IC_Aileron_TraiPhai2 = HAL_TIM_ReadCapturedValue(&htim5, TIM_CHANNEL_4);
-									IC_Aileron_TraiPhai_pusle_width		= IC_Aileron_TraiPhai2 - IC_Aileron_TraiPhai1;
-									IC_Aileron_TraiPhai_flag_capture_number = 2;	
-											
+						__HAL_TIM_CLEAR_FLAG(&htim5, TIM_IT_CC4);	
+						if( HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_3)== SET)
+						{ //ngat canh len
+							IC_Aileron_TraiPhai1 = HAL_TIM_ReadCapturedValue(&htim5, TIM_CHANNEL_4);
+						}else if( HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_3)== RESET)
+						{//ngat canh xuong
+							IC_Aileron_TraiPhai2 = HAL_TIM_ReadCapturedValue(&htim5, TIM_CHANNEL_4);
+							IC_Aileron_TraiPhai_pusle_width		= IC_Aileron_TraiPhai2 - IC_Aileron_TraiPhai1;
+							TIM5->CNT = 0;
 						}
-						else if(IC_Aileron_TraiPhai_flag_capture_number==2)
-						{
-									IC_Aileron_TraiPhai_cycle_time = HAL_TIM_ReadCapturedValue(&htim5, TIM_CHANNEL_4) - IC_Aileron_TraiPhai1;
-									IC_Aileron_TraiPhai_flag_capture_number = 3;
-						}else if(IC_Aileron_TraiPhai_flag_capture_number==3)
-						{
-									IC_Aileron_TraiPhai_flag_capture_number=0;
-									TIM5->CNT = 0;
-						}						
 			}
 }
 //
