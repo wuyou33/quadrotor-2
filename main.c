@@ -312,10 +312,16 @@ int main(void)
 								//         X				        |
 								//        / \          y____|
 								//    (4)/   \(3)				
-								pwm_motor_1 = IC_Throttle_pusle_width - pid_roll.output - pid_pitch.output + pid_yaw.output;
+								/*pwm_motor_1 = IC_Throttle_pusle_width - pid_roll.output - pid_pitch.output + pid_yaw.output;
 								pwm_motor_2 = IC_Throttle_pusle_width + pid_roll.output - pid_pitch.output - pid_yaw.output;				
 								pwm_motor_3 = IC_Throttle_pusle_width + pid_roll.output + pid_pitch.output + pid_yaw.output;
 								pwm_motor_4 = IC_Throttle_pusle_width - pid_roll.output + pid_pitch.output - pid_yaw.output;
+								*/
+								pwm_motor_1 = IC_Throttle_pusle_width - pid_roll.output - pid_pitch.output;// + pid_yaw.output;
+								pwm_motor_2 = IC_Throttle_pusle_width + pid_roll.output - pid_pitch.output;// - pid_yaw.output;				
+								pwm_motor_3 = IC_Throttle_pusle_width + pid_roll.output + pid_pitch.output;// + pid_yaw.output;
+								pwm_motor_4 = IC_Throttle_pusle_width - pid_roll.output + pid_pitch.output;// - pid_yaw.output;
+						
 								SetPWM_1_Motor(1, pwm_motor_1);
 								SetPWM_1_Motor(2, pwm_motor_2);
 								SetPWM_1_Motor(3, pwm_motor_3);

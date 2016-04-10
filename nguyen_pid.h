@@ -68,8 +68,8 @@ void pid_compute(PID* pid, double Input, double dt, int16_t pid_min, int16_t pid
 		//curr_error la do lech so voi gia tri dat, vi du goc roll lech 5 do (gia tri dat - mong muon = 0 do)
 		double error 					= pid->setpoint - Input;
 		
-		pid->integral_error 	+=   (pid->kI *  error); //   (pid->kI *  error)*dt
-		pid->diff_error 			= 		pid->kD * (error - pid->pre_error); //   (error - pid->pre_error) / dt
+		pid->integral_error 	+=   (pid->kI *  error)*dt; //   (pid->kI *  error)*dt
+		pid->diff_error 			= 		pid->kD * (error - pid->pre_error)/dt; //   (error - pid->pre_error) / dt
   
 		//Compute PID Output		//output += (Kp * err) + (Ki * int * dt) + (Kd * der /dt);
 		pid->output 					= (pid->kP*error) +    pid->integral_error +      pid->diff_error;
