@@ -10,8 +10,9 @@
 	
 	
 
-//#define DT_milisecond 					10 //100ms = 0.1s
-#define DT 											0.01 //10ms=0.01s hay 100ms=0.1s (10ms sample time)
+//I think the 1000/50 is an error. Looks to me like the AC_PID library takes its dt in seconds. The main loop runs every 50 milliseconds, so the correct dt would be 50/1000 = 0.05 sec.
+//#define DT_milisecond 					0.01 //10ms
+#define DT 											0.05 //50ms
 
 #define ROLL_PID_KP  1.3							
 #define ROLL_PID_KI  0.05 					

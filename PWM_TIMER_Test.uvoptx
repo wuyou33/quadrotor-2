@@ -224,6 +224,11 @@
           <WinNumber>1</WinNumber>
           <ItemText>IC_Rudder_Xoay_pusle_width,0x0A</ItemText>
         </Ww>
+        <Ww>
+          <count>5</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>mpu6050,0x0A</ItemText>
+        </Ww>
       </WatchWindow1>
       <WatchWindow2>
         <Ww>
@@ -259,25 +264,20 @@
         <Ww>
           <count>6</count>
           <WinNumber>2</WinNumber>
-          <ItemText>output</ItemText>
+          <ItemText>accX_angle,0x0A</ItemText>
         </Ww>
         <Ww>
           <count>7</count>
           <WinNumber>2</WinNumber>
-          <ItemText>accX_angle,0x0A</ItemText>
+          <ItemText>accY_angle,0x0A</ItemText>
         </Ww>
         <Ww>
           <count>8</count>
           <WinNumber>2</WinNumber>
-          <ItemText>accY_angle,0x0A</ItemText>
-        </Ww>
-        <Ww>
-          <count>9</count>
-          <WinNumber>2</WinNumber>
           <ItemText>Kalman_angelX</ItemText>
         </Ww>
         <Ww>
-          <count>10</count>
+          <count>9</count>
           <WinNumber>2</WinNumber>
           <ItemText>Kalman_angelY</ItemText>
         </Ww>
