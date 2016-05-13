@@ -37,6 +37,7 @@ PA3 ->TIM5_CH4  //Aileron_TraiPhai (trai - phai) - goc Roll     keo qua trai +, 
 #include "nguyen_mpu6050.h"
 #include "nguyen_pid.h"
 #include "kalman_filter.h"
+#include "nguyen_fuzzy_logic.h"
 
 
 //I2C handle, dung de doc value cua cam bien MPU6050

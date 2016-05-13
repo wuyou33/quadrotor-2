@@ -1,11 +1,6 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <math.h>
-	
-
-
-
-	
 
 #define TM_MPU6050_DataRate_8KHz       0   /*!< Sample rate set to 8 kHz */
 #define TM_MPU6050_DataRate_4KHz       1   /*!< Sample rate set to 4 kHz */

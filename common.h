@@ -36,8 +36,8 @@
 #define M_PI 										(float)3.1415926535
 #define PI											(float)3.1415926535
 #define RAD_TO_DEG 							(float)(180/PI)
-#define MAX(a,b)								( (a > b) ? a : b )
-#define MIN(a,b)								( (a < b) ? a : b )
+#define MAXIMUM(a,b)								(float)( (a > b) ? a : b )
+#define MINIMUM(a,b)								(float)( (a < b) ? a : b )
 
 
 
