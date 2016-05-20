@@ -25,7 +25,14 @@ Fuzzy Process(thuc hien):
 	step3:
 	step4:
 */
+
+#define NUMBER_RULE					10
+#define NUMBER_NAME					30  //so luong char cua string_name
+
+
+
 //---------------------------------------
+//MEMBERSHIP FUNCTION
 typedef struct {
 	char  name[30];       /*  name of system input/output       */
 	float type;								/*  loai gi input hay output       */
@@ -39,13 +46,17 @@ typedef struct {
 } MF;
 
 
+
+
+
 //---------------------------------------
+//RULE
 typedef struct{
-	float a;
-	float b;
-	float c;
-	float d;
-			
+	char name[30]; /* ten cua rule if A then B  */
+	MF* in;					/*membership function input cua Rule (o day la A)*/
+	MF* out;         /*membership function outpt cua Rule (o day la B)*/
+	float h;        /* do cao(strength) cua Rule hoac gia tri cua membership output MF* out */
+	float avg_x;    /*gia tri trung binh theo truc x cua output MF vd: (0+100)/2 */		
 } MF_rule;
 
 
@@ -77,8 +88,8 @@ void setMienXD_ForMF(MF *mf, float mienXDmax, float mienXDmin)
 
 
 
-/*--------Mo` Hoa' ngo~ vao`-------------------------------
-Fuzzify all input values into fuzzy membership functions.
+/*--------MO HOA - Fuzzify-------------------------------
+Mo` hoa' 1 Membership function. tu` gia tri ro~ x, ta tinh ra strength cua Membership Function [0...1]
 Tong quat cho hinh tam giac' va hinh` thang
 
  left_top(B)         right_top(C)
@@ -90,18 +101,18 @@ Tong quat cho hinh tam giac' va hinh` thang
 left(A)                     right(D)
 x: gia tri ro~
 */
-float fuzzify(float x, float left, float left_top, float right_top, float right)
+float fuzzify(float x, MF *mf)
 {
 	float value = 0;
-	if(x <= left)
+	if(x <= mf->left)
 		value= 0;
-	else if(x > left && x < left_top)
-		value= (float)(x-left)/(left_top - left);
-	else if(x >= left_top && x <= right_top)
+	else if(x > mf->left && x < mf->left_top)
+		value= (float)(x - mf->left)/(mf->left_top - mf->left);
+	else if(x >= mf->left_top && x <= mf->right_top)
 		value= 1;
-	else if( x > right_top && x < right)
-		value= (float)(right-x)/(right - right_top);
-	else if(x >= right)
+	else if( x > mf->right_top && x < mf->right)
+		value= (float)(mf->right-x)/(mf->right - mf->right_top);
+	else if(x >= mf->right)
 		value= 0;
 	else 
 		value= 0;	
@@ -111,11 +122,30 @@ float fuzzify(float x, float left, float left_top, float right_top, float right)
 	else return value;
 }
 
+// => khi co gia tri ro~ thi` phai fuzzify tat ca cac MF: MF small, MF zero, MF big,....
 
-//--------Giai Mo`-------------------------------
-//De-fuzzify the fuzzy output functions to get "crisp" output values.
-float defuzzify(float x, float a, float b, float c, float d)
+
+
+
+//--------APPLY RULE vao`-------------------------------
+//tinh output cua moi~ Rule (tinh h va tinh avg_x)
+//	dung vong for loop het NUMBER_RULE
+//	voi moi Rule, dung MAX or MIN => h
+//	tinh avg_x = (left+right)/2
+float applyRule(MF_rule   (*rules)[NUMBER_RULE] )
 {
 	float dom;
 	return dom;
+}
+
+
+
+
+//--------GIAI MO` De-fuzzify-------------------------------
+//De-fuzzify the fuzzy output functions to get "crisp" output values.
+float defuzzify(MF_rule   (*rules)[NUMBER_RULE] )
+{
+	float output = 0;
+	
+	return output;
 }
