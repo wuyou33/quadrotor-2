@@ -93,6 +93,25 @@ TM_MPU6050_t 							mpu6050;
 //
 PID 											pid_roll, pid_pitch, pid_yaw;
 
+//--------Fuzzy System--------------
+FuzzyController						rollFuzzyControl;
+FuzzyController						pitchFuzzyControl;
+FuzzyController						yawFuzzyControl;
+
+
+
+// => khi co gia tri ro~ thi` phai fuzzify tat ca cac MF: MF small, MF zero, MF big,....
+// fuzzify(roll, RatNho); //roll la goc lech roll
+// fuzzify(roll, Nho); //roll la goc lech roll
+// fuzzify(roll, NhoVua); //roll la goc lech roll
+// fuzzify(roll, Zero); //roll la goc lech roll
+// fuzzify(roll, LonVua); //roll la goc lech roll
+// fuzzify(roll, Lon); //roll la goc lech roll
+// fuzzify(roll, RatLon); //roll la goc lech roll
+
+//applyRule()
+
+
 //------------------------------
 															//...code default of ARM
 															#ifdef _RTE_
@@ -247,6 +266,71 @@ int main(void)
 		//accZ_angle = output.Gyroscope_Z*DT; //angel Z (yaww) = tocdo_goc*thoigian;
 		gyroX_angle = accX_angle; //set goc gyroX_angle = accX_angle;
 		//timer = HAL_GetTick();
+		
+		//--------------------------------------------------------------------------------------------------
+		//-----FUZZY SET Membership Function-------------------------------------------------------------------------
+		//rollController input
+		setLeftRight_ForMF(rollFuzzyControl.in[0], -90, -90, -50,0); //MF RatNho
+		setLeftRight_ForMF(rollFuzzyControl.in[1], -90, -90, -50,0); //MF Nho
+		setLeftRight_ForMF(rollFuzzyControl.in[2], -90, -90, -50,0); //MF NhoVua
+		setLeftRight_ForMF(rollFuzzyControl.in[3], -90, -90, -50,0); //MF Zero
+		setLeftRight_ForMF(rollFuzzyControl.in[4], -90, -90, -50,0); //MF LonVua
+		setLeftRight_ForMF(rollFuzzyControl.in[5], -90, -90, -50,0); //MF Lon
+		setLeftRight_ForMF(rollFuzzyControl.in[6], -90, -90, -50,0); //MF RatLon
+		
+		//pitchController input
+		setLeftRight_ForMF(pitchFuzzyControl.in[0], -90, -90, -50,0); //MF RatNho
+		setLeftRight_ForMF(pitchFuzzyControl.in[1], -90, -90, -50,0); //MF Nho
+		setLeftRight_ForMF(pitchFuzzyControl.in[2], -90, -90, -50,0); //MF NhoVua
+		setLeftRight_ForMF(pitchFuzzyControl.in[3], -90, -90, -50,0); //MF Zero
+		setLeftRight_ForMF(pitchFuzzyControl.in[4], -90, -90, -50,0); //MF LonVua
+		setLeftRight_ForMF(pitchFuzzyControl.in[5], -90, -90, -50,0); //MF Lon
+		setLeftRight_ForMF(pitchFuzzyControl.in[6], -90, -90, -50,0); //MF RatLon
+		
+		//Output rollController
+		setLeftRight_ForMF(rollFuzzyControl.in[0], -90, -90, -50,0); //MF RatCham
+		setLeftRight_ForMF(rollFuzzyControl.in[1], -90, -90, -50,0); //MF Cham
+		setLeftRight_ForMF(rollFuzzyControl.in[2], -90, -90, -50,0); //MF Zero
+		setLeftRight_ForMF(rollFuzzyControl.in[3], -90, -90, -50,0); //MF Nhanh
+		setLeftRight_ForMF(rollFuzzyControl.in[4], -90, -90, -50,0); //MF RatNhanh
+		
+		//Output pitchController
+		setLeftRight_ForMF(pitchFuzzyControl.in[0], -90, -90, -50,0); //MF RatCham
+		setLeftRight_ForMF(pitchFuzzyControl.in[1], -90, -90, -50,0); //MF Cham
+		setLeftRight_ForMF(pitchFuzzyControl.in[2], -90, -90, -50,0); //MF Zero
+		setLeftRight_ForMF(pitchFuzzyControl.in[3], -90, -90, -50,0); //MF Nhanh
+		setLeftRight_ForMF(pitchFuzzyControl.in[4], -90, -90, -50,0); //MF RatNhanh	
+
+
+		//---RULE FuzzySystem  --------------------------------------------
+		//10 rule xac dinh truoc. vidu IF roll la rat nho MF RatNho (<50 do) THEN output(PWM) la rat nhanh MF RatNhanh
+		//Roll Rule
+		setOneRule(rollFuzzyControl.rules[0], rollFuzzyControl.in[0], rollFuzzyControl.out[0] );
+		setOneRule(rollFuzzyControl.rules[1], rollFuzzyControl.in[0], rollFuzzyControl.out[0] );
+		setOneRule(rollFuzzyControl.rules[2], rollFuzzyControl.in[0], rollFuzzyControl.out[0] );
+		setOneRule(rollFuzzyControl.rules[3], rollFuzzyControl.in[0], rollFuzzyControl.out[0] );
+		setOneRule(rollFuzzyControl.rules[4], rollFuzzyControl.in[0], rollFuzzyControl.out[0] );
+		setOneRule(rollFuzzyControl.rules[5], rollFuzzyControl.in[0], rollFuzzyControl.out[0] );
+		setOneRule(rollFuzzyControl.rules[6], rollFuzzyControl.in[0], rollFuzzyControl.out[0] );
+		setOneRule(rollFuzzyControl.rules[7], rollFuzzyControl.in[0], rollFuzzyControl.out[0] );
+		setOneRule(rollFuzzyControl.rules[8], rollFuzzyControl.in[0], rollFuzzyControl.out[0] );
+		setOneRule(rollFuzzyControl.rules[9], rollFuzzyControl.in[0], rollFuzzyControl.out[0] );
+		
+		//Pitch Rule
+		setOneRule(pitchFuzzyControl.rules[0], pitchFuzzyControl.in[0], pitchFuzzyControl.out[0] );
+		setOneRule(pitchFuzzyControl.rules[1], pitchFuzzyControl.in[0], pitchFuzzyControl.out[0] );
+		setOneRule(pitchFuzzyControl.rules[2], pitchFuzzyControl.in[0], pitchFuzzyControl.out[0] );
+		setOneRule(pitchFuzzyControl.rules[3], pitchFuzzyControl.in[0], pitchFuzzyControl.out[0] );
+		setOneRule(pitchFuzzyControl.rules[4], pitchFuzzyControl.in[0], pitchFuzzyControl.out[0] );
+		setOneRule(pitchFuzzyControl.rules[5], pitchFuzzyControl.in[0], pitchFuzzyControl.out[0] );
+		setOneRule(pitchFuzzyControl.rules[6], pitchFuzzyControl.in[0], pitchFuzzyControl.out[0] );
+		setOneRule(pitchFuzzyControl.rules[7], pitchFuzzyControl.in[0], pitchFuzzyControl.out[0] );
+		setOneRule(pitchFuzzyControl.rules[8], pitchFuzzyControl.in[0], pitchFuzzyControl.out[0] );
+		setOneRule(pitchFuzzyControl.rules[9], pitchFuzzyControl.in[0], pitchFuzzyControl.out[0] );
+		
+		
+		
+		
 		//-----------------------------------------------------------------------------------		
 																//.... code dafault cua ARM		// when using CMSIS RTOS	// start thread execution 
 																#ifdef RTE_CMSIS_RTOS 
