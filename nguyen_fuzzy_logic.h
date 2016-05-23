@@ -46,21 +46,24 @@ typedef struct {
 } MF;
 
 //-----RULE FUZZY RULE----------------------------------
+// if A and B then C
 typedef struct{
-	char name[30]; 						/* ten cua rule if A then B  */
-	MF* in;										/*membership function input cua Rule (o day la A)*/
-	MF* out;         					/*membership function outpt cua Rule (o day la B)*/
-	float h;        					/* do cao(strength) cua Rule hoac gia tri cua membership output MF* out */
-	float avg_x;    					/*gia tri trung binh theo truc x cua output MF vd: (0+100)/2 */		
+	char name[30]; 							/* ten cua rule if A then B  */
+	MF* error;										/*membership function input cua Rule (o day la A)*/
+	MF* error_dot;										/*membership function input cua Rule (o day la B)*/
+	MF* output;         						/*membership function outpt cua Rule (o day la C)*/
+	float h;        						/* do cao(strength) cua Rule hoac gia tri cua membership output MF* out */
+	float avg_x;    						/*gia tri trung binh theo truc x cua output MF vd: (0+100)/2 */		
 } MF_rule;
 
 
 //-------FuzzyController--------------------------------
 typedef struct {
-	char  name[30];       		/*  roll / pitch /yaw    */
-	MF * in[7];
-	MF * out[5];
-	MF_rule * rules[NUMBER_RULE];
+	char  name[30];       				/*  roll / pitch /yaw    */
+	MF * input1[5];								//input do lech goc error
+	MF * input2[5];						//input dao ham` do lech goc
+	MF * output[5];									//output MF gia tri PWM +/- 
+	MF_rule * rules[NUMBER_RULE];	//rule fuzzy
 } FuzzyController;
 
 
@@ -133,10 +136,11 @@ void fuzzify(float x, MF *mf)
 
 
 //----------------APPLY RULE -------------------------------
-void setOneRule(MF_rule* rule, MF* in, MF* out)
+void setOneRule(MF_rule* rule, MF* error, MF* error_dot, MF * output)
 {
-	rule->in = in;
-	rule->out= out;
+	rule->error 		= error;
+	rule->error_dot	= error_dot;
+	rule->output		= output;
 }
 void applyRuleList(MF_rule   (*rules)[NUMBER_RULE])
 {
@@ -154,8 +158,9 @@ void calcule_H_and_Avg_x_ForEachRule(MF_rule   (*rules)[NUMBER_RULE] )
 	for (i=0; i <= NUMBER_RULE; i++) 
 	{ 
 		if(!rules[i]) continue;
-		rules[i]->h = 		(float)MINIMUM(rules[i]->in->h, rules[i]->out->h);
-		rules[i]->avg_x = (float)( (rules[i]->out->left + rules[i]->out->right)/2) ;
+		//rules[i]->h = 		(float)MINIMUM(  MINIMUM(rules[i]->error->h, rules[i]->error_dot->h ) , rules[i]->output->h);
+		rules[i]->h = 		(float)MAXIMUM(  MINIMUM(rules[i]->error->h, rules[i]->error_dot->h ) , 0);
+		rules[i]->avg_x = (float)( (rules[i]->output->left + rules[i]->output->right)/2) ;
 	}
 }
 
