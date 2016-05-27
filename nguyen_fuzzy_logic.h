@@ -6,12 +6,6 @@
 Fuzzy logic
 Author: nguyen
 Date : 13/5/2016
-Description: 
-	MF_in
-	MF_out
-	MF_rule
-	Fuzzify : mo` hoa' ngo~ vao (bien ngon ngu)
-	Defuzzify : giai`~ mo`
 
 Fuzzy process:
 B1: xac dinh cac MF
@@ -30,99 +24,94 @@ B5: lap qua tat ca Rule. tinh ra output (phuong phap trong tam trung binh)
 #define NUMBER_NAME					30  //so luong char cua string_name
 #define MAXIMUM(a,b)								(float)( (a > b) ? a : b )
 #define MINIMUM(a,b)								(float)( (a < b) ? a : b )
+	
+#define MembershipFunction_TYPE_INPUT_GOCLECH 					0
+#define MembershipFunction_TYPE_INPUT_GOCLECH_DOT 			1
+#define MembershipFunction_TYPE_OUTPUT_ValuePWMControl 	2
 
 
 //-------MEMBERSHIP FUNCTION--------------------------------
+//data struct cua MembershipFunction (FuzzySet or Tap Mo`)
 typedef struct {
-	char  name[30];       		/*  name of system input/output       */
-	float type;								/*  loai gi input hay output       */
-	float h;									/*  degree cua MF       */
-	float mienXDmax;
-	float mienXDmin;
-	float left;								/*  gia tri diem A trong hinh thang/tam giac */
-	float left_top;						/*  gia tri diem B trong hinh thang/tam giac */
-	float right_top;					/*  gia tri diem C trong hinh thang/tam giac */
-	float right;							/*  gia tri diem D trong hinh thang/tam giac */
+	char  name[30];       			/*  name of system input/output       */
+	int 	type;									/*  loai gi input hay output       */
+	float h;										/*  degree cua MF       */
+	float minXacDinh;
+	float maxXacDinh;
+	float a;										/*  gia tri diem A trong hinh thang/tam giac */
+	float b;										/*  gia tri diem B trong hinh thang/tam giac */
+	float c;										/*  gia tri diem C trong hinh thang/tam giac */
+	float d;										/*  gia tri diem D trong hinh thang/tam giac */
 } MF;
 
-//-----RULE FUZZY RULE----------------------------------
-// if A and B then C
+//--------Fuzzy Rule----------------------------------
+// Data struct cua 1 Rule. Rule: dinh nghia cac luat trong fuzzy system
 typedef struct{
-	char name[30]; 							/* ten cua rule if A then B  */
-	MF* error;										/*membership function input cua Rule (o day la A)*/
-	MF* error_dot;										/*membership function input cua Rule (o day la B)*/
-	MF* output;         						/*membership function outpt cua Rule (o day la C)*/
-	float h;        						/* do cao(strength) cua Rule hoac gia tri cua membership output MF* out */
-	float avg_x;    						/*gia tri trung binh theo truc x cua output MF vd: (0+100)/2 */		
+	char name[30]; 										/* ten cua rule if A then B  */
+	int rule_index_number;						//index cua luat. vi du luat thu 5
+	MF* inGocLech;										/*membership function input cua Rule (o day la A)*/
+	MF* inGocLech_dot;								/*membership function input cua Rule (o day la B)*/
+	MF* outValuePWMControl;         	/*membership function outpt cua Rule (o day la C)*/
+	float h;        									/* do cao(strength) cua Rule hoac gia tri cua membership output MF* out */
+	float y;    											/*gia tri trung binh theo truc x cua output MF vd: (0+100)/2 */		
 } MF_rule;
 
 
 //-------FuzzyController--------------------------------
+//gom co rollFuzzyControl va pitchFuzzyControl
 typedef struct {
-	char  name[30];       				/*  roll / pitch /yaw    */
-	MF * input1[5];								//input do lech goc error
-	MF * input2[5];						//input dao ham` do lech goc
-	MF * output[5];									//output MF gia tri PWM +/- 
-	MF_rule * rules[NUMBER_RULE];	//rule fuzzy
+	char  name[30];       							/*  roll / pitch /yaw    */
+	MF * inGocLech[7];									//input do lech goc error
+	MF * inGocLech_dot[7];							//input dao ham` do lech goc
+	MF * outValuePWMControl[7];					//output MF gia tri PWM +/-
+	float output;												//gia tri output control
+	MF_rule * fuzzy_rules[NUMBER_RULE];	//rule fuzzy
 } FuzzyController;
 
 
 //--------------------------------------------------------------
-void setLeftRight_ForMF(MF *mf, float left, float left_top, float right_top, float right)
+void setABCD_MF(MF *mf, float a, float b, float c, float d, int type, float minXD, float maxXD)
 {
-	mf->left = left;
-	mf->left_top = left_top;
-	mf->right = right;
-	mf->right_top = right_top;
-}
-void setName_ForMF(MF *mf, char* name )
-{
-	strcpy(mf->name, name);
-	//strlcpy(mf->name, name, sizeof(name));
-}
-void setType_ForMF(MF *mf, float type)
-{
+	mf->a = a;
+	mf->b = b;
+	mf->c = c;
+	mf->d = d;
 	mf->type = type;
-}
-void setMienXD_ForMF(MF *mf, float mienXDmax, float mienXDmin)
-{
-	mf->mienXDmax = mienXDmax;
-	mf->mienXDmin = mienXDmin;
+	mf->minXacDinh = minXD;
+	mf->maxXacDinh = maxXD;
+	mf->h = 0;
 }
 
 
 
 /*--------MO HOA - FUZZIFY-------------------------------
-Mo` hoa' 1 Membership function. tu` gia tri ro~ x, ta tinh ra strength cua Membership Function [0...1]
+Mo` hoa' 1 Membership function. tu` gia tri ro~ x, ta tinh ra strength(degree or h) cua Membership Function [0...1]
 Tong quat cho hinh tam giac' va hinh` thang
- left_top(B)         right_top(C)
 |
-|			*.................*
+|			B.................C
 |		 /                   \
 |		/                     \
 |	 /                       \
-..*.........................*................-> x 
-left(A)                     right(D)
-x: gia tri ro~
+..*.........................D................-> x 
 */
-void fuzzify(float x, MF *mf)
+void fuzzification(MF *mf, float x)
 {
 	float value = 0;
-	if(x <= mf->left)
+	if(x <= mf->a)
 		value= 0;
-	else if(x > mf->left && x < mf->left_top)
-		value = (float)(x - mf->left)/(mf->left_top - mf->left);
-	else if(x >= mf->left_top && x <= mf->right_top)
+	else if(x > mf->a && x < mf->b)
+		value = (float)(x - mf->a)/(mf->b - mf->a);
+	else if(x >= mf->b && x <= mf->c )
 		value = 1;
-	else if( x > mf->right_top && x < mf->right)
-		value= (float)(mf->right-x)/(mf->right - mf->right_top);
-	else if(x >= mf->right)
+	else if( x > mf->c && x < mf->d)
+		value= (float)(mf->d - x)/(mf->d - mf->c);
+	else if(x >= mf->d )
 		value = 0;
 	else 
 		value = 0;	
 	
 	if(value <= 0) mf->h = 0;
-	else if(value>=1) mf->h = 1;
+	else if(value >= 1) mf->h = 1;
 	else mf->h = value;
 }
 
@@ -135,13 +124,17 @@ void fuzzify(float x, MF *mf)
 
 
 
-//----------------APPLY RULE -------------------------------
-void setOneRule(MF_rule* rule, MF* error, MF* error_dot, MF * output)
+//----------------ONE RULE------------ 
+//Set input, output cho mot Rule
+void setOneRule(MF_rule* rule, MF* inGocLech, MF* inGocLech_dot, MF* outValuePWMControl, int rule_index_number)
 {
-	rule->error 		= error;
-	rule->error_dot	= error_dot;
-	rule->output		= output;
+	rule->inGocLech 						= inGocLech;
+	rule->inGocLech_dot					= inGocLech_dot;
+	rule->outValuePWMControl		= outValuePWMControl;
+	rule->rule_index_number = rule_index_number;
+	rule->h = 0;
 }
+
 void applyRuleList(MF_rule   (*rules)[NUMBER_RULE])
 {
 	//setOneRule(rules[0], RatNho, RatNhanh); //neu goc lenh nho~ thi output PWM nhanh
@@ -160,7 +153,7 @@ void calcule_H_and_Avg_x_ForEachRule(MF_rule   (*rules)[NUMBER_RULE] )
 		if(!rules[i]) continue;
 		//rules[i]->h = 		(float)MINIMUM(  MINIMUM(rules[i]->error->h, rules[i]->error_dot->h ) , rules[i]->output->h);
 		rules[i]->h = 		(float)MAXIMUM(  MINIMUM(rules[i]->error->h, rules[i]->error_dot->h ) , 0);
-		rules[i]->avg_x = (float)( (rules[i]->output->left + rules[i]->output->right)/2) ;
+		rules[i]->y = (float)( (rules[i]->output->left + rules[i]->output->right)/2) ;
 	}
 }
 
