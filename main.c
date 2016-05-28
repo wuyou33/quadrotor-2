@@ -97,21 +97,6 @@ PID 											pid_roll, pid_pitch, pid_yaw;
 FuzzyController						rollFuzzyControl;
 FuzzyController						pitchFuzzyControl;
 FuzzyController						yawFuzzyControl;
-
-
-
-// => khi co gia tri ro~ thi` phai fuzzify tat ca cac MF: MF small, MF zero, MF big,....
-// fuzzify(roll, RatNho); //roll la goc lech roll
-// fuzzify(roll, Nho); //roll la goc lech roll
-// fuzzify(roll, NhoVua); //roll la goc lech roll
-// fuzzify(roll, Zero); //roll la goc lech roll
-// fuzzify(roll, LonVua); //roll la goc lech roll
-// fuzzify(roll, Lon); //roll la goc lech roll
-// fuzzify(roll, RatLon); //roll la goc lech roll
-
-//applyRule()
-
-
 //------------------------------
 															//...code default of ARM
 															#ifdef _RTE_
@@ -269,64 +254,7 @@ int main(void)
 		
 		//--------------------------------------------------------------------------------------------------
 		//-----FUZZY SET Membership Function-------------------------------------------------------------------------
-		//rollController input
-		setLeftRight_ForMF(rollFuzzyControl.in[0], -90, -90, -50,0); //MF RatNho
-		setLeftRight_ForMF(rollFuzzyControl.in[1], -90, -90, -50,0); //MF Nho
-		setLeftRight_ForMF(rollFuzzyControl.in[2], -90, -90, -50,0); //MF NhoVua
-		setLeftRight_ForMF(rollFuzzyControl.in[3], -90, -90, -50,0); //MF Zero
-		setLeftRight_ForMF(rollFuzzyControl.in[4], -90, -90, -50,0); //MF LonVua
-		setLeftRight_ForMF(rollFuzzyControl.in[5], -90, -90, -50,0); //MF Lon
-		setLeftRight_ForMF(rollFuzzyControl.in[6], -90, -90, -50,0); //MF RatLon
 		
-		//pitchController input
-		setLeftRight_ForMF(pitchFuzzyControl.in[0], -90, -90, -50,0); //MF RatNho
-		setLeftRight_ForMF(pitchFuzzyControl.in[1], -90, -90, -50,0); //MF Nho
-		setLeftRight_ForMF(pitchFuzzyControl.in[2], -90, -90, -50,0); //MF NhoVua
-		setLeftRight_ForMF(pitchFuzzyControl.in[3], -90, -90, -50,0); //MF Zero
-		setLeftRight_ForMF(pitchFuzzyControl.in[4], -90, -90, -50,0); //MF LonVua
-		setLeftRight_ForMF(pitchFuzzyControl.in[5], -90, -90, -50,0); //MF Lon
-		setLeftRight_ForMF(pitchFuzzyControl.in[6], -90, -90, -50,0); //MF RatLon
-		
-		//Output rollController
-		setLeftRight_ForMF(rollFuzzyControl.in[0], -90, -90, -50,0); //MF RatCham
-		setLeftRight_ForMF(rollFuzzyControl.in[1], -90, -90, -50,0); //MF Cham
-		setLeftRight_ForMF(rollFuzzyControl.in[2], -90, -90, -50,0); //MF Zero
-		setLeftRight_ForMF(rollFuzzyControl.in[3], -90, -90, -50,0); //MF Nhanh
-		setLeftRight_ForMF(rollFuzzyControl.in[4], -90, -90, -50,0); //MF RatNhanh
-		
-		//Output pitchController
-		setLeftRight_ForMF(pitchFuzzyControl.in[0], -90, -90, -50,0); //MF RatCham
-		setLeftRight_ForMF(pitchFuzzyControl.in[1], -90, -90, -50,0); //MF Cham
-		setLeftRight_ForMF(pitchFuzzyControl.in[2], -90, -90, -50,0); //MF Zero
-		setLeftRight_ForMF(pitchFuzzyControl.in[3], -90, -90, -50,0); //MF Nhanh
-		setLeftRight_ForMF(pitchFuzzyControl.in[4], -90, -90, -50,0); //MF RatNhanh	
-
-
-		//---RULE FuzzySystem  --------------------------------------------
-		//10 rule xac dinh truoc. vidu IF roll la rat nho MF RatNho (<50 do) THEN output(PWM) la rat nhanh MF RatNhanh
-		//Roll Rule
-		setOneRule(rollFuzzyControl.rules[0], rollFuzzyControl.in[0], rollFuzzyControl.out[0] );
-		setOneRule(rollFuzzyControl.rules[1], rollFuzzyControl.in[0], rollFuzzyControl.out[0] );
-		setOneRule(rollFuzzyControl.rules[2], rollFuzzyControl.in[0], rollFuzzyControl.out[0] );
-		setOneRule(rollFuzzyControl.rules[3], rollFuzzyControl.in[0], rollFuzzyControl.out[0] );
-		setOneRule(rollFuzzyControl.rules[4], rollFuzzyControl.in[0], rollFuzzyControl.out[0] );
-		setOneRule(rollFuzzyControl.rules[5], rollFuzzyControl.in[0], rollFuzzyControl.out[0] );
-		setOneRule(rollFuzzyControl.rules[6], rollFuzzyControl.in[0], rollFuzzyControl.out[0] );
-		setOneRule(rollFuzzyControl.rules[7], rollFuzzyControl.in[0], rollFuzzyControl.out[0] );
-		setOneRule(rollFuzzyControl.rules[8], rollFuzzyControl.in[0], rollFuzzyControl.out[0] );
-		setOneRule(rollFuzzyControl.rules[9], rollFuzzyControl.in[0], rollFuzzyControl.out[0] );
-		
-		//Pitch Rule
-		setOneRule(pitchFuzzyControl.rules[0], pitchFuzzyControl.in[0], pitchFuzzyControl.out[0] );
-		setOneRule(pitchFuzzyControl.rules[1], pitchFuzzyControl.in[0], pitchFuzzyControl.out[0] );
-		setOneRule(pitchFuzzyControl.rules[2], pitchFuzzyControl.in[0], pitchFuzzyControl.out[0] );
-		setOneRule(pitchFuzzyControl.rules[3], pitchFuzzyControl.in[0], pitchFuzzyControl.out[0] );
-		setOneRule(pitchFuzzyControl.rules[4], pitchFuzzyControl.in[0], pitchFuzzyControl.out[0] );
-		setOneRule(pitchFuzzyControl.rules[5], pitchFuzzyControl.in[0], pitchFuzzyControl.out[0] );
-		setOneRule(pitchFuzzyControl.rules[6], pitchFuzzyControl.in[0], pitchFuzzyControl.out[0] );
-		setOneRule(pitchFuzzyControl.rules[7], pitchFuzzyControl.in[0], pitchFuzzyControl.out[0] );
-		setOneRule(pitchFuzzyControl.rules[8], pitchFuzzyControl.in[0], pitchFuzzyControl.out[0] );
-		setOneRule(pitchFuzzyControl.rules[9], pitchFuzzyControl.in[0], pitchFuzzyControl.out[0] );
 		
 		
 		
@@ -1544,6 +1472,89 @@ float kalmanCalculate(Kalman_Setting *kalman, float newAngle, float newRate, flo
 			kalman->P_11 -= kalman->K_1 * kalman->P_01;
 			
 			return kalman->angle;
+}
+
+//FUZZY SYSTEM
+void initFuzzySystem()
+{
+	//Buoc 1: Khai bao MF:
+	/*GocLech*/
+	//inGocLech roll
+	setABCD_MF(rollFuzzyControl.inGocLech[0], -90, -90, -50, -40, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//VerySmall
+	setABCD_MF(rollFuzzyControl.inGocLech[1], -60, -40, -40, -20, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//LittleSmall
+	setABCD_MF(rollFuzzyControl.inGocLech[2], -40, -20, -20,   0, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//Small
+	setABCD_MF(rollFuzzyControl.inGocLech[3], -20,   0,   0,  20, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//Zero
+	setABCD_MF(rollFuzzyControl.inGocLech[4],   0,  20,  20,  40, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//Big
+	setABCD_MF(rollFuzzyControl.inGocLech[5],  20,  40,  40,  60, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//LittleBig
+	setABCD_MF(rollFuzzyControl.inGocLech[6],  40,  60,  90,  90, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//VeryBig
+	
+	//inGocLech pitch
+	setABCD_MF(pitchFuzzyControl.inGocLech[0], -90, -90, -50, -40, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//VerySmall
+	setABCD_MF(pitchFuzzyControl.inGocLech[1], -60, -40, -40, -20, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//LittleSmall
+	setABCD_MF(pitchFuzzyControl.inGocLech[2], -40, -20, -20,   0, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//Small
+	setABCD_MF(pitchFuzzyControl.inGocLech[3], -20,   0,   0,  20, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//Zero
+	setABCD_MF(pitchFuzzyControl.inGocLech[4],   0,  20,  20,  40, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//Big
+	setABCD_MF(pitchFuzzyControl.inGocLech[5],  20,  40,  40,  60, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//LittleBig
+	setABCD_MF(pitchFuzzyControl.inGocLech[6],  40,  60,  90,  90, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//VeryBig
+	
+	
+	
+	
+	/*GocLech_dot*/
+	//inGocLech_dot roll
+	setABCD_MF(rollFuzzyControl.inGocLech_dot[0], -100, -100, -80, -40, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//VeryNagative
+	setABCD_MF(rollFuzzyControl.inGocLech_dot[1], -60,   -40, -40, -20, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//LittleNagative
+	setABCD_MF(rollFuzzyControl.inGocLech_dot[2], -40,   -20, -20,   0, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//Nagative
+	setABCD_MF(rollFuzzyControl.inGocLech_dot[3], -20,     0,   0,  20, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//Zero
+	setABCD_MF(rollFuzzyControl.inGocLech_dot[4],   0,    20,  20,  40, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//Positive
+	setABCD_MF(rollFuzzyControl.inGocLech_dot[5],  20,    40,  40,  60, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//LittlePositive
+	setABCD_MF(rollFuzzyControl.inGocLech_dot[6],  40,    80, 100, 100, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//VeryPositive
+	
+	//inGocLech_dot pitch
+	setABCD_MF(pitchFuzzyControl.inGocLech_dot[0], -100, -100, -80, -40, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//VeryNagative
+	setABCD_MF(pitchFuzzyControl.inGocLech_dot[1], -60,   -40, -40, -20, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//LittleNagative
+	setABCD_MF(pitchFuzzyControl.inGocLech_dot[2], -40,   -20, -20,   0, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//Nagative
+	setABCD_MF(pitchFuzzyControl.inGocLech_dot[3], -20,     0,   0,  20, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//Zero
+	setABCD_MF(pitchFuzzyControl.inGocLech_dot[4],   0,    20,  20,  40, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//Positive
+	setABCD_MF(pitchFuzzyControl.inGocLech_dot[5],  20,    40,  40,  60, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//LittlePositive
+	setABCD_MF(pitchFuzzyControl.inGocLech_dot[6],  40,    80, 100, 100, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//VeryPositive
+	
+	
+	/*ValuePWMControl*/
+	//outValuePWMControl roll
+	setABCD_MF(rollFuzzyControl.outValuePWMControl[0], -200, -200, -150, -100, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//VerySlow
+	setABCD_MF(rollFuzzyControl.outValuePWMControl[1], -150, -100, -100,  -50, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//LittleSlow
+	setABCD_MF(rollFuzzyControl.outValuePWMControl[2], -100,  -50,  -50,    0, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//Slow
+	setABCD_MF(rollFuzzyControl.outValuePWMControl[3],  -50,    0,    0,   50, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//Zero
+	setABCD_MF(rollFuzzyControl.outValuePWMControl[4],    0,   50,   50,  100, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//Fast
+	setABCD_MF(rollFuzzyControl.outValuePWMControl[5],  50 ,  100,  100,  150, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//LittleFast
+	setABCD_MF(rollFuzzyControl.outValuePWMControl[6],  100,  150,  200,  200, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//VeryFast
+
+	//outValuePWMControl pitch
+	setABCD_MF(pitchFuzzyControl.outValuePWMControl[0], -200, -200, -150, -100, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//VerySlow
+	setABCD_MF(pitchFuzzyControl.outValuePWMControl[1], -150, -100, -100,  -50, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//LittleSlow
+	setABCD_MF(pitchFuzzyControl.outValuePWMControl[2], -100,  -50,  -50,    0, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//Slow
+	setABCD_MF(pitchFuzzyControl.outValuePWMControl[3],  -50,    0,    0,   50, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//Zero
+	setABCD_MF(pitchFuzzyControl.outValuePWMControl[4],    0,   50,   50,  100, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//Fast
+	setABCD_MF(pitchFuzzyControl.outValuePWMControl[5],  50 ,  100,  100,  150, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//LittleFast
+	setABCD_MF(pitchFuzzyControl.outValuePWMControl[6],  100,  150,  200,  200, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//VeryFast
+
+
+
+
+	//Buoc 2: RULE FuzzySystem  --------------------------------------------	
+	/*
+	setOneRule(rollFuzzyControl.rules[0], rollFuzzyControl.in[0], rollFuzzyControl.out[0] );
+	setOneRule(rollFuzzyControl.rules[1], rollFuzzyControl.in[0], rollFuzzyControl.out[0] );
+	setOneRule(rollFuzzyControl.rules[2], rollFuzzyControl.in[0], rollFuzzyControl.out[0] );
+	setOneRule(rollFuzzyControl.rules[3], rollFuzzyControl.in[0], rollFuzzyControl.out[0] );
+	setOneRule(rollFuzzyControl.rules[4], rollFuzzyControl.in[0], rollFuzzyControl.out[0] );
+	setOneRule(rollFuzzyControl.rules[5], rollFuzzyControl.in[0], rollFuzzyControl.out[0] );
+	setOneRule(rollFuzzyControl.rules[6], rollFuzzyControl.in[0], rollFuzzyControl.out[0] );
+	setOneRule(rollFuzzyControl.rules[7], rollFuzzyControl.in[0], rollFuzzyControl.out[0] );
+	setOneRule(rollFuzzyControl.rules[8], rollFuzzyControl.in[0], rollFuzzyControl.out[0] );
+	setOneRule(rollFuzzyControl.rules[9], rollFuzzyControl.in[0], rollFuzzyControl.out[0] );
+	*/
 }
 
 #ifdef  USE_FULL_ASSERT

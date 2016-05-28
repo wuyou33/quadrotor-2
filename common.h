@@ -36,8 +36,15 @@
 #define M_PI 										(float)3.1415926535
 #define PI											(float)3.1415926535
 #define RAD_TO_DEG 							(float)(180/PI)
+	
 
 
+#define GocLech_maxXD 					90
+#define GocLech_minXD 					-90
 
+#define GocLech_dot_maxXD 			100
+#define GocLech_dot_minXD 			-100
 
+#define ValuePWMControl_maxXD 			200
+#define ValuePWMControl_minXD 			-200
 
