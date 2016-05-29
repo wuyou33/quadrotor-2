@@ -20,14 +20,14 @@ B5: lap qua tat ca Rule. tinh ra output (phuong phap trong tam trung binh)
 		=>output		
 */
 
-#define NUMBER_RULE					10  //so luong rule
+#define NUMBER_RULE					49  //so luong rule
 #define NUMBER_NAME					30  //so luong char cua string_name
 #define MAXIMUM(a,b)								(float)( (a > b) ? a : b )
 #define MINIMUM(a,b)								(float)( (a < b) ? a : b )
 	
-#define TYPE_INPUT_GOCLECH 					0
-#define TYPE_INPUT_GOCLECH_DOT 			1
-#define TYPE_OUTPUT_ValuePWMControl 	2
+#define TYPE_INPUT_GOCLECH 					 0
+#define TYPE_INPUT_GOCLECH_DOT 			 1
+#define TYPE_OUTPUT_ValuePWMControl  2
 
 
 //-------MEMBERSHIP FUNCTION--------------------------------

@@ -1543,6 +1543,8 @@ void initFuzzySystem()
 
 
 	//Buoc 2: RULE FuzzySystem  --------------------------------------------	
+	setOneRule(rollFuzzyControl.fuzzy_rules[0], rollFuzzyControl.inGocLech[0], rollFuzzyControl.inGocLech_dot[0], rollFuzzyControl.outValuePWMControl[0], 1);//rule 1
+	setOneRule(rollFuzzyControl.fuzzy_rules[1], rollFuzzyControl.inGocLech[0], rollFuzzyControl.inGocLech_dot[1], rollFuzzyControl.outValuePWMControl[0], 2);//rule 2
 	/*
 	setOneRule(rollFuzzyControl.rules[0], rollFuzzyControl.in[0], rollFuzzyControl.out[0] );
 	setOneRule(rollFuzzyControl.rules[1], rollFuzzyControl.in[0], rollFuzzyControl.out[0] );
