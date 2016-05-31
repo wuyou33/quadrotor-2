@@ -39,11 +39,11 @@
 	
 
 
-#define GocLech_maxXD 					90
-#define GocLech_minXD 					-90
+#define GocLech_maxXD 							90
+#define GocLech_minXD 							-90
 
-#define GocLech_dot_maxXD 			100
-#define GocLech_dot_minXD 			-100
+#define GocLech_dot_maxXD 					100
+#define GocLech_dot_minXD 					-100
 
 #define ValuePWMControl_maxXD 			200
 #define ValuePWMControl_minXD 			-200
