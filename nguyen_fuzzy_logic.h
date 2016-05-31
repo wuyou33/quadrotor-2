@@ -64,8 +64,7 @@ typedef struct {
 	MF * inGocLech[7];									//input do lech goc error
 	MF * inGocLech_dot[7];							//input dao ham` do lech goc
 	MF * outValuePWMControl[7];					//output MF gia tri PWM +/-
-	float realGocLech;  								//gia tri ro~ cua goc lech
-	float realGocLech_dot;							//dao ham cua goc lech
+	float pre_GocLech;  								//tinh dao ham = ( pre - current)/dt;
 	float output;												//gia tri output control
 	MF_rule * fuzzy_rules[NUMBER_RULE];	//rule fuzzy
 } FuzzyController;
@@ -100,27 +99,29 @@ void fuzzification(MF *mf, float x)
 	float value = 0;
 	if(x <= mf->a)
 		value= 0;
-	else if(x > mf->a && x < mf->b)
-		value = (float)(x - mf->a)/(mf->b - mf->a);
-	else if(x >= mf->b && x <= mf->c )
-		value = 1;
-	else if( x > mf->c && x < mf->d)
-		value= (float)(mf->d - x)/(mf->d - mf->c);
+	
 	else if(x >= mf->d )
 		value = 0;
+	
+	else if(x > mf->a && x < mf->b)
+		value = (float)(x - mf->a)/(mf->b - mf->a);
+	
+	else if(x >= mf->b && x <= mf->c )
+		value = 1;
+	
+	else if( x > mf->c && x < mf->d)
+		value= (float)(mf->d - x)/(mf->d - mf->c);
+	
 	else 
 		value = 0;	
 	
-	if(value <= 0) mf->h = 0;
-	else if(value >= 1) mf->h = 1;
-	else mf->h = value;
+	if(value <= 0) 
+		mf->h = 0;
+	else if(value >= 1) 
+		mf->h = 1;
+	else 
+		mf->h = value;
 }
-
-// => khi co gia tri ro~ thi` phai fuzzify tat ca cac MF: MF small, MF zero, MF big,....
-// fuzzify(roll, RatNho); //roll la goc lech roll
-// fuzzify(roll, Nho); //roll la goc lech roll
-// fuzzify(roll, NhoVua); //roll la goc lech roll
-// fuzzify(roll, Zero); //roll la goc lech roll
 
 
 
@@ -136,13 +137,6 @@ void setOneRule(MF_rule* rule, MF* inGocLech, MF* inGocLech_dot, MF* outValuePWM
 	rule->h = 0;
 }
 
-void applyRuleList(MF_rule   (*rules)[NUMBER_RULE])
-{
-	//setOneRule(rules[0], RatNho, RatNhanh); //neu goc lenh nho~ thi output PWM nhanh
-	//setOneRule(rules[0], RatNho, RatNhanh); //neu goc lenh nho~ thi output PWM nhanh
-	//setOneRule(rules[0], RatNho, RatNhanh); //neu goc lenh nho~ thi output PWM nhanh
-}
-
 //tinh output cua moi~ Rule (tinh h va tinh avg_x)
 //	dung vong for loop het NUMBER_RULE
 //	voi moi Rule, dung MAX or MIN => h
@@ -150,10 +144,10 @@ void applyRuleList(MF_rule   (*rules)[NUMBER_RULE])
 void calcule_H_and_Y_PerRule(MF_rule   (*rules)[NUMBER_RULE] )
 {
 	int i;
-	for (i=0; i <= NUMBER_RULE; i++) 
+	for (i=0; i < NUMBER_RULE; i++) 
 	{ 
 		if(!rules[i]) continue;
-		rules[i]->h = 		(float)MAXIMUM(  MINIMUM(rules[i]->inGocLech->h, rules[i]->inGocLech_dot->h ) , 0);
+		rules[i]->h = (float) MAXIMUM(  MINIMUM(rules[i]->inGocLech->h, rules[i]->inGocLech_dot->h ) , 0);
 		rules[i]->y = (float)( (rules[i]->outValuePWMControl->a + rules[i]->outValuePWMControl->d)/2) ;
 	}
 }
@@ -169,7 +163,7 @@ float defuzzification(MF_rule   (*rules)[NUMBER_RULE] )
 	int i;
 	float sum_h = 0; 					//tong tat ca cac strength( degree) cua cac MF thanh phan
 	float total_y = 0; 				//tong tat ca cac x(hoanh do) trong tam cua MF thanh phan
-	for (i=0; i <= NUMBER_RULE; i++) 
+	for (i=0; i < NUMBER_RULE; i++) 
 	{ 
 		if(!rules[i]) continue;
 		sum_h = 			(float)sum_h + rules[i]->h;
