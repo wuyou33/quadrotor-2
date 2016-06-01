@@ -97,6 +97,9 @@ PID 											pid_roll, pid_pitch, pid_yaw;
 FuzzyController						rollFuzzyControl;
 FuzzyController						pitchFuzzyControl;
 FuzzyController						yawFuzzyControl;
+void initFuzzySystem(void);
+void Fuzzification_All_MF(float x, FuzzyController * fuzzyController);	
+
 //------------------------------
 															//...code default of ARM
 															#ifdef _RTE_
@@ -181,9 +184,11 @@ volatile 					uint32_t g_iSysTicks = 0;
 void 							SysTick_Handler(){	g_iSysTicks++;}
 void 							delay_ms(uint32_t piMillis){	uint32_t iStartTime = g_iSysTicks;	while( (g_iSysTicks - iStartTime ) < piMillis)	{}}			
 
-void 							initFuzzySystem(void);
+
+
 int main(void)
-{		
+{				
+
 		initFuzzySystem();
 		SetInitDataQuadrotor();
 																				/* code default cua ARM co san						*/
@@ -335,7 +340,15 @@ int main(void)
 								pwm_motor_2 = IC_Throttle_pusle_width + pid_roll.output - pid_pitch.output;// - pid_yaw.output;				
 								pwm_motor_3 = IC_Throttle_pusle_width + pid_roll.output + pid_pitch.output;// + pid_yaw.output;
 								pwm_motor_4 = IC_Throttle_pusle_width - pid_roll.output + pid_pitch.output;// - pid_yaw.output;
-						
+								
+								//fuzzy dieu khien can bang
+								//buoc 3: tinh toan degree cho tat ca MF
+								Fuzzification_All_MF(Kalman_angelX, &rollFuzzyControl);	
+								Fuzzification_All_MF(Kalman_angelY, &pitchFuzzyControl);
+									
+									//buoc 4: ap dung luat mo (rule list) & tinh output cho moi~ rule.
+									
+								
 								SetPWM_1_Motor(1, pwm_motor_1);
 								SetPWM_1_Motor(2, pwm_motor_2);
 								SetPWM_1_Motor(3, pwm_motor_3);
@@ -1475,9 +1488,33 @@ float kalmanCalculate(Kalman_Setting *kalman, float newAngle, float newRate, flo
 			return kalman->angle;
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//------------------------------------------------------------------------------------------------------------------------------
+//FUZZY SYSTEM //FUZZY SYSTEM//FUZZY SYSTEM//FUZZY SYSTEM
 //FUZZY SYSTEM
-void initFuzzySystem()
+void initFuzzySystem(void)
 {
+	rollFuzzyControl.pre_GocLech = 0;
+	pitchFuzzyControl.pre_GocLech = 0;
+	rollFuzzyControl.output = 0;
+	pitchFuzzyControl.output = 0;
+	
 	//Buoc 1: Khai bao MF:
 	/*GocLech*/
 	//inGocLech roll
@@ -1547,65 +1584,158 @@ void initFuzzySystem()
 	//GocLech =     {VerySmall, LittleSmall, Small, Zero, Big, LittleBig, VeryBig}
 	//GocLech_dot = {VeryNagative, LittleNagative, Nagative, Zero, Positive, LittlePositive, VeryPositive}
 	//ValuePWM =    {VerySlow, LittleSlow, Slow, Zero, Fast, LittleFast, VeryFast}
-	setOneRule(rollFuzzyControl.fuzzy_rules[0], rollFuzzyControl.inGocLech[0], rollFuzzyControl.inGocLech_dot[0], rollFuzzyControl.outValuePWMControl[0], 1);//rule 1
-	setOneRule(rollFuzzyControl.fuzzy_rules[1], rollFuzzyControl.inGocLech[0], rollFuzzyControl.inGocLech_dot[1], rollFuzzyControl.outValuePWMControl[0], 2);//rule 2
-	setOneRule(rollFuzzyControl.fuzzy_rules[2], rollFuzzyControl.inGocLech[0], rollFuzzyControl.inGocLech_dot[2], rollFuzzyControl.outValuePWMControl[0], 3);//rule 3
-	setOneRule(rollFuzzyControl.fuzzy_rules[3], rollFuzzyControl.inGocLech[0], rollFuzzyControl.inGocLech_dot[3], rollFuzzyControl.outValuePWMControl[0], 4);//rule 4
-	setOneRule(rollFuzzyControl.fuzzy_rules[4], rollFuzzyControl.inGocLech[0], rollFuzzyControl.inGocLech_dot[4], rollFuzzyControl.outValuePWMControl[0], 5);//rule 5
-	setOneRule(rollFuzzyControl.fuzzy_rules[5], rollFuzzyControl.inGocLech[0], rollFuzzyControl.inGocLech_dot[5], rollFuzzyControl.outValuePWMControl[0], 6);//rule 6
-	setOneRule(rollFuzzyControl.fuzzy_rules[6], rollFuzzyControl.inGocLech[0], rollFuzzyControl.inGocLech_dot[6], rollFuzzyControl.outValuePWMControl[0], 7);//rule 7
+	//ROLL
+	setOneRule(rollFuzzyControl.fuzzy_rules[0], rollFuzzyControl.inGocLech[0], rollFuzzyControl.inGocLech_dot[0], rollFuzzyControl.outValuePWMControl[6], 1);//rule 1
+	setOneRule(rollFuzzyControl.fuzzy_rules[1], rollFuzzyControl.inGocLech[0], rollFuzzyControl.inGocLech_dot[1], rollFuzzyControl.outValuePWMControl[6], 2);//rule 2
+	setOneRule(rollFuzzyControl.fuzzy_rules[2], rollFuzzyControl.inGocLech[0], rollFuzzyControl.inGocLech_dot[2], rollFuzzyControl.outValuePWMControl[5], 3);//rule 3
+	setOneRule(rollFuzzyControl.fuzzy_rules[3], rollFuzzyControl.inGocLech[0], rollFuzzyControl.inGocLech_dot[3], rollFuzzyControl.outValuePWMControl[5], 4);//rule 4
+	setOneRule(rollFuzzyControl.fuzzy_rules[4], rollFuzzyControl.inGocLech[0], rollFuzzyControl.inGocLech_dot[4], rollFuzzyControl.outValuePWMControl[4], 5);//rule 5
+	setOneRule(rollFuzzyControl.fuzzy_rules[5], rollFuzzyControl.inGocLech[0], rollFuzzyControl.inGocLech_dot[5], rollFuzzyControl.outValuePWMControl[4], 6);//rule 6
+	setOneRule(rollFuzzyControl.fuzzy_rules[6], rollFuzzyControl.inGocLech[0], rollFuzzyControl.inGocLech_dot[6], rollFuzzyControl.outValuePWMControl[3], 7);//rule 7
 	
-	setOneRule(rollFuzzyControl.fuzzy_rules[7],  rollFuzzyControl.inGocLech[1], rollFuzzyControl.inGocLech_dot[0], rollFuzzyControl.outValuePWMControl[0], 8);//rule 8
-	setOneRule(rollFuzzyControl.fuzzy_rules[8],  rollFuzzyControl.inGocLech[1], rollFuzzyControl.inGocLech_dot[1], rollFuzzyControl.outValuePWMControl[0], 9);//rule 9
-	setOneRule(rollFuzzyControl.fuzzy_rules[9],  rollFuzzyControl.inGocLech[1], rollFuzzyControl.inGocLech_dot[2], rollFuzzyControl.outValuePWMControl[0], 10);//rule 10
-	setOneRule(rollFuzzyControl.fuzzy_rules[10], rollFuzzyControl.inGocLech[1], rollFuzzyControl.inGocLech_dot[3], rollFuzzyControl.outValuePWMControl[0], 11);//rule 11
-	setOneRule(rollFuzzyControl.fuzzy_rules[11], rollFuzzyControl.inGocLech[1], rollFuzzyControl.inGocLech_dot[4], rollFuzzyControl.outValuePWMControl[0], 12);//rule 12
-	setOneRule(rollFuzzyControl.fuzzy_rules[12], rollFuzzyControl.inGocLech[1], rollFuzzyControl.inGocLech_dot[5], rollFuzzyControl.outValuePWMControl[0], 13);//rule 13
-	setOneRule(rollFuzzyControl.fuzzy_rules[13], rollFuzzyControl.inGocLech[1], rollFuzzyControl.inGocLech_dot[6], rollFuzzyControl.outValuePWMControl[0], 14);//rule 14
+	setOneRule(rollFuzzyControl.fuzzy_rules[7],  rollFuzzyControl.inGocLech[1], rollFuzzyControl.inGocLech_dot[0], rollFuzzyControl.outValuePWMControl[6], 8);//rule 8
+	setOneRule(rollFuzzyControl.fuzzy_rules[8],  rollFuzzyControl.inGocLech[1], rollFuzzyControl.inGocLech_dot[1], rollFuzzyControl.outValuePWMControl[5], 9);//rule 9
+	setOneRule(rollFuzzyControl.fuzzy_rules[9],  rollFuzzyControl.inGocLech[1], rollFuzzyControl.inGocLech_dot[2], rollFuzzyControl.outValuePWMControl[5], 10);//rule 10
+	setOneRule(rollFuzzyControl.fuzzy_rules[10], rollFuzzyControl.inGocLech[1], rollFuzzyControl.inGocLech_dot[3], rollFuzzyControl.outValuePWMControl[4], 11);//rule 11
+	setOneRule(rollFuzzyControl.fuzzy_rules[11], rollFuzzyControl.inGocLech[1], rollFuzzyControl.inGocLech_dot[4], rollFuzzyControl.outValuePWMControl[4], 12);//rule 12
+	setOneRule(rollFuzzyControl.fuzzy_rules[12], rollFuzzyControl.inGocLech[1], rollFuzzyControl.inGocLech_dot[5], rollFuzzyControl.outValuePWMControl[3], 13);//rule 13
+	setOneRule(rollFuzzyControl.fuzzy_rules[13], rollFuzzyControl.inGocLech[1], rollFuzzyControl.inGocLech_dot[6], rollFuzzyControl.outValuePWMControl[2], 14);//rule 14
 	
-	setOneRule(rollFuzzyControl.fuzzy_rules[14], rollFuzzyControl.inGocLech[2], rollFuzzyControl.inGocLech_dot[0], rollFuzzyControl.outValuePWMControl[0], 15);//rule 15
-	setOneRule(rollFuzzyControl.fuzzy_rules[15], rollFuzzyControl.inGocLech[2], rollFuzzyControl.inGocLech_dot[1], rollFuzzyControl.outValuePWMControl[0], 16);//rule 16
-	setOneRule(rollFuzzyControl.fuzzy_rules[16], rollFuzzyControl.inGocLech[2], rollFuzzyControl.inGocLech_dot[2], rollFuzzyControl.outValuePWMControl[0], 17);//rule 17
-	setOneRule(rollFuzzyControl.fuzzy_rules[17], rollFuzzyControl.inGocLech[2], rollFuzzyControl.inGocLech_dot[3], rollFuzzyControl.outValuePWMControl[0], 18);//rule 18
-	setOneRule(rollFuzzyControl.fuzzy_rules[18], rollFuzzyControl.inGocLech[2], rollFuzzyControl.inGocLech_dot[4], rollFuzzyControl.outValuePWMControl[0], 19);//rule 19
-	setOneRule(rollFuzzyControl.fuzzy_rules[19], rollFuzzyControl.inGocLech[2], rollFuzzyControl.inGocLech_dot[5], rollFuzzyControl.outValuePWMControl[0], 20);//rule 20
-	setOneRule(rollFuzzyControl.fuzzy_rules[20], rollFuzzyControl.inGocLech[2], rollFuzzyControl.inGocLech_dot[6], rollFuzzyControl.outValuePWMControl[0], 21);//rule 21
+	setOneRule(rollFuzzyControl.fuzzy_rules[14], rollFuzzyControl.inGocLech[2], rollFuzzyControl.inGocLech_dot[0], rollFuzzyControl.outValuePWMControl[5], 15);//rule 15
+	setOneRule(rollFuzzyControl.fuzzy_rules[15], rollFuzzyControl.inGocLech[2], rollFuzzyControl.inGocLech_dot[1], rollFuzzyControl.outValuePWMControl[5], 16);//rule 16
+	setOneRule(rollFuzzyControl.fuzzy_rules[16], rollFuzzyControl.inGocLech[2], rollFuzzyControl.inGocLech_dot[2], rollFuzzyControl.outValuePWMControl[4], 17);//rule 17
+	setOneRule(rollFuzzyControl.fuzzy_rules[17], rollFuzzyControl.inGocLech[2], rollFuzzyControl.inGocLech_dot[3], rollFuzzyControl.outValuePWMControl[4], 18);//rule 18
+	setOneRule(rollFuzzyControl.fuzzy_rules[18], rollFuzzyControl.inGocLech[2], rollFuzzyControl.inGocLech_dot[4], rollFuzzyControl.outValuePWMControl[3], 19);//rule 19
+	setOneRule(rollFuzzyControl.fuzzy_rules[19], rollFuzzyControl.inGocLech[2], rollFuzzyControl.inGocLech_dot[5], rollFuzzyControl.outValuePWMControl[2], 20);//rule 20
+	setOneRule(rollFuzzyControl.fuzzy_rules[20], rollFuzzyControl.inGocLech[2], rollFuzzyControl.inGocLech_dot[6], rollFuzzyControl.outValuePWMControl[2], 21);//rule 21
 	
-	setOneRule(rollFuzzyControl.fuzzy_rules[21], rollFuzzyControl.inGocLech[3], rollFuzzyControl.inGocLech_dot[0], rollFuzzyControl.outValuePWMControl[0], 22);//rule 22
-	setOneRule(rollFuzzyControl.fuzzy_rules[22], rollFuzzyControl.inGocLech[3], rollFuzzyControl.inGocLech_dot[1], rollFuzzyControl.outValuePWMControl[0], 23);//rule 23
-	setOneRule(rollFuzzyControl.fuzzy_rules[23], rollFuzzyControl.inGocLech[3], rollFuzzyControl.inGocLech_dot[2], rollFuzzyControl.outValuePWMControl[0], 24);//rule 24
-	setOneRule(rollFuzzyControl.fuzzy_rules[24], rollFuzzyControl.inGocLech[3], rollFuzzyControl.inGocLech_dot[3], rollFuzzyControl.outValuePWMControl[0], 25);//rule 25
-	setOneRule(rollFuzzyControl.fuzzy_rules[25], rollFuzzyControl.inGocLech[3], rollFuzzyControl.inGocLech_dot[4], rollFuzzyControl.outValuePWMControl[0], 26);//rule 26
-	setOneRule(rollFuzzyControl.fuzzy_rules[26], rollFuzzyControl.inGocLech[3], rollFuzzyControl.inGocLech_dot[5], rollFuzzyControl.outValuePWMControl[0], 27);//rule 27
-	setOneRule(rollFuzzyControl.fuzzy_rules[27], rollFuzzyControl.inGocLech[3], rollFuzzyControl.inGocLech_dot[6], rollFuzzyControl.outValuePWMControl[0], 28);//rule 28
+	setOneRule(rollFuzzyControl.fuzzy_rules[21], rollFuzzyControl.inGocLech[3], rollFuzzyControl.inGocLech_dot[0], rollFuzzyControl.outValuePWMControl[5], 22);//rule 22
+	setOneRule(rollFuzzyControl.fuzzy_rules[22], rollFuzzyControl.inGocLech[3], rollFuzzyControl.inGocLech_dot[1], rollFuzzyControl.outValuePWMControl[4], 23);//rule 23
+	setOneRule(rollFuzzyControl.fuzzy_rules[23], rollFuzzyControl.inGocLech[3], rollFuzzyControl.inGocLech_dot[2], rollFuzzyControl.outValuePWMControl[4], 24);//rule 24
+	setOneRule(rollFuzzyControl.fuzzy_rules[24], rollFuzzyControl.inGocLech[3], rollFuzzyControl.inGocLech_dot[3], rollFuzzyControl.outValuePWMControl[3], 25);//rule 25
+	setOneRule(rollFuzzyControl.fuzzy_rules[25], rollFuzzyControl.inGocLech[3], rollFuzzyControl.inGocLech_dot[4], rollFuzzyControl.outValuePWMControl[2], 26);//rule 26
+	setOneRule(rollFuzzyControl.fuzzy_rules[26], rollFuzzyControl.inGocLech[3], rollFuzzyControl.inGocLech_dot[5], rollFuzzyControl.outValuePWMControl[2], 27);//rule 27
+	setOneRule(rollFuzzyControl.fuzzy_rules[27], rollFuzzyControl.inGocLech[3], rollFuzzyControl.inGocLech_dot[6], rollFuzzyControl.outValuePWMControl[1], 28);//rule 28
 	
-	setOneRule(rollFuzzyControl.fuzzy_rules[28], rollFuzzyControl.inGocLech[4], rollFuzzyControl.inGocLech_dot[0], rollFuzzyControl.outValuePWMControl[0], 29);//rule 29
-	setOneRule(rollFuzzyControl.fuzzy_rules[29], rollFuzzyControl.inGocLech[4], rollFuzzyControl.inGocLech_dot[1], rollFuzzyControl.outValuePWMControl[0], 30);//rule 30
-	setOneRule(rollFuzzyControl.fuzzy_rules[30], rollFuzzyControl.inGocLech[4], rollFuzzyControl.inGocLech_dot[2], rollFuzzyControl.outValuePWMControl[0], 31);//rule 31
-	setOneRule(rollFuzzyControl.fuzzy_rules[31], rollFuzzyControl.inGocLech[4], rollFuzzyControl.inGocLech_dot[3], rollFuzzyControl.outValuePWMControl[0], 32);//rule 32
-	setOneRule(rollFuzzyControl.fuzzy_rules[32], rollFuzzyControl.inGocLech[4], rollFuzzyControl.inGocLech_dot[4], rollFuzzyControl.outValuePWMControl[0], 33);//rule 33
-	setOneRule(rollFuzzyControl.fuzzy_rules[33], rollFuzzyControl.inGocLech[4], rollFuzzyControl.inGocLech_dot[5], rollFuzzyControl.outValuePWMControl[0], 34);//rule 34
-	setOneRule(rollFuzzyControl.fuzzy_rules[34], rollFuzzyControl.inGocLech[4], rollFuzzyControl.inGocLech_dot[6], rollFuzzyControl.outValuePWMControl[0], 35);//rule 35
+	setOneRule(rollFuzzyControl.fuzzy_rules[28], rollFuzzyControl.inGocLech[4], rollFuzzyControl.inGocLech_dot[0], rollFuzzyControl.outValuePWMControl[4], 29);//rule 29
+	setOneRule(rollFuzzyControl.fuzzy_rules[29], rollFuzzyControl.inGocLech[4], rollFuzzyControl.inGocLech_dot[1], rollFuzzyControl.outValuePWMControl[4], 30);//rule 30
+	setOneRule(rollFuzzyControl.fuzzy_rules[30], rollFuzzyControl.inGocLech[4], rollFuzzyControl.inGocLech_dot[2], rollFuzzyControl.outValuePWMControl[3], 31);//rule 31
+	setOneRule(rollFuzzyControl.fuzzy_rules[31], rollFuzzyControl.inGocLech[4], rollFuzzyControl.inGocLech_dot[3], rollFuzzyControl.outValuePWMControl[2], 32);//rule 32
+	setOneRule(rollFuzzyControl.fuzzy_rules[32], rollFuzzyControl.inGocLech[4], rollFuzzyControl.inGocLech_dot[4], rollFuzzyControl.outValuePWMControl[2], 33);//rule 33
+	setOneRule(rollFuzzyControl.fuzzy_rules[33], rollFuzzyControl.inGocLech[4], rollFuzzyControl.inGocLech_dot[5], rollFuzzyControl.outValuePWMControl[1], 34);//rule 34
+	setOneRule(rollFuzzyControl.fuzzy_rules[34], rollFuzzyControl.inGocLech[4], rollFuzzyControl.inGocLech_dot[6], rollFuzzyControl.outValuePWMControl[1], 35);//rule 35
 	
-	setOneRule(rollFuzzyControl.fuzzy_rules[35], rollFuzzyControl.inGocLech[5], rollFuzzyControl.inGocLech_dot[0], rollFuzzyControl.outValuePWMControl[0], 36);//rule 36
-	setOneRule(rollFuzzyControl.fuzzy_rules[36], rollFuzzyControl.inGocLech[5], rollFuzzyControl.inGocLech_dot[1], rollFuzzyControl.outValuePWMControl[0], 37);//rule 37
-	setOneRule(rollFuzzyControl.fuzzy_rules[37], rollFuzzyControl.inGocLech[5], rollFuzzyControl.inGocLech_dot[2], rollFuzzyControl.outValuePWMControl[0], 38);//rule 38
-	setOneRule(rollFuzzyControl.fuzzy_rules[38], rollFuzzyControl.inGocLech[5], rollFuzzyControl.inGocLech_dot[3], rollFuzzyControl.outValuePWMControl[0], 39);//rule 39
-	setOneRule(rollFuzzyControl.fuzzy_rules[39], rollFuzzyControl.inGocLech[5], rollFuzzyControl.inGocLech_dot[4], rollFuzzyControl.outValuePWMControl[0], 40);//rule 40
-	setOneRule(rollFuzzyControl.fuzzy_rules[40], rollFuzzyControl.inGocLech[5], rollFuzzyControl.inGocLech_dot[5], rollFuzzyControl.outValuePWMControl[0], 41);//rule 41
+	setOneRule(rollFuzzyControl.fuzzy_rules[35], rollFuzzyControl.inGocLech[5], rollFuzzyControl.inGocLech_dot[0], rollFuzzyControl.outValuePWMControl[4], 36);//rule 36
+	setOneRule(rollFuzzyControl.fuzzy_rules[36], rollFuzzyControl.inGocLech[5], rollFuzzyControl.inGocLech_dot[1], rollFuzzyControl.outValuePWMControl[3], 37);//rule 37
+	setOneRule(rollFuzzyControl.fuzzy_rules[37], rollFuzzyControl.inGocLech[5], rollFuzzyControl.inGocLech_dot[2], rollFuzzyControl.outValuePWMControl[2], 38);//rule 38
+	setOneRule(rollFuzzyControl.fuzzy_rules[38], rollFuzzyControl.inGocLech[5], rollFuzzyControl.inGocLech_dot[3], rollFuzzyControl.outValuePWMControl[2], 39);//rule 39
+	setOneRule(rollFuzzyControl.fuzzy_rules[39], rollFuzzyControl.inGocLech[5], rollFuzzyControl.inGocLech_dot[4], rollFuzzyControl.outValuePWMControl[1], 40);//rule 40
+	setOneRule(rollFuzzyControl.fuzzy_rules[40], rollFuzzyControl.inGocLech[5], rollFuzzyControl.inGocLech_dot[5], rollFuzzyControl.outValuePWMControl[1], 41);//rule 41
 	setOneRule(rollFuzzyControl.fuzzy_rules[41], rollFuzzyControl.inGocLech[5], rollFuzzyControl.inGocLech_dot[6], rollFuzzyControl.outValuePWMControl[0], 42);//rule 42
 
-	setOneRule(rollFuzzyControl.fuzzy_rules[42], rollFuzzyControl.inGocLech[6], rollFuzzyControl.inGocLech_dot[0], rollFuzzyControl.outValuePWMControl[0], 43);//rule 43
-	setOneRule(rollFuzzyControl.fuzzy_rules[43], rollFuzzyControl.inGocLech[6], rollFuzzyControl.inGocLech_dot[1], rollFuzzyControl.outValuePWMControl[0], 44);//rule 44
-	setOneRule(rollFuzzyControl.fuzzy_rules[44], rollFuzzyControl.inGocLech[6], rollFuzzyControl.inGocLech_dot[2], rollFuzzyControl.outValuePWMControl[0], 45);//rule 45
-	setOneRule(rollFuzzyControl.fuzzy_rules[45], rollFuzzyControl.inGocLech[6], rollFuzzyControl.inGocLech_dot[3], rollFuzzyControl.outValuePWMControl[0], 46);//rule 46
-	setOneRule(rollFuzzyControl.fuzzy_rules[46], rollFuzzyControl.inGocLech[6], rollFuzzyControl.inGocLech_dot[4], rollFuzzyControl.outValuePWMControl[0], 47);//rule 47
+	setOneRule(rollFuzzyControl.fuzzy_rules[42], rollFuzzyControl.inGocLech[6], rollFuzzyControl.inGocLech_dot[0], rollFuzzyControl.outValuePWMControl[3], 43);//rule 43
+	setOneRule(rollFuzzyControl.fuzzy_rules[43], rollFuzzyControl.inGocLech[6], rollFuzzyControl.inGocLech_dot[1], rollFuzzyControl.outValuePWMControl[2], 44);//rule 44
+	setOneRule(rollFuzzyControl.fuzzy_rules[44], rollFuzzyControl.inGocLech[6], rollFuzzyControl.inGocLech_dot[2], rollFuzzyControl.outValuePWMControl[2], 45);//rule 45
+	setOneRule(rollFuzzyControl.fuzzy_rules[45], rollFuzzyControl.inGocLech[6], rollFuzzyControl.inGocLech_dot[3], rollFuzzyControl.outValuePWMControl[1], 46);//rule 46
+	setOneRule(rollFuzzyControl.fuzzy_rules[46], rollFuzzyControl.inGocLech[6], rollFuzzyControl.inGocLech_dot[4], rollFuzzyControl.outValuePWMControl[1], 47);//rule 47
 	setOneRule(rollFuzzyControl.fuzzy_rules[47], rollFuzzyControl.inGocLech[6], rollFuzzyControl.inGocLech_dot[5], rollFuzzyControl.outValuePWMControl[0], 48);//rule 48
 	setOneRule(rollFuzzyControl.fuzzy_rules[48], rollFuzzyControl.inGocLech[6], rollFuzzyControl.inGocLech_dot[6], rollFuzzyControl.outValuePWMControl[0], 49);//rule 49
 	
 	
+	
+	//PITCH
+	setOneRule(pitchFuzzyControl.fuzzy_rules[0], pitchFuzzyControl.inGocLech[0], pitchFuzzyControl.inGocLech_dot[0], pitchFuzzyControl.outValuePWMControl[6], 1);//rule 1
+	setOneRule(pitchFuzzyControl.fuzzy_rules[1], pitchFuzzyControl.inGocLech[0], pitchFuzzyControl.inGocLech_dot[1], pitchFuzzyControl.outValuePWMControl[6], 2);//rule 2
+	setOneRule(pitchFuzzyControl.fuzzy_rules[2], pitchFuzzyControl.inGocLech[0], pitchFuzzyControl.inGocLech_dot[2], pitchFuzzyControl.outValuePWMControl[5], 3);//rule 3
+	setOneRule(pitchFuzzyControl.fuzzy_rules[3], pitchFuzzyControl.inGocLech[0], pitchFuzzyControl.inGocLech_dot[3], pitchFuzzyControl.outValuePWMControl[5], 4);//rule 4
+	setOneRule(pitchFuzzyControl.fuzzy_rules[4], pitchFuzzyControl.inGocLech[0], pitchFuzzyControl.inGocLech_dot[4], pitchFuzzyControl.outValuePWMControl[4], 5);//rule 5
+	setOneRule(pitchFuzzyControl.fuzzy_rules[5], pitchFuzzyControl.inGocLech[0], pitchFuzzyControl.inGocLech_dot[5], pitchFuzzyControl.outValuePWMControl[4], 6);//rule 6
+	setOneRule(pitchFuzzyControl.fuzzy_rules[6], pitchFuzzyControl.inGocLech[0], pitchFuzzyControl.inGocLech_dot[6], pitchFuzzyControl.outValuePWMControl[3], 7);//rule 7
+	
+	setOneRule(pitchFuzzyControl.fuzzy_rules[7],  pitchFuzzyControl.inGocLech[1], pitchFuzzyControl.inGocLech_dot[0], pitchFuzzyControl.outValuePWMControl[6], 8);//rule 8
+	setOneRule(pitchFuzzyControl.fuzzy_rules[8],  pitchFuzzyControl.inGocLech[1], pitchFuzzyControl.inGocLech_dot[1], pitchFuzzyControl.outValuePWMControl[5], 9);//rule 9
+	setOneRule(pitchFuzzyControl.fuzzy_rules[9],  pitchFuzzyControl.inGocLech[1], pitchFuzzyControl.inGocLech_dot[2], pitchFuzzyControl.outValuePWMControl[5], 10);//rule 10
+	setOneRule(pitchFuzzyControl.fuzzy_rules[10], pitchFuzzyControl.inGocLech[1], pitchFuzzyControl.inGocLech_dot[3], pitchFuzzyControl.outValuePWMControl[4], 11);//rule 11
+	setOneRule(pitchFuzzyControl.fuzzy_rules[11], pitchFuzzyControl.inGocLech[1], pitchFuzzyControl.inGocLech_dot[4], pitchFuzzyControl.outValuePWMControl[4], 12);//rule 12
+	setOneRule(pitchFuzzyControl.fuzzy_rules[12], pitchFuzzyControl.inGocLech[1], pitchFuzzyControl.inGocLech_dot[5], pitchFuzzyControl.outValuePWMControl[3], 13);//rule 13
+	setOneRule(pitchFuzzyControl.fuzzy_rules[13], pitchFuzzyControl.inGocLech[1], pitchFuzzyControl.inGocLech_dot[6], pitchFuzzyControl.outValuePWMControl[2], 14);//rule 14
+	
+	setOneRule(pitchFuzzyControl.fuzzy_rules[14], pitchFuzzyControl.inGocLech[2], pitchFuzzyControl.inGocLech_dot[0], pitchFuzzyControl.outValuePWMControl[5], 15);//rule 15
+	setOneRule(pitchFuzzyControl.fuzzy_rules[15], pitchFuzzyControl.inGocLech[2], pitchFuzzyControl.inGocLech_dot[1], pitchFuzzyControl.outValuePWMControl[5], 16);//rule 16
+	setOneRule(pitchFuzzyControl.fuzzy_rules[16], pitchFuzzyControl.inGocLech[2], pitchFuzzyControl.inGocLech_dot[2], pitchFuzzyControl.outValuePWMControl[4], 17);//rule 17
+	setOneRule(pitchFuzzyControl.fuzzy_rules[17], pitchFuzzyControl.inGocLech[2], pitchFuzzyControl.inGocLech_dot[3], pitchFuzzyControl.outValuePWMControl[4], 18);//rule 18
+	setOneRule(pitchFuzzyControl.fuzzy_rules[18], pitchFuzzyControl.inGocLech[2], pitchFuzzyControl.inGocLech_dot[4], pitchFuzzyControl.outValuePWMControl[3], 19);//rule 19
+	setOneRule(pitchFuzzyControl.fuzzy_rules[19], pitchFuzzyControl.inGocLech[2], pitchFuzzyControl.inGocLech_dot[5], pitchFuzzyControl.outValuePWMControl[2], 20);//rule 20
+	setOneRule(pitchFuzzyControl.fuzzy_rules[20], pitchFuzzyControl.inGocLech[2], pitchFuzzyControl.inGocLech_dot[6], pitchFuzzyControl.outValuePWMControl[2], 21);//rule 21
+	
+	setOneRule(pitchFuzzyControl.fuzzy_rules[21], pitchFuzzyControl.inGocLech[3], pitchFuzzyControl.inGocLech_dot[0], pitchFuzzyControl.outValuePWMControl[5], 22);//rule 22
+	setOneRule(pitchFuzzyControl.fuzzy_rules[22], pitchFuzzyControl.inGocLech[3], pitchFuzzyControl.inGocLech_dot[1], pitchFuzzyControl.outValuePWMControl[4], 23);//rule 23
+	setOneRule(pitchFuzzyControl.fuzzy_rules[23], pitchFuzzyControl.inGocLech[3], pitchFuzzyControl.inGocLech_dot[2], pitchFuzzyControl.outValuePWMControl[4], 24);//rule 24
+	setOneRule(pitchFuzzyControl.fuzzy_rules[24], pitchFuzzyControl.inGocLech[3], pitchFuzzyControl.inGocLech_dot[3], pitchFuzzyControl.outValuePWMControl[3], 25);//rule 25
+	setOneRule(pitchFuzzyControl.fuzzy_rules[25], pitchFuzzyControl.inGocLech[3], pitchFuzzyControl.inGocLech_dot[4], pitchFuzzyControl.outValuePWMControl[2], 26);//rule 26
+	setOneRule(pitchFuzzyControl.fuzzy_rules[26], pitchFuzzyControl.inGocLech[3], pitchFuzzyControl.inGocLech_dot[5], pitchFuzzyControl.outValuePWMControl[2], 27);//rule 27
+	setOneRule(pitchFuzzyControl.fuzzy_rules[27], pitchFuzzyControl.inGocLech[3], pitchFuzzyControl.inGocLech_dot[6], pitchFuzzyControl.outValuePWMControl[1], 28);//rule 28
+	
+	setOneRule(pitchFuzzyControl.fuzzy_rules[28], pitchFuzzyControl.inGocLech[4], pitchFuzzyControl.inGocLech_dot[0], pitchFuzzyControl.outValuePWMControl[4], 29);//rule 29
+	setOneRule(pitchFuzzyControl.fuzzy_rules[29], pitchFuzzyControl.inGocLech[4], pitchFuzzyControl.inGocLech_dot[1], pitchFuzzyControl.outValuePWMControl[4], 30);//rule 30
+	setOneRule(pitchFuzzyControl.fuzzy_rules[30], pitchFuzzyControl.inGocLech[4], pitchFuzzyControl.inGocLech_dot[2], pitchFuzzyControl.outValuePWMControl[3], 31);//rule 31
+	setOneRule(pitchFuzzyControl.fuzzy_rules[31], pitchFuzzyControl.inGocLech[4], pitchFuzzyControl.inGocLech_dot[3], pitchFuzzyControl.outValuePWMControl[2], 32);//rule 32
+	setOneRule(pitchFuzzyControl.fuzzy_rules[32], pitchFuzzyControl.inGocLech[4], pitchFuzzyControl.inGocLech_dot[4], pitchFuzzyControl.outValuePWMControl[2], 33);//rule 33
+	setOneRule(pitchFuzzyControl.fuzzy_rules[33], pitchFuzzyControl.inGocLech[4], pitchFuzzyControl.inGocLech_dot[5], pitchFuzzyControl.outValuePWMControl[1], 34);//rule 34
+	setOneRule(pitchFuzzyControl.fuzzy_rules[34], pitchFuzzyControl.inGocLech[4], pitchFuzzyControl.inGocLech_dot[6], pitchFuzzyControl.outValuePWMControl[1], 35);//rule 35
+	
+	setOneRule(pitchFuzzyControl.fuzzy_rules[35], pitchFuzzyControl.inGocLech[5], pitchFuzzyControl.inGocLech_dot[0], pitchFuzzyControl.outValuePWMControl[4], 36);//rule 36
+	setOneRule(pitchFuzzyControl.fuzzy_rules[36], pitchFuzzyControl.inGocLech[5], pitchFuzzyControl.inGocLech_dot[1], pitchFuzzyControl.outValuePWMControl[3], 37);//rule 37
+	setOneRule(pitchFuzzyControl.fuzzy_rules[37], pitchFuzzyControl.inGocLech[5], pitchFuzzyControl.inGocLech_dot[2], pitchFuzzyControl.outValuePWMControl[2], 38);//rule 38
+	setOneRule(pitchFuzzyControl.fuzzy_rules[38], pitchFuzzyControl.inGocLech[5], pitchFuzzyControl.inGocLech_dot[3], pitchFuzzyControl.outValuePWMControl[2], 39);//rule 39
+	setOneRule(pitchFuzzyControl.fuzzy_rules[39], pitchFuzzyControl.inGocLech[5], pitchFuzzyControl.inGocLech_dot[4], pitchFuzzyControl.outValuePWMControl[1], 40);//rule 40
+	setOneRule(pitchFuzzyControl.fuzzy_rules[40], pitchFuzzyControl.inGocLech[5], pitchFuzzyControl.inGocLech_dot[5], pitchFuzzyControl.outValuePWMControl[1], 41);//rule 41
+	setOneRule(pitchFuzzyControl.fuzzy_rules[41], pitchFuzzyControl.inGocLech[5], pitchFuzzyControl.inGocLech_dot[6], pitchFuzzyControl.outValuePWMControl[0], 42);//rule 42
+
+	setOneRule(pitchFuzzyControl.fuzzy_rules[42], pitchFuzzyControl.inGocLech[6], pitchFuzzyControl.inGocLech_dot[0], pitchFuzzyControl.outValuePWMControl[3], 43);//rule 43
+	setOneRule(pitchFuzzyControl.fuzzy_rules[43], pitchFuzzyControl.inGocLech[6], pitchFuzzyControl.inGocLech_dot[1], pitchFuzzyControl.outValuePWMControl[2], 44);//rule 44
+	setOneRule(pitchFuzzyControl.fuzzy_rules[44], pitchFuzzyControl.inGocLech[6], pitchFuzzyControl.inGocLech_dot[2], pitchFuzzyControl.outValuePWMControl[2], 45);//rule 45
+	setOneRule(pitchFuzzyControl.fuzzy_rules[45], pitchFuzzyControl.inGocLech[6], pitchFuzzyControl.inGocLech_dot[3], pitchFuzzyControl.outValuePWMControl[1], 46);//rule 46
+	setOneRule(pitchFuzzyControl.fuzzy_rules[46], pitchFuzzyControl.inGocLech[6], pitchFuzzyControl.inGocLech_dot[4], pitchFuzzyControl.outValuePWMControl[1], 47);//rule 47
+	setOneRule(pitchFuzzyControl.fuzzy_rules[47], pitchFuzzyControl.inGocLech[6], pitchFuzzyControl.inGocLech_dot[5], pitchFuzzyControl.outValuePWMControl[0], 48);//rule 48
+	setOneRule(pitchFuzzyControl.fuzzy_rules[48], pitchFuzzyControl.inGocLech[6], pitchFuzzyControl.inGocLech_dot[6], pitchFuzzyControl.outValuePWMControl[0], 49);//rule 49
 }
 
+void Fuzzification_All_MF(float x, FuzzyController * fuzzyController)
+{
+	//Buoc 3: mo hoa ngo~ vao. tinh degree cho tat ca MF
+	float xx;
+	int i;
+	int j;
+	//Mo hoa input GocLech
+	for (i=0; i < 7; i++) 
+	{ 
+		if( !fuzzyController->inGocLech[i] ) continue;
+		fuzzification( fuzzyController->inGocLech[i] , x); //void fuzzification(MF *mf, float x)
+	}
+	
+	//Mo hoa input GocLech_dot
+	xx = (float)(( fuzzyController->pre_GocLech - x )/DT);
+	for (j=0; j < 7; j++) 
+	{ 
+		if( !fuzzyController->inGocLech_dot[j] ) continue;
+		fuzzification( fuzzyController->inGocLech[j] , xx); //void fuzzification(MF *mf, float x)
+	}
+	fuzzyController->pre_GocLech = x;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+//--------------------------------------------------------------------------------------------------------------------------------------------
 #ifdef  USE_FULL_ASSERT
 
 /**
