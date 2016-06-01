@@ -181,9 +181,10 @@ volatile 					uint32_t g_iSysTicks = 0;
 void 							SysTick_Handler(){	g_iSysTicks++;}
 void 							delay_ms(uint32_t piMillis){	uint32_t iStartTime = g_iSysTicks;	while( (g_iSysTicks - iStartTime ) < piMillis)	{}}			
 
-	
+void 							initFuzzySystem(void);
 int main(void)
-{				
+{		
+		initFuzzySystem();
 		SetInitDataQuadrotor();
 																				/* code default cua ARM co san						*/
 																			#ifdef RTE_CMSIS_RTOS                   
