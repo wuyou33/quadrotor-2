@@ -1517,73 +1517,62 @@ void initFuzzySystem(void)
 	
 	//Buoc 1: Khai bao MF:
 	/*GocLech*/
-	//inGocLech roll
-	setABCD_MF(rollFuzzyControl.inGocLech[0], -90, -90, -50, -40, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//VerySmall
-	setABCD_MF(rollFuzzyControl.inGocLech[1], -60, -40, -40, -20, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//LittleSmall
-	setABCD_MF(rollFuzzyControl.inGocLech[2], -40, -20, -20,   0, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//Small
-	setABCD_MF(rollFuzzyControl.inGocLech[3], -20,   0,   0,  20, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//Zero
-	setABCD_MF(rollFuzzyControl.inGocLech[4],   0,  20,  20,  40, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//Big
-	setABCD_MF(rollFuzzyControl.inGocLech[5],  20,  40,  40,  60, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//LittleBig
-	setABCD_MF(rollFuzzyControl.inGocLech[6],  40,  60,  90,  90, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//VeryBig
+	setABCD_MF(rollFuzzyControl.inGocLech[0],   -30,   -30,   -18,  -12, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//VerySmall
+	setABCD_MF(rollFuzzyControl.inGocLech[1],   -18,   -12,   -12,   -6, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//LittleSmall
+	setABCD_MF(rollFuzzyControl.inGocLech[2],   -12,    -6,    -6,    0, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//Small
+	setABCD_MF(rollFuzzyControl.inGocLech[3],    -6,     0,     0,    6, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//Zero
+	setABCD_MF(rollFuzzyControl.inGocLech[4],     0,     6,     6,   12, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//Big
+	setABCD_MF(rollFuzzyControl.inGocLech[5],     6,    12,    12,   18, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//LittleBig
+	setABCD_MF(rollFuzzyControl.inGocLech[6],    12,    18,    30,   30, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//VeryBig
+
+	setABCD_MF(pitchFuzzyControl.inGocLech[0],  -30,   -30,   -18,  -12, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//VerySmall
+	setABCD_MF(pitchFuzzyControl.inGocLech[1],  -18,   -12,   -12,   -6, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//LittleSmall
+	setABCD_MF(pitchFuzzyControl.inGocLech[2],  -12,    -6,    -6,    0, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//Small
+	setABCD_MF(pitchFuzzyControl.inGocLech[3],   -6,     0,     0,    6, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//Zero
+	setABCD_MF(pitchFuzzyControl.inGocLech[4],    0,     6,     6,   12, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//Big
+	setABCD_MF(pitchFuzzyControl.inGocLech[5],    6,    12,    12,   18, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//LittleBig
+	setABCD_MF(pitchFuzzyControl.inGocLech[6],   12,    18,    30,   30, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//VeryBig
 	
-	//inGocLech pitch
-	setABCD_MF(pitchFuzzyControl.inGocLech[0], -90, -90, -50, -40, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//VerySmall
-	setABCD_MF(pitchFuzzyControl.inGocLech[1], -60, -40, -40, -20, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//LittleSmall
-	setABCD_MF(pitchFuzzyControl.inGocLech[2], -40, -20, -20,   0, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//Small
-	setABCD_MF(pitchFuzzyControl.inGocLech[3], -20,   0,   0,  20, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//Zero
-	setABCD_MF(pitchFuzzyControl.inGocLech[4],   0,  20,  20,  40, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//Big
-	setABCD_MF(pitchFuzzyControl.inGocLech[5],  20,  40,  40,  60, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//LittleBig
-	setABCD_MF(pitchFuzzyControl.inGocLech[6],  40,  60,  90,  90, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//VeryBig
-	
-	
-	
-	
+
 	/*GocLech_dot*/
-	//inGocLech_dot roll
-	setABCD_MF(rollFuzzyControl.inGocLech_dot[0], -100, -100, -80, -40, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//VeryNagative
-	setABCD_MF(rollFuzzyControl.inGocLech_dot[1], -60,   -40, -40, -20, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//LittleNagative
-	setABCD_MF(rollFuzzyControl.inGocLech_dot[2], -40,   -20, -20,   0, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//Nagative
-	setABCD_MF(rollFuzzyControl.inGocLech_dot[3], -20,     0,   0,  20, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//Zero
-	setABCD_MF(rollFuzzyControl.inGocLech_dot[4],   0,    20,  20,  40, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//Positive
-	setABCD_MF(rollFuzzyControl.inGocLech_dot[5],  20,    40,  40,  60, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//LittlePositive
-	setABCD_MF(rollFuzzyControl.inGocLech_dot[6],  40,    80, 100, 100, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//VeryPositive
-	
-	//inGocLech_dot pitch
-	setABCD_MF(pitchFuzzyControl.inGocLech_dot[0], -100, -100, -80, -40, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//VeryNagative
-	setABCD_MF(pitchFuzzyControl.inGocLech_dot[1], -60,   -40, -40, -20, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//LittleNagative
-	setABCD_MF(pitchFuzzyControl.inGocLech_dot[2], -40,   -20, -20,   0, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//Nagative
-	setABCD_MF(pitchFuzzyControl.inGocLech_dot[3], -20,     0,   0,  20, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//Zero
-	setABCD_MF(pitchFuzzyControl.inGocLech_dot[4],   0,    20,  20,  40, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//Positive
-	setABCD_MF(pitchFuzzyControl.inGocLech_dot[5],  20,    40,  40,  60, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//LittlePositive
-	setABCD_MF(pitchFuzzyControl.inGocLech_dot[6],  40,    80, 100, 100, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//VeryPositive
+	setABCD_MF(rollFuzzyControl.inGocLech_dot[0] ,  -10,   -10,   -6,   -4, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//VeryNagative
+	setABCD_MF(rollFuzzyControl.inGocLech_dot[1] ,   -6,    -4,   -4,   -2, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//LittleNagative
+	setABCD_MF(rollFuzzyControl.inGocLech_dot[2] ,   -4,    -2,   -2,    0, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//Nagative
+	setABCD_MF(rollFuzzyControl.inGocLech_dot[3] ,   -2,     0,    0,    2, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//Zero
+	setABCD_MF(rollFuzzyControl.inGocLech_dot[4] ,    0,     2,    2,    4, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//Positive
+	setABCD_MF(rollFuzzyControl.inGocLech_dot[5] ,    2,     4,    4,    6, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//LittlePositive
+	setABCD_MF(rollFuzzyControl.inGocLech_dot[6] ,    4,     6,   10,   10, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//VeryPositive
+
+	setABCD_MF(pitchFuzzyControl.inGocLech_dot[0],  -10,   -10,   -6,   -4, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//VeryNagative
+	setABCD_MF(pitchFuzzyControl.inGocLech_dot[1],   -6,    -4,   -4,   -2, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//LittleNagative
+	setABCD_MF(pitchFuzzyControl.inGocLech_dot[2],   -4,    -2,   -2,    0, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//Nagative
+	setABCD_MF(pitchFuzzyControl.inGocLech_dot[3],   -2,     0,    0,    2, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//Zero
+	setABCD_MF(pitchFuzzyControl.inGocLech_dot[4],    0,     2,    2,    4, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//Positive
+	setABCD_MF(pitchFuzzyControl.inGocLech_dot[5],    2,     4,    4,    6, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//LittlePositive
+	setABCD_MF(pitchFuzzyControl.inGocLech_dot[6],    4,     6,   10,   10, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//VeryPositive
 	
 	
 	/*ValuePWMControl*/
-	//outValuePWMControl roll
-	setABCD_MF(rollFuzzyControl.outValuePWMControl[0], -200, -200, -150, -100, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//VerySlow
-	setABCD_MF(rollFuzzyControl.outValuePWMControl[1], -150, -100, -100,  -50, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//LittleSlow
-	setABCD_MF(rollFuzzyControl.outValuePWMControl[2], -100,  -50,  -50,    0, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//Slow
-	setABCD_MF(rollFuzzyControl.outValuePWMControl[3],  -50,    0,    0,   50, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//Zero
-	setABCD_MF(rollFuzzyControl.outValuePWMControl[4],    0,   50,   50,  100, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//Fast
-	setABCD_MF(rollFuzzyControl.outValuePWMControl[5],  50 ,  100,  100,  150, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//LittleFast
-	setABCD_MF(rollFuzzyControl.outValuePWMControl[6],  100,  150,  200,  200, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//VeryFast
+	setABCD_MF(rollFuzzyControl.outValuePWMControl[0] , -200,  -200,  -120,   -80, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//VerySlow
+	setABCD_MF(rollFuzzyControl.outValuePWMControl[1] , -120,   -80,   -80,   -40, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//LittleSlow
+	setABCD_MF(rollFuzzyControl.outValuePWMControl[2] ,  -80,   -40,   -40,     0, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//Slow
+	setABCD_MF(rollFuzzyControl.outValuePWMControl[3] ,  -40,     0,     0,    40, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//Zero
+	setABCD_MF(rollFuzzyControl.outValuePWMControl[4] ,    0,    40,    40,    80, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//Fast
+	setABCD_MF(rollFuzzyControl.outValuePWMControl[5] ,   40,    80,    80,   120, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//LittleFast
+	setABCD_MF(rollFuzzyControl.outValuePWMControl[6] ,   80,   120,   200,   200, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//VeryFast
 
-	//outValuePWMControl pitch
-	setABCD_MF(pitchFuzzyControl.outValuePWMControl[0], -200, -200, -150, -100, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//VerySlow
-	setABCD_MF(pitchFuzzyControl.outValuePWMControl[1], -150, -100, -100,  -50, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//LittleSlow
-	setABCD_MF(pitchFuzzyControl.outValuePWMControl[2], -100,  -50,  -50,    0, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//Slow
-	setABCD_MF(pitchFuzzyControl.outValuePWMControl[3],  -50,    0,    0,   50, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//Zero
-	setABCD_MF(pitchFuzzyControl.outValuePWMControl[4],    0,   50,   50,  100, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//Fast
-	setABCD_MF(pitchFuzzyControl.outValuePWMControl[5],  50 ,  100,  100,  150, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//LittleFast
-	setABCD_MF(pitchFuzzyControl.outValuePWMControl[6],  100,  150,  200,  200, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//VeryFast
-
-
-
+	setABCD_MF(pitchFuzzyControl.outValuePWMControl[0], -200,  -200,  -120,   -80, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//VerySlow
+	setABCD_MF(pitchFuzzyControl.outValuePWMControl[1], -120,   -80,   -80,   -40, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//LittleSlow
+	setABCD_MF(pitchFuzzyControl.outValuePWMControl[2],  -80,   -40,   -40,     0, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//Slow
+	setABCD_MF(pitchFuzzyControl.outValuePWMControl[3],  -40,     0,     0,    40, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//Zero
+	setABCD_MF(pitchFuzzyControl.outValuePWMControl[4],    0,    40,    40,    80, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//Fast
+	setABCD_MF(pitchFuzzyControl.outValuePWMControl[5],   40,    80,    80,   120, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//LittleFast
+	setABCD_MF(pitchFuzzyControl.outValuePWMControl[6],   80,   120,   200,   200, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//VeryFast
 
 	//Buoc 2: RULE FuzzySystem  --------------------------------------------	
-	//GocLech =     {VerySmall, LittleSmall, Small, Zero, Big, LittleBig, VeryBig}
+	//GocLech =     {VerySmall,    LittleSmall,    Small,    Zero, Big,      LittleBig,      VeryBig}
 	//GocLech_dot = {VeryNagative, LittleNagative, Nagative, Zero, Positive, LittlePositive, VeryPositive}
-	//ValuePWM =    {VerySlow, LittleSlow, Slow, Zero, Fast, LittleFast, VeryFast}
+	//ValuePWM =    {VerySlow,     LittleSlow,     Slow,     Zero, Fast,     LittleFast,     VeryFast}
 	//ROLL
 	setOneRule(rollFuzzyControl.fuzzy_rules[0], rollFuzzyControl.inGocLech[0], rollFuzzyControl.inGocLech_dot[0], rollFuzzyControl.outValuePWMControl[6], 1);//rule 1
 	setOneRule(rollFuzzyControl.fuzzy_rules[1], rollFuzzyControl.inGocLech[0], rollFuzzyControl.inGocLech_dot[1], rollFuzzyControl.outValuePWMControl[6], 2);//rule 2
@@ -1722,6 +1711,16 @@ void Fuzzification_All_MF(float x, FuzzyController * fuzzyController)
 		fuzzification( fuzzyController->inGocLech[j] , xx); //void fuzzification(MF *mf, float x)
 	}
 	fuzzyController->pre_GocLech = x;
+}
+
+void Apply_All_Rule( FuzzyController * fuzzyController )
+{ 
+	int i;
+	for(i=0; i < NUMBER_RULE; i++)
+	{
+		if(!fuzzyController->fuzzy_rules[i]) continue;
+		calcule_H_and_Y_PerRule(fuzzyController->fuzzy_rules[i]);
+	}
 }
 
 

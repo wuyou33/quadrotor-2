@@ -8,16 +8,18 @@ Author: nguyen
 Date : 13/5/2016
 
 Fuzzy process:
-B1: xac dinh cac MF
-B2: xac dinh cac rule
-B3: tu gia tri ro~ x => degree cua tat ca MF in va MF out
-B4: tu (degree of MF in + Rule[i] ) => degree of MF out 
-		Neu menh de IF dung and => MIN()           //ap dung khi co 2 input
-		Neu menh de IF dung or  => MAX()					 //ap dung khi co 2 input
-		=> degree of menh de IF
-		=> degree of menh de THEN (ap dung MIN() )
-B5: lap qua tat ca Rule. tinh ra output (phuong phap trong tam trung binh)
-		=>output		
+Step 1: Define MF (FuzzySet - Membershipfunction)
+Step 2: Define Fuzzy Rule
+Step 3: Fuzzification: real value x => degree(strength) of MF input and degree(strength)) MF output
+Step 4: Apply Rule (apply Fuzzy Rule) 
+				Fuzzy Rule + (degree MF input_1 & degree MF input_2) using MAX-MIN Law => degree MF output
+				In case: 2 input and 1 output
+				"If clause":   if AND => using MIN()
+				"If clause":   if OR  => using MAX()
+				"Then clause":           using MIN()
+Step 5: Defuzzification: caculate output via Loop all rule list
+				Using Average-Height method
+				=> real output value
 */
 
 #define NUMBER_RULE					49  //so luong rule
@@ -141,15 +143,11 @@ void setOneRule(MF_rule* rule, MF* inGocLech, MF* inGocLech_dot, MF* outValuePWM
 //	dung vong for loop het NUMBER_RULE
 //	voi moi Rule, dung MAX or MIN => h
 //	tinh avg_x = (left+right)/2
-void calcule_H_and_Y_PerRule(MF_rule   (*rules)[NUMBER_RULE] )
+void calcule_H_and_Y_PerRule(MF_rule   * rule )
 {
-	int i;
-	for (i=0; i < NUMBER_RULE; i++) 
-	{ 
-		if(!rules[i]) continue;
-		rules[i]->h = (float) MAXIMUM(  MINIMUM(rules[i]->inGocLech->h, rules[i]->inGocLech_dot->h ) , 0);
-		rules[i]->y = (float)( (rules[i]->outValuePWMControl->a + rules[i]->outValuePWMControl->d)/2) ;
-	}
+		if(!rule) return;
+		rule->h = (float) MAXIMUM(  MINIMUM(rule->inGocLech->h, rule->inGocLech_dot->h ) , 0);
+		rule->y = (float)( (rule->outValuePWMControl->a + rule->outValuePWMControl->d)/2) ;
 }
 
 
