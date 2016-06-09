@@ -30,6 +30,17 @@ Step 5: Defuzzification: caculate output via Loop all rule list
 #define TYPE_INPUT_GOCLECH 					 0
 #define TYPE_INPUT_GOCLECH_DOT 			 1
 #define TYPE_OUTPUT_ValuePWMControl  2
+	
+
+
+#define GocLech_maxXD 							 (float)30
+#define GocLech_minXD 							(float)-30
+
+#define GocLech_dot_maxXD 					 (float)10
+#define GocLech_dot_minXD 					(float)-10
+
+#define ValuePWMControl_maxXD 			 (float)200
+#define ValuePWMControl_minXD 			(float)-200
 
 
 //-------MEMBERSHIP FUNCTION--------------------------------
@@ -153,23 +164,7 @@ void calcule_H_and_Y_PerRule(MF_rule   * rule )
 
 
 
-//--------GIAI MO` De-fuzzify-------------------------------
-//De-fuzzify the fuzzy output functions to get "crisp" output values.
-float defuzzification(MF_rule   (*rules)[NUMBER_RULE] )
-{
-	float output = 0;
-	int i;
-	float sum_h = 0; 					//tong tat ca cac strength( degree) cua cac MF thanh phan
-	float total_y = 0; 				//tong tat ca cac x(hoanh do) trong tam cua MF thanh phan
-	for (i=0; i < NUMBER_RULE; i++) 
-	{ 
-		if(!rules[i]) continue;
-		sum_h = 			(float)sum_h + rules[i]->h;
-		total_y = (float)total_y + (float)rules[i]->y * rules[i]->h;
-	}
-	output = (float)(total_y/sum_h);
-	return output; //PWM + hoac - mot gia tri output
-}
+
 
 
 //-----------------------------------------------------------------------

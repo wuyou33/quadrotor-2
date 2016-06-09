@@ -1713,14 +1713,42 @@ void Fuzzification_All_MF(float x, FuzzyController * fuzzyController)
 	fuzzyController->pre_GocLech = x;
 }
 
+
+
+
 void Apply_All_Rule( FuzzyController * fuzzyController )
 { 
+	//Buoc 4: apply rule: loop all rule and caculate output degree of Every Rule
 	int i;
 	for(i=0; i < NUMBER_RULE; i++)
 	{
 		if(!fuzzyController->fuzzy_rules[i]) continue;
 		calcule_H_and_Y_PerRule(fuzzyController->fuzzy_rules[i]);
 	}
+}
+
+
+
+void defuzzification( FuzzyController * fuzzyController )
+{
+	//buoc 5
+	//--------GIAI MO` De-fuzzify-------------------------------
+	//De-fuzzify the fuzzy output functions to get "crisp" output values.
+	float output = 0;
+	int i;
+	float sum_h = 0; 					//Sum degree of all MF
+	float total_y = 0; 				//Sum y=(a+d)/2 of all MF
+	for (i=0; i < NUMBER_RULE; i++) 
+	{ 
+		if(!fuzzyController->fuzzy_rules[i]) continue;
+		sum_h = 			(float)sum_h + fuzzyController->fuzzy_rules[i]->h;
+		total_y = (float)total_y + (float)fuzzyController->fuzzy_rules[i]->y * fuzzyController->fuzzy_rules[i]->h;
+	}
+	if(sum_h != 0)
+	{
+			output = (float)(total_y/sum_h);
+	}
+	fuzzyController->output = output;//PWM + hoac - mot gia tri output
 }
 
 

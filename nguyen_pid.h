@@ -11,20 +11,20 @@
 	
 
 //I think the 1000/50 is an error. Looks to me like the AC_PID library takes its dt in seconds. The main loop runs every 50 milliseconds, so the correct dt would be 50/1000 = 0.05 sec.
-//#define DT_milisecond 					0.01 //10ms
-#define DT 											0.05 //50ms
+//#define DT_milisecond 					(float)0.01 //10ms
+#define DT 											(float)0.05 //50ms
 
-#define ROLL_PID_KP  1.3							
-#define ROLL_PID_KI  0.05 					
-#define ROLL_PID_KD  20							
-#define ROLL_PID_MIN  -400.0
-#define ROLL_PID_MAX  400.0
+#define ROLL_PID_KP  (float)1.3							
+#define ROLL_PID_KI  (float)0.05 					
+#define ROLL_PID_KD  (float)20							
+#define ROLL_PID_MIN  (float)-400.0
+#define ROLL_PID_MAX  (float)400.0
 
-#define PITCH_PID_KP  1.3
-#define PITCH_PID_KI  0.05 				
-#define PITCH_PID_KD  20
-#define PITCH_PID_MIN  -400.0
-#define PITCH_PID_MAX  400.0
+#define PITCH_PID_KP  (float)1.3
+#define PITCH_PID_KI  (float)0.05 				
+#define PITCH_PID_KD  (float)20
+#define PITCH_PID_MIN  (float)-400.0
+#define PITCH_PID_MAX  (float)400.0
 
 /*
 #define YAW_PID_KP  0.680
