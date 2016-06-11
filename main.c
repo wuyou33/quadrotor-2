@@ -89,10 +89,7 @@ float kalmanCalculate(Kalman_Setting *kalman, float newAngle, float newRate, flo
 //ham handle error						
 static void 			SystemClock_Config(void);
 static void 			Error_Handler(void); 
-void 							Error_Handler1(void); 
-void 							Error_Handler2(void);
-void 							Error_Handler3(void); 
-void 							Error_Handler4(void);
+void 							Error_Handler_Custom(int type);
 															
 //ham Led Sang
 void 							SANG_1_LED(int8_t pin);
@@ -160,71 +157,57 @@ void 							defuzzification( FuzzyController * fuzzyController );
 
 int main(void)
 {
-		initFuzzySystem();
-		SetInitDataQuadrotor();
-																				/* code default cua ARM co san						*/
-																			#ifdef RTE_CMSIS_RTOS                   
-																				osKernelInitialize();                 
-																			#endif		
-																			HAL_Init();
-																			SystemClock_Config();	
+		HAL_Init();
+		SystemClock_Config();	
+	
+		initFuzzySystem(); //init fuzzy system
+		SetInitDataQuadrotor(); // set kalman filter, input cature
+	
 		//-------------cap xung clock------------------------------------
-		__GPIOA_CLK_ENABLE();			
-		__GPIOB_CLK_ENABLE();			
-		__GPIOC_CLK_ENABLE();			
-		__GPIOD_CLK_ENABLE();			
-		__GPIOE_CLK_ENABLE();		
-		__TIM1_CLK_ENABLE(); 		
-		__TIM2_CLK_ENABLE(); 		
-		__TIM3_CLK_ENABLE(); 			
-		__TIM4_CLK_ENABLE(); 		
-		__TIM5_CLK_ENABLE();    
-		__TIM9_CLK_ENABLE(); 	 
-		__I2C1_CLK_ENABLE();						
-		
+																			__GPIOA_CLK_ENABLE();		__GPIOB_CLK_ENABLE();			__GPIOC_CLK_ENABLE();			__GPIOD_CLK_ENABLE();			__GPIOE_CLK_ENABLE();		
+																			__TIM1_CLK_ENABLE(); 		__TIM2_CLK_ENABLE(); 		 __TIM3_CLK_ENABLE(); 			__TIM4_CLK_ENABLE(); 			__TIM5_CLK_ENABLE();    __TIM9_CLK_ENABLE(); 	 
+																			__I2C1_CLK_ENABLE();
 		//---------GPIO init cho 4 led sang--------gpio init cho button user-----------------------------------
 		Init_LEDSANG_PORTD_12_13_14_15(); 	Init_BUTTON_USER_PORT_A_0();
 		
-		//--------------------------------------------------
-		Init_PWM_GPIO_PORT_C_4Channel();	Init_PWM_TIM3_Handle();		Init_TIM3_OUTPUT_COMPARE();					//setting cho 4 PIN of PWM		//Khoi tao timer 3//cau hinh timer 3 voi mode output PWM
-		
+		//---------setting cho 4 PIN of PWM		//Khoi tao timer 3//cau hinh timer 3 voi mode output PWM
+		Init_PWM_GPIO_PORT_C_4Channel();	Init_PWM_TIM3_Handle();		Init_TIM3_OUTPUT_COMPARE();		
+
 		//-----------Output compare PWM. Khoi dong PWM motor---------------------------------------
 		HAL_TIM_Base_Start_IT(&Tim3_Handle_PWM); 		
-		HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_1);		
-		//HAL_TIMEx_PWMN_Start(&Tim3_Handle_PWM,TIM_CHANNEL_1);	
-		HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_2);		
-		//HAL_TIMEx_PWMN_Start(&Tim3_Handle_PWM,TIM_CHANNEL_2);	
-		HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_3);		
-		//HAL_TIMEx_PWMN_Start(&Tim3_Handle_PWM,TIM_CHANNEL_3);	
-		HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_4);		
-		//HAL_TIMEx_PWMN_Start(&Tim3_Handle_PWM,TIM_CHANNEL_4);				
+		HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_1);			//HAL_TIMEx_PWMN_Start(&Tim3_Handle_PWM,TIM_CHANNEL_1);	
+		HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_2); HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_3);	HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_4);	
 		
-		//----------------------Code config cho motor, luc dau tao clock PWM max 2000ms trong vong 2s, sau do giam xuong 700ms
-		TIM3->CCR1 = 2000; 		TIM3->CCR2 = 2000;		TIM3->CCR3 = 2000;		TIM3->CCR4 = 2000;		SANG_4_LED(); delay_ms(2000); 		
-		TIM3->CCR1 = 700; 		TIM3->CCR2 = 700;			TIM3->CCR3 = 700;			TIM3->CCR4 = 700;		
-		SANG_4_LED_OFF();
+		//---------Code config cho motor, luc dau tao clock PWM max 2000ms trong vong 2s, sau do giam xuong 700ms
+		TIM3->CCR1 = 2000; 		TIM3->CCR2 = 2000;		 TIM3->CCR3 = 2000;		 TIM3->CCR4 = 2000;		
+		SANG_4_LED(); delay_ms(2000); 		
+		TIM3->CCR1 =  700; 		TIM3->CCR2 =  700;			TIM3->CCR3 = 700;			TIM3->CCR4 = 700;		
+		SANG_4_LED_OFF();		
 		
-		//---------------------------------------------------
+		//------config DEVO 7 RF module - INPUT CAPTURE MODE---------------------------------------------
 		Init_Receiver_TIM_PWM_Capture_TIM1(); //PE9 ->TIM1_CH1  //Throttle (can ga)
 		Init_Receiver_TIM_PWM_Capture_TIM2(); //PA5 ->TIM2_CH1  //Rudder  (xoay)
 		Init_Receiver_TIM_PWM_Capture_TIM4(); //PB8 ->TIM4_CH3  //Elevator (tien - lui)
 		Init_Receiver_TIM_PWM_Capture_TIM5(); //PA3 - TIM5_CH4  //Ailenron (trai - phai)		
 		
 		//----------MPU6050 cau hinh PB6, PB7 doc cam bien mpu6050---------------------------------------------------			
-		Init_I2C_GPIO_PortB();		Init_I2C_Handle_10truc();			TM_I2C_IS_DEVICE_CONNECTED();	
+		Init_I2C_GPIO_PortB();		
+		Init_I2C_Handle_10truc();			
+		TM_I2C_IS_DEVICE_CONNECTED();//khong connect dc => LED VANG sang lien tuc
 				
-		//-----------------doc gia tri cua WHO I AM register, neu co loi se Sang 4 LED Sang Forever
+		//-----------------doc gia tri cua WHO I AM register, if error => LED RED(14) sang nhap nhay
 		who_i_am_reg_value_MPU6050 = TM_I2C_WHO_I_AM( MPU6050_I2C_ADDR, MPU6050_WHO_AM_I_REGISTER);
-		if( who_i_am_reg_value_MPU6050 != MPU6050_I_AM_VALUES )		{			SANG_4_LED_FOREVER();		}
+		if( who_i_am_reg_value_MPU6050 != MPU6050_I_AM_VALUES )	{ Error_Handler_Custom(	ERROR_MPU6050_NOT_I_AM_VALUES ); }	
+
 		
-		//---------------------setting/config cho cam bien mpu6050-----------------------------
+		//---------------------setting/config cho MPU6050-----------------------------
 		TM_I2C_WRITE( MPU6050_I2C_ADDR, MPU6050_PWR_MGMT_1, 0x00); 
 		TM_MPU6050_SetDataRate( MPU6050_I2C_ADDR, MPU6050_SMPLRT_DIV, TM_MPU6050_DataRate_1KHz); 
 		TM_MPU6050_SetAccelerometer( MPU6050_I2C_ADDR, MPU6050_ACCEL_CONFIG, TM_MPU6050_Accelerometer_2G); 
 		TM_MPU6050_SetGyroscope( MPU6050_I2C_ADDR, MPU6050_GYRO_CONFIG, TM_MPU6050_Gyroscope_250s); 
 		TM_MPU6050_ReadAll( MPU6050_I2C_ADDR, &mpu6050);
 				
-		//-----------------------------------------------------------------------------------		
+		//-----------Caculate Roll/Pitch/Yaw Angel------------------------------------------------------------------------		
 		//Roll  = atan2( Y,   sign* sqrt(Z*Z+ miu*X*X)); 		//sign  = 1 if accZ>0, -1 otherwise 		//miu = 0.001		
 		
 		//https://sites.google.com/site/myimuestimationexperience/sensors/magnetometer
@@ -236,9 +219,7 @@ int main(void)
 		//accZ_angle = atan(output.Accelerometer_Z/sqrt(output.Accelerometer_X*output.Accelerometer_X + output.Accelerometer_Z*output.Accelerometer_Z)) * RAD_TO_DEG;		
 		//accZ_angle = output.Gyroscope_Z*DT; //angel Z (yaww) = tocdo_goc*thoigian;
 		gyroX_angle = accX_angle; //set goc gyroX_angle = accX_angle;
-		//timer = HAL_GetTick();
 		
-		//--------------------------------------------------------------------------------------------------
 		//-----FUZZY SET Membership Function-------------------------------------------------------------------------
 		Fuzzification_All_MF(0, &rollFuzzyControl);	
 		Apply_All_Rule( &rollFuzzyControl );
@@ -250,20 +231,14 @@ int main(void)
 		
 		Fuzzification_All_MF(0, &yawFuzzyControl);	
 		Apply_All_Rule( &yawFuzzyControl );
-		defuzzification( &yawFuzzyControl );
-		//-----------------------------------------------------------------------------------		
-																//.... code dafault cua ARM		// when using CMSIS RTOS	// start thread execution 
-																#ifdef RTE_CMSIS_RTOS 
-																	osKernelStart();     
-																#endif	
-																
+		defuzzification( &yawFuzzyControl );							
 		
 		KiemTraCodeOK();		
 		while(1)
 		{		//-----------Khoi dong may bay	--------------
 				while(FlyState == 0)
 				{					
-					KhoiDongQuadrotor(); SANG_4_LED(); delay_ms(50); SANG_4_LED_OFF(); delay_ms(50);
+					KhoiDongQuadrotor();
 				}						
 				
 				TM_MPU6050_ReadAll( MPU6050_I2C_ADDR, &mpu6050); 
@@ -359,6 +334,9 @@ int main(void)
 
 void SetInitDataQuadrotor(void)
 {
+		who_i_am_reg_value_MPU6050 = 0;
+		
+		//set kalman filter	
 		kalmanX.Q_angle  =  0.001;  //0.001    //0.005
 		kalmanX.Q_gyro   =  0.003;  //0.003    //0.0003
 		kalmanX.R_angle  =  0.03;  //0.03     //0.008
@@ -385,7 +363,8 @@ void SetInitDataQuadrotor(void)
 		kalmanZ.P_01 = 0;
 		kalmanZ.P_10 = 0; 
 		kalmanZ.P_11 = 0;
-	
+		
+		//set input capture
 		IC_Throttle1 = 0;
 		IC_Throttle2 = 0; 
 		IC_Throttle_pusle_width = 0;
@@ -402,9 +381,11 @@ void SetInitDataQuadrotor(void)
 		IC_Rudder_Xoay2 = 0;
 		IC_Rudder_Xoay_pusle_width = 0;
 		
-		who_i_am_reg_value_MPU6050 = 0;
+		
 		SetPWM_4_Motor(0);
 		FlyState = 0;
+				
+		//set pid controller
 		//pid_setup_gain(&pid_roll,   ROLL_PID_KP,  ROLL_PID_KI,  ROLL_PID_KD);
 		//pid_setup_gain(&pid_pitch,  PITCH_PID_KP, PITCH_PID_KI, PITCH_PID_KD);
 		//pid_setup_error(&pid_roll);
@@ -412,12 +393,22 @@ void SetInitDataQuadrotor(void)
 }
 void KhoiDongQuadrotor(void)
 {
+		int i=0;
+	int timedelay = 100;
 		if( (IC_Throttle_pusle_width             >= PWM_ON_OFF_MIN && IC_Throttle_pusle_width         <= PWM_ON_OFF_MAX) && 
 						(IC_Aileron_TraiPhai_pusle_width >= PWM_ON_OFF_MIN && IC_Aileron_TraiPhai_pusle_width <= PWM_ON_OFF_MAX) && 
 						(IC_Elevator_TienLui_pusle_width >= PWM_ON_OFF_MIN && IC_Elevator_TienLui_pusle_width <= PWM_ON_OFF_MAX) 
 				)
 				{
-						SANG_4_LED(); delay_ms(3000); SANG_4_LED_OFF();
+						while(i<5)
+						{
+							SANG_1_LED(12); delay_ms(timedelay);
+							SANG_1_LED(13); delay_ms(timedelay);
+							SANG_1_LED(14); delay_ms(timedelay);
+							SANG_1_LED(15); delay_ms(timedelay);
+							i++;
+						}
+						SANG_4_LED(); 	delay_ms(1000);  SANG_4_LED_OFF();						
 						if( (IC_Throttle_pusle_width         >= PWM_ON_OFF_MIN && IC_Throttle_pusle_width         <= PWM_ON_OFF_MAX) && 
 								(IC_Aileron_TraiPhai_pusle_width >= PWM_ON_OFF_MIN && IC_Aileron_TraiPhai_pusle_width <= PWM_ON_OFF_MAX) && 
 								(IC_Elevator_TienLui_pusle_width >= PWM_ON_OFF_MIN && IC_Elevator_TienLui_pusle_width <= PWM_ON_OFF_MAX) 
@@ -433,18 +424,27 @@ void KhoiDongQuadrotor(void)
 
 void TurnOffQuadrotor(void) //tat quadrotor
 {
-		SANG_4_LED(); delay_ms(3000); SANG_4_LED_OFF();
-		if( (IC_Throttle_pusle_width         >= PWM_ON_OFF_MIN && IC_Throttle_pusle_width         <= PWM_ON_OFF_MAX) && 
-				(IC_Aileron_TraiPhai_pusle_width >= PWM_ON_OFF_MIN && IC_Aileron_TraiPhai_pusle_width <= PWM_ON_OFF_MAX) && 
-				(IC_Elevator_TienLui_pusle_width >= PWM_ON_OFF_MIN && IC_Elevator_TienLui_pusle_width <= PWM_ON_OFF_MAX) &&
-				(IC_Rudder_Xoay_pusle_width      >= PWM_ON_OFF_MIN && IC_Rudder_Xoay_pusle_width      <= PWM_ON_OFF_MAX)
-		)
-		{				
-				SANG_4_LED_OFF();
-				FlyState = 0;
-				SetPWM_4_Motor(500); //stop all motor
-				//SetPWM_4_Motor(0);
-		}
+	int i=0;
+	int timedelay = 100;
+						while(i<5)
+						{
+							SANG_1_LED(15); delay_ms(timedelay);
+							SANG_1_LED(14); delay_ms(timedelay);
+							SANG_1_LED(13); delay_ms(timedelay);
+							SANG_1_LED(12); delay_ms(timedelay);
+							i++;
+						}
+						SANG_4_LED(); 	delay_ms(1000);  SANG_4_LED_OFF();
+						if( (IC_Throttle_pusle_width         >= PWM_ON_OFF_MIN && IC_Throttle_pusle_width         <= PWM_ON_OFF_MAX) && 
+								(IC_Aileron_TraiPhai_pusle_width >= PWM_ON_OFF_MIN && IC_Aileron_TraiPhai_pusle_width <= PWM_ON_OFF_MAX) && 
+								(IC_Elevator_TienLui_pusle_width >= PWM_ON_OFF_MIN && IC_Elevator_TienLui_pusle_width <= PWM_ON_OFF_MAX) &&
+								(IC_Rudder_Xoay_pusle_width      >= PWM_ON_OFF_MIN && IC_Rudder_Xoay_pusle_width      <= PWM_ON_OFF_MAX)
+						)
+						{				
+								SANG_4_LED_OFF();
+								FlyState = 0;
+								SetPWM_4_Motor(500); //stop all motor
+						}
 }
 //
 //
@@ -496,7 +496,11 @@ void Init_Receiver_TIM_PWM_Capture_TIM1(void)
   sConfigIC.ICFilter = 0;
   HAL_TIM_IC_ConfigChannel(&htim1, &sConfigIC, TIM_CHANNEL_1);
 	//__HAL_TIM_ENABLE_IT(&htim1, TIM_IT_CC1);
-	if(HAL_TIM_IC_Start_IT(&htim1, TIM_CHANNEL_1) != HAL_OK)		{							Error_Handler();			}	
+	if(HAL_TIM_IC_Start_IT(&htim1, TIM_CHANNEL_1) != HAL_OK)		
+	{
+		Error_Handler_Custom(ERROR_TIM_1_INPUTCAPTURE);
+		//Error_Handler();			
+	}	
 }	
 
 void Init_Receiver_TIM_PWM_Capture_TIM2(void)
@@ -728,12 +732,12 @@ void TIM5_IRQHandler(void) //PA3 - TIM5_CH4 ////Aileron_TraiPhai (trai - phai) -
 void KiemTraCodeOK(void)
 {
 		int i = 0;
-		while(i < 5)
+		while(i < 10)
 		{
-			SANG_2_LED(1);				
-			delay_ms(100);				
-			SANG_2_LED(2);				
-			delay_ms(100);
+			SANG_1_LED(12); delay_ms(50);
+			SANG_1_LED(13); delay_ms(50);			
+			SANG_1_LED(14); delay_ms(50);	
+			SANG_1_LED(15); delay_ms(50);	
 			i++;
 		}
 		SANG_4_LED_OFF();
@@ -839,16 +843,14 @@ void TM_I2C_IS_DEVICE_CONNECTED()
 {
 	if(HAL_I2C_IsDeviceReady(&I2C_Handle_10truc, MPU6050_I2C_ADDR, 2, 5) != HAL_OK) 
 	{
-		while(1)
-		{
-			Error_Handler();
-		}
+			Error_Handler_Custom(ERROR_MPU6050_NOT_CONNECT);
 	}
 	while( HAL_I2C_GetState(&I2C_Handle_10truc) != HAL_I2C_STATE_READY )
 	{
 		while(1)
 		{
-			Error_Handler();
+			//neu k connect dc MPU6050 => LED CAM sang lien tuc
+			SANG_1_LED(13); 			delay_ms(50);			SANG_4_LED_OFF();			delay_ms(50);
 		}
 	}
 }
@@ -1339,45 +1341,42 @@ static void Error_Handler(void)
 	}
 }
 
-void Error_Handler1(void)
+
+
+void Error_Handler_Custom(int type)
 {
-  while(1)
-  {			
-		SANG_2_LED(1);
-		delay_ms(500);
-		SANG_2_LED(2);
-		delay_ms(500);
-	}
-}
-void Error_Handler2(void)
-{
-  while(1)
-  {			
-		SANG_2_LED(1);
-		delay_ms(500);
-		SANG_4_LED_OFF();
-		delay_ms(500);
-	}
-}
-void Error_Handler3(void)
-{
-  while(1)
-  {			
-		SANG_2_LED(2);
-		delay_ms(500);
-		SANG_4_LED_OFF();
-		delay_ms(500);
-	}
-}
-void Error_Handler4(void)
-{
-  while(1)
-  {			
-		SANG_1_LED(12); delay_ms(500);
-		SANG_1_LED(13); delay_ms(500);
-		SANG_1_LED(14); delay_ms(500);
-		SANG_1_LED(15); delay_ms(500);
-	}
+		switch(type) 
+		{
+			 case ERROR_MPU6050_NOT_CONNECT :
+					while(1)
+					{	//neu k connect dc MPU6050 => LED VANG sang lien tuc
+								SANG_1_LED(12); 			delay_ms(50);			SANG_4_LED_OFF();			delay_ms(50);
+					}
+					break;
+			
+			 case ERROR_MPU6050_NOT_I_AM_VALUES  :
+					while(1)
+						{ /*ERROR LED RED nhay lien tuc*/  
+							SANG_1_LED(14); 	 delay_ms(50); SANG_4_LED_OFF();  delay_ms(50); 											
+						}
+					break; 
+						
+			 case ERROR_TIM_1_INPUTCAPTURE : 
+			 case ERROR_TIM_2_INPUTCAPTURE : 
+			 case ERROR_TIM_4_INPUTCAPTURE : 
+			 case ERROR_TIM_5_INPUTCAPTURE :
+					while(1){ 
+						/*ERROR LED RED nhay lien tuc*/  
+						SANG_1_LED(14); 	 delay_ms(50); 						SANG_4_LED_OFF();  delay_ms(50); 					
+					}
+					break; 
+			 default : 
+					while(1){ 
+						/*ERROR LED RED nhay lien tuc*/  
+						SANG_1_LED(14); 	 delay_ms(50); 							SANG_4_LED_OFF();  delay_ms(50); 					
+					}
+		}
+
 }
 
 void SANG_1_LED(int8_t PIN)

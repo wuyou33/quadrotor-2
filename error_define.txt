@@ -1,0 +1,4 @@
+
+1.  LED VANG (PIN 12) nhay lien tuc 	=>ERROR when connect sensor 10 DOF MPU6050
+1.  LED CAM  (PIN 13) nhay lien tuc 	=>ERROR get state MPU6050, not state READY
+2.  LED RED  (PIN 14) nhay lien tuc    =>ERROR khi doc gia tri cua WHO I AM REGISTER

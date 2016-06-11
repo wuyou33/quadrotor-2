@@ -36,5 +36,14 @@
 #define M_PI 										(float)3.1415926535
 #define PI											(float)3.1415926535
 #define RAD_TO_DEG 							(float)(180/PI)
+	
+
+
+#define ERROR_MPU6050_NOT_CONNECT									  1
+#define ERROR_MPU6050_NOT_I_AM_VALUES							  2
+#define ERROR_TIM_1_INPUTCAPTURE										3
+#define ERROR_TIM_2_INPUTCAPTURE										4
+#define ERROR_TIM_4_INPUTCAPTURE										5
+#define ERROR_TIM_5_INPUTCAPTURE										6
 
 
