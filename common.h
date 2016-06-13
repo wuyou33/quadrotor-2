@@ -39,11 +39,13 @@
 	
 
 
-#define ERROR_MPU6050_NOT_CONNECT									  1
-#define ERROR_MPU6050_NOT_I_AM_VALUES							  2
-#define ERROR_TIM_1_INPUTCAPTURE										3
-#define ERROR_TIM_2_INPUTCAPTURE										4
-#define ERROR_TIM_4_INPUTCAPTURE										5
-#define ERROR_TIM_5_INPUTCAPTURE										6
+#define ERROR_MPU6050_NOT_CONNECT									  11
+#define ERROR_MPU6050_NOT_I_AM_VALUES							  12
+#define ERROR_MPU6050_STATE_READY_NOT_OK						13
+
+#define ERROR_TIM_1_INPUTCAPTURE										21
+#define ERROR_TIM_2_INPUTCAPTURE										22
+#define ERROR_TIM_4_INPUTCAPTURE										23
+#define ERROR_TIM_5_INPUTCAPTURE										24
 
 

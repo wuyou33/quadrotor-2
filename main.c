@@ -847,11 +847,8 @@ void TM_I2C_IS_DEVICE_CONNECTED()
 	}
 	while( HAL_I2C_GetState(&I2C_Handle_10truc) != HAL_I2C_STATE_READY )
 	{
-		while(1)
-		{
-			//neu k connect dc MPU6050 => LED CAM sang lien tuc
-			SANG_1_LED(13); 			delay_ms(50);			SANG_4_LED_OFF();			delay_ms(50);
-		}
+		Error_Handler_Custom(ERROR_MPU6050_STATE_READY_NOT_OK);
+		
 	}
 }
 
@@ -1359,7 +1356,15 @@ void Error_Handler_Custom(int type)
 						{ /*ERROR LED RED nhay lien tuc*/  
 							SANG_1_LED(14); 	 delay_ms(50); SANG_4_LED_OFF();  delay_ms(50); 											
 						}
-					break; 
+					break;
+						
+			 case ERROR_MPU6050_STATE_READY_NOT_OK :
+					while(1)
+						{
+							//neu k connect dc MPU6050 => LED CAM sang lien tuc
+							SANG_1_LED(13); 			delay_ms(50);			SANG_4_LED_OFF();			delay_ms(50);
+						}
+						break;
 						
 			 case ERROR_TIM_1_INPUTCAPTURE : 
 			 case ERROR_TIM_2_INPUTCAPTURE : 
@@ -1370,6 +1375,7 @@ void Error_Handler_Custom(int type)
 						SANG_1_LED(14); 	 delay_ms(50); 						SANG_4_LED_OFF();  delay_ms(50); 					
 					}
 					break; 
+					
 			 default : 
 					while(1){ 
 						/*ERROR LED RED nhay lien tuc*/  
@@ -1381,68 +1387,31 @@ void Error_Handler_Custom(int type)
 
 void SANG_1_LED(int8_t PIN)
 {
-		LED_D_12_LOW;
-		LED_D_13_LOW;
-		LED_D_14_LOW;
-		LED_D_15_LOW;
-		if(PIN==12)
-		{
-			LED_D_12_HIGH;
-		}
-		else if(PIN==13)
-		{
-			LED_D_13_HIGH;
-		}
-		else if(PIN==14)
-		{
-			LED_D_14_HIGH;
-		}
-		else if(PIN==15)
-		{
-			LED_D_15_HIGH;
-		}
+		LED_D_12_LOW;		LED_D_13_LOW;		LED_D_14_LOW;		LED_D_15_LOW;
+		if(PIN==12) {			LED_D_12_HIGH;		}
+		else if(PIN==13)		{			LED_D_13_HIGH;		}
+		else if(PIN==14)		{			LED_D_14_HIGH;		}
+		else if(PIN==15)		{			LED_D_15_HIGH;		}
 }
 
 void SANG_2_LED(int8_t type)
 {
-	LED_D_12_LOW;
-	LED_D_13_LOW;
-	LED_D_14_LOW;
-	LED_D_15_LOW;
-	if(type==1)
-	{	
-		LED_D_12_HIGH;
-		LED_D_14_HIGH;
-	}
-	else if(type==2)
-	{
-		LED_D_13_HIGH;
-		LED_D_15_HIGH;
-	}
+	LED_D_12_LOW;	LED_D_13_LOW;	LED_D_14_LOW;	LED_D_15_LOW;
+	if(type==1)	{			LED_D_12_HIGH;		LED_D_14_HIGH;	}
+	else if(type==2)	{		LED_D_13_HIGH;		LED_D_15_HIGH;	}
 }
 
 void SANG_4_LED()
 {
-		LED_D_12_HIGH;
-		LED_D_13_HIGH;
-		LED_D_14_HIGH;
-		LED_D_15_HIGH;
+		LED_D_12_HIGH;		LED_D_13_HIGH;		LED_D_14_HIGH;		LED_D_15_HIGH;
 }
 void SANG_4_LED_FOREVER()
 {
-	
-		LED_D_12_HIGH;
-		LED_D_13_HIGH;
-		LED_D_14_HIGH;
-		LED_D_15_HIGH;
-		while(1){}
+		LED_D_12_HIGH;		LED_D_13_HIGH;		LED_D_14_HIGH;		LED_D_15_HIGH;		while(1){}
 }
 void SANG_4_LED_OFF()
 {
-		LED_D_12_LOW;
-		LED_D_13_LOW;
-		LED_D_14_LOW;
-		LED_D_15_LOW;
+		LED_D_12_LOW;		LED_D_13_LOW;		LED_D_14_LOW;		LED_D_15_LOW;
 }
 
 
