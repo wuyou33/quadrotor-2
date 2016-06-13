@@ -340,29 +340,29 @@ void SetInitDataQuadrotor(void)
 		kalmanX.Q_angle  =  0.001;  //0.001    //0.005
 		kalmanX.Q_gyro   =  0.003;  //0.003    //0.0003
 		kalmanX.R_angle  =  0.03;  //0.03     //0.008
-		kalmanX.bias = 0;
-		kalmanX.P_00 = 0;
-		kalmanX.P_01 = 0;
-		kalmanX.P_10 = 0; 
-		kalmanX.P_11 = 0;
+		kalmanX.bias     =  0;
+		kalmanX.P_00     =  0;
+		kalmanX.P_01     =  0;
+		kalmanX.P_10     =  0; 
+		kalmanX.P_11     =  0;
 	
 		kalmanY.Q_angle  =  0.001;  //0.001    //0.005
 		kalmanY.Q_gyro   =  0.003;  //0.003    //0.0003
 		kalmanY.R_angle  =  0.03;  //0.03     //0.008
-		kalmanY.bias = 0;
-		kalmanY.P_00 = 0;
-		kalmanY.P_01 = 0;
-		kalmanY.P_10 = 0; 
-		kalmanY.P_11 = 0;
+		kalmanY.bias     =  0;
+		kalmanY.P_00     =  0;
+		kalmanY.P_01     =  0;
+		kalmanY.P_10     =  0; 
+		kalmanY.P_11     =  0;
 		
 		kalmanZ.Q_angle  =  0.001;  //0.001    //0.005
 		kalmanZ.Q_gyro   =  0.003;  //0.003    //0.0003
 		kalmanZ.R_angle  =  0.03;  //0.03     //0.008
-		kalmanZ.bias = 0;
-		kalmanZ.P_00 = 0;
-		kalmanZ.P_01 = 0;
-		kalmanZ.P_10 = 0; 
-		kalmanZ.P_11 = 0;
+		kalmanZ.bias     =  0;
+		kalmanZ.P_00     =  0;
+		kalmanZ.P_01     =  0;
+		kalmanZ.P_10     =  0; 
+		kalmanZ.P_11     =  0;
 		
 		//set input capture
 		IC_Throttle1 = 0;
@@ -380,7 +380,6 @@ void SetInitDataQuadrotor(void)
 		IC_Rudder_Xoay1 = 0;
 		IC_Rudder_Xoay2 = 0;
 		IC_Rudder_Xoay_pusle_width = 0;
-		
 		
 		SetPWM_4_Motor(0);
 		FlyState = 0;
