@@ -45,8 +45,8 @@ Step 5: Defuzzification: caculate output via Loop all rule list
 
 //-------MEMBERSHIP FUNCTION--------------------------------
 //data struct cua MembershipFunction (FuzzySet or Tap Mo`)
-typedef struct {
-	char  name[30];       			/*  name of system input/output       */
+typedef struct _MF{
+	/*char  name[30];       			  name of system input/output       */
 	int 	type;									/*  loai gi input hay output       */
 	float h;										/*  degree cua MF       */
 	float minXacDinh;
@@ -59,8 +59,8 @@ typedef struct {
 
 //--------Fuzzy Rule----------------------------------
 // Data struct cua 1 Rule. Rule: dinh nghia cac luat trong fuzzy system
-typedef struct{
-	char name[30]; 										/* ten cua rule if A then B  */
+typedef struct _MF_rule{
+	/*char name[30]; 										 ten cua rule if A then B  */
 	int rule_index_number;						//index cua luat. vi du luat thu 5
 	MF* inGocLech;										/*membership function input cua Rule (o day la A)*/
 	MF* inGocLech_dot;								/*membership function input cua Rule (o day la B)*/
@@ -72,8 +72,8 @@ typedef struct{
 
 //-------FuzzyController--------------------------------
 //gom co rollFuzzyControl va pitchFuzzyControl
-typedef struct {
-	char  name[30];       							/*  roll / pitch /yaw    */
+typedef struct _FuzzyController{
+	/* char  name[30];       							 roll / pitch /yaw    */
 	MF * inGocLech[7];									//input do lech goc error
 	MF * inGocLech_dot[7];							//input dao ham` do lech goc
 	MF * outValuePWMControl[7];					//output MF gia tri PWM +/-
@@ -95,8 +95,6 @@ void setABCD_MF(MF *mf, float a, float b, float c, float d, int type, float minX
 	mf->maxXacDinh = maxXD;
 	mf->h = 0;
 }
-
-
 
 /*--------MO HOA - FUZZIFY-------------------------------
 Mo` hoa' 1 Membership function. tu` gia tri ro~ x, ta tinh ra strength(degree or h) cua Membership Function [0...1]
