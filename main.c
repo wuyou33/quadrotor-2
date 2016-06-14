@@ -97,8 +97,8 @@ void 							SANG_2_LED(int8_t type);
 void 							SANG_4_LED(void);
 void 							SANG_4_LED_FOREVER(void);
 void 							SANG_4_LED_OFF(void);
-void 							KiemTraCodeOK(void);
-void 							KhoiDongQuadrotor(void);
+void 							Check_EveryThing_OK(void);
+void 							Turn_On_Quadrotor(void);
 void 							TurnOffQuadrotor(void);
 															
 //Khoi Tao LED, BUTTON USER
@@ -119,11 +119,11 @@ void 							Init_Receiver_TIM_PWM_Capture_TIM5(void); //PA3 - TIM5_CH4  //Ailenr
 //Dieu chinh huong bay qua receiver
 void 							SetInitDataQuadrotor(void);
 void 							SetPWM_4_Motor(int16_t value);
-void 							UpdatePWM_4_Motor(void);
+void 							UpdatePWM_4_Motor_By_TIM_CCRx(void);
 void 							SetPWM_1_Motor(int16_t numberMotor, int16_t newValue);
 void 							SetPWM_Motor_Tang(int16_t numberMotor, int16_t changeValue);
 void 							SetPWM_Motor_Giam(int16_t numberMotor, int16_t changeValue);
-void 							DieuChinhHuongBay_Qua_Receiver(void);
+void 							Direct_Quadrotor_By_Receiver(void);
 
 
 //i2c chip mpu6050 10truc
@@ -152,7 +152,7 @@ void 							delay_ms(uint32_t piMillis){	uint32_t iStartTime = g_iSysTicks;	whil
 void 							initFuzzySystem(void);
 void 							Fuzzification_All_MF(float x, FuzzyController * fuzzyController);	
 void 							Apply_All_Rule( FuzzyController * fuzzyController );
-void 							defuzzification( FuzzyController * fuzzyController );
+void 							Defuzzification( FuzzyController * fuzzyController );
 //-----------END Khai bao HAM-------------------------------------------------------
 
 int main(void)
@@ -223,22 +223,22 @@ int main(void)
 		//-----FUZZY SET Membership Function-------------------------------------------------------------------------
 		Fuzzification_All_MF(0, &rollFuzzyControl);	
 		Apply_All_Rule( &rollFuzzyControl );
-		defuzzification( &rollFuzzyControl );
+		Defuzzification( &rollFuzzyControl );
 		
 		Fuzzification_All_MF(0, &pitchFuzzyControl);	
 		Apply_All_Rule( &pitchFuzzyControl );
-		defuzzification( &pitchFuzzyControl );
+		Defuzzification( &pitchFuzzyControl );
 		
 		Fuzzification_All_MF(0, &yawFuzzyControl);	
 		Apply_All_Rule( &yawFuzzyControl );
-		defuzzification( &yawFuzzyControl );							
+		Defuzzification( &yawFuzzyControl );							
 		
-		KiemTraCodeOK();		
+		Check_EveryThing_OK();		
 		while(1)
 		{		//-----------Khoi dong may bay	--------------
 				while(FlyState == 0)
 				{					
-					KhoiDongQuadrotor();
+					Turn_On_Quadrotor();
 				}						
 				
 				TM_MPU6050_ReadAll( MPU6050_I2C_ADDR, &mpu6050); 
@@ -312,8 +312,8 @@ int main(void)
 								Apply_All_Rule( &rollFuzzyControl );
 								Apply_All_Rule( &pitchFuzzyControl );
 								//buoc 5: giai mo
-								defuzzification( &rollFuzzyControl );
-								defuzzification( &pitchFuzzyControl );
+								Defuzzification( &rollFuzzyControl );
+								Defuzzification( &pitchFuzzyControl );
 									
 								
 								SetPWM_1_Motor(1, pwm_motor_1);
@@ -325,7 +325,7 @@ int main(void)
 					}
 					else
 					{		//co tac dong tu receiver, k phai trang thai CAN BANG
-							DieuChinhHuongBay_Qua_Receiver();
+							Direct_Quadrotor_By_Receiver();
 					}					
 				}
 		}		
@@ -390,7 +390,7 @@ void SetInitDataQuadrotor(void)
 		//pid_setup_error(&pid_roll);
 		//pid_setup_error(&pid_pitch);
 }
-void KhoiDongQuadrotor(void)
+void Turn_On_Quadrotor(void)
 {
 		int i=0;
 	int timedelay = 100;
@@ -728,7 +728,7 @@ void TIM5_IRQHandler(void) //PA3 - TIM5_CH4 ////Aileron_TraiPhai (trai - phai) -
 //
 //
 //
-void KiemTraCodeOK(void)
+void Check_EveryThing_OK(void)
 {
 		int i = 0;
 		while(i < 10)
@@ -1041,7 +1041,7 @@ void SetPWM_4_Motor(int16_t value) //set 4 motor cung 1 speed
 	if(value==0)
 	{
 					pwm_motor_1 = 0;	pwm_motor_2 = 0;		pwm_motor_3 = 0;		pwm_motor_4 = 0;		
-					UpdatePWM_4_Motor();
+					UpdatePWM_4_Motor_By_TIM_CCRx();
 	}
 	else{
 			if(value <= PWM_Throtte_Min)
@@ -1056,11 +1056,11 @@ void SetPWM_4_Motor(int16_t value) //set 4 motor cung 1 speed
 					pwm_motor_1 = value;										pwm_motor_2 = value;
 					pwm_motor_3 = value;										pwm_motor_4 = value;
 			}	
-			UpdatePWM_4_Motor();
+			UpdatePWM_4_Motor_By_TIM_CCRx();
 	}
 }
 
-void UpdatePWM_4_Motor(void) //update lai speed
+void UpdatePWM_4_Motor_By_TIM_CCRx(void) //update lai speed
 {
 		TIM3->CCR1 = pwm_motor_1;
 		TIM3->CCR2 = pwm_motor_2;
@@ -1151,7 +1151,7 @@ void SetPWM_Motor_Giam(int16_t numberMotor, int16_t changeValue)
 	}
 }
 
-void DieuChinhHuongBay_Qua_Receiver(void)
+void Direct_Quadrotor_By_Receiver(void)
 {
 	int16_t chenhLechGiaTri = 0;
 	//Ga, tang-giam Ga
@@ -1341,46 +1341,53 @@ static void Error_Handler(void)
 
 void Error_Handler_Custom(int type)
 {
-		switch(type) 
-		{
-			 case ERROR_MPU6050_NOT_CONNECT :
-					while(1)
-					{	//neu k connect dc MPU6050 => LED VANG sang lien tuc
-								SANG_1_LED(12); 			delay_ms(50);			SANG_4_LED_OFF();			delay_ms(50);
-					}
-					break;
-			
-			 case ERROR_MPU6050_NOT_I_AM_VALUES  :
-					while(1)
+
+				if(type == ERROR_MPU6050_NOT_CONNECT )
+				{
+						while(1)
+						{	//neu k connect dc MPU6050 => LED VANG sang lien tuc
+									SANG_1_LED(12); 			delay_ms(50);			SANG_4_LED_OFF();			delay_ms(50);
+						}
+				}
+				else
+				if(type == ERROR_MPU6050_NOT_I_AM_VALUES )
+				{	
+						while(1)
 						{ /*ERROR LED RED nhay lien tuc*/  
 							SANG_1_LED(14); 	 delay_ms(50); SANG_4_LED_OFF();  delay_ms(50); 											
 						}
-					break;
-						
-			 case ERROR_MPU6050_STATE_READY_NOT_OK :
+				}
+				else
+				if(type == ERROR_MPU6050_STATE_READY_NOT_OK )
+				{
 					while(1)
 						{
 							//neu k connect dc MPU6050 => LED CAM sang lien tuc
 							SANG_1_LED(13); 			delay_ms(50);			SANG_4_LED_OFF();			delay_ms(50);
 						}
-						break;
-						
-			 case ERROR_TIM_1_INPUTCAPTURE : 
-			 case ERROR_TIM_2_INPUTCAPTURE : 
-			 case ERROR_TIM_4_INPUTCAPTURE : 
-			 case ERROR_TIM_5_INPUTCAPTURE :
-					while(1){ 
+				}
+				else 
+				if(type == ERROR_TIM_1_INPUTCAPTURE ||
+					 type == ERROR_TIM_2_INPUTCAPTURE || 
+					 type == ERROR_TIM_4_INPUTCAPTURE || 
+					 type == ERROR_TIM_5_INPUTCAPTURE 
+				)
+				{
+					while(1)
+					{ 
 						/*ERROR LED RED nhay lien tuc*/  
 						SANG_1_LED(14); 	 delay_ms(50); 						SANG_4_LED_OFF();  delay_ms(50); 					
 					}
-					break; 
-					
-			 default : 
-					while(1){ 
-						/*ERROR LED RED nhay lien tuc*/  
-						SANG_1_LED(14); 	 delay_ms(50); 							SANG_4_LED_OFF();  delay_ms(50); 					
-					}
-		}
+				}
+				else
+				{
+						while(1)
+						{ 
+							/*ERROR LED RED nhay lien tuc*/  
+							SANG_1_LED(14); 	 delay_ms(50); 							SANG_4_LED_OFF();  delay_ms(50); 					
+						}
+				}
+		
 
 }
 
@@ -1688,7 +1695,7 @@ void Apply_All_Rule( FuzzyController * fuzzyController )
 
 
 
-void defuzzification( FuzzyController * fuzzyController )
+void Defuzzification( FuzzyController * fuzzyController )
 {
 	//buoc 5
 	//--------GIAI MO` De-fuzzify-------------------------------
