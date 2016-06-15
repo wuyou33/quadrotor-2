@@ -62,9 +62,9 @@ typedef struct _MF{
 typedef struct _MF_rule{
 	//char 			name[30]; 								//		 ten cua rule if A then B  */
 	int 			rule_index_number;						//index cua luat. vi du luat thu 5
-	MF  			inGocLech;										/*membership function input cua Rule (o day la A)*/
-	MF     		inGocLech_dot;								/*membership function input cua Rule (o day la B)*/
-	MF  			outValuePWMControl;         	/*membership function outpt cua Rule (o day la C)*/
+	MF  			* inGocLech;										/*membership function input cua Rule (o day la A)*/
+	MF     		* inGocLech_dot;								/*membership function input cua Rule (o day la B)*/
+	MF  			* outValuePWMControl;         	/*membership function outpt cua Rule (o day la C)*/
 	float 		h;        									/* do cao(strength) cua Rule hoac gia tri cua membership output MF* out */
 	float 		y;    											/*gia tri trung binh theo truc x cua output MF vd: (0+100)/2 */		
 } MF_rule;
@@ -139,24 +139,23 @@ void fuzzification(float x, MF *mf )
 
 //----------------ONE RULE------------ 
 //Set input, output cho mot Rule
-void setOneRule(MF_rule* rule, MF inGocLech, MF inGocLech_dot, MF outValuePWMControl, int rule_index_number)
+void setOneRule(MF_rule* rule, MF inGocLech, MF  inGocLech_dot, MF  outValuePWMControl, int rule_index_number)
 {
-	rule->inGocLech 						= inGocLech;
-	rule->inGocLech_dot					= inGocLech_dot;
-	rule->outValuePWMControl		= outValuePWMControl;
+	rule->inGocLech 						= &inGocLech;
+	rule->inGocLech_dot					= &inGocLech_dot;
+	rule->outValuePWMControl		= &outValuePWMControl;
 	rule->rule_index_number     = rule_index_number;
 	rule->h = 0;
+	rule->y = 0;
 }
 
 //tinh output cua moi~ Rule (tinh h va tinh avg_x)
-//	dung vong for loop het NUMBER_RULE
-//	voi moi Rule, dung MAX or MIN => h
-//	tinh avg_x = (left+right)/2
+//	dung vong for loop het NUMBER_RULE,//	voi moi Rule, dung MAX or MIN => h,//	tinh avg_x = (left+right)/2
 void calcule_H_and_Y_PerRule(MF_rule   * rule )
 {
 		if(!rule) return;
-		rule->h = (float) MAXIMUM(  MINIMUM(rule->inGocLech.h, rule->inGocLech_dot.h ) , 0);
-		rule->y = (float)( (rule->outValuePWMControl.a + rule->outValuePWMControl.d)/2) ;
+		rule->h = (float) MAXIMUM(  MINIMUM(rule->inGocLech->h, rule->inGocLech_dot->h ) , 0);
+		rule->y = (float)( (rule->outValuePWMControl->a + rule->outValuePWMControl->d)/2) ;
 }
 
 

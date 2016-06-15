@@ -1651,16 +1651,15 @@ void Fuzzification_All_MF(float x, FuzzyController fuzzyController)
 	{ 
 		//if( !fuzzyController->inGocLech[i] ) continue;
 		fuzzification( x, &fuzzyController.inGocLech[i] );
-		//fuzzyController->inGocLech[i].h = i;
+		
 	}
 	
 	//Mo hoa input GocLech_dot
 	xx = (float)( ((float)( fuzzyController.pre_GocLech - x ))/DT );
 	for (j=0; j < 7; j++) 
 	{ 
-		//if( !fuzzyController->inGocLech_dot[j] ) continue;
+		//if( !fuzzyController.inGocLech_dot[j] ) continue;
 		fuzzification( xx,  &fuzzyController.inGocLech_dot[j] );
-		//fuzzyController->inGocLech_dot[j].h = j;
 	}
 	fuzzyController.pre_GocLech = x;
 }
@@ -1699,6 +1698,8 @@ void Defuzzification( FuzzyController * fuzzyController )
 	if(sum_h != 0)
 	{
 			output = (float)(total_y/sum_h);
+	}else{
+		output = 0;
 	}
 	fuzzyController->output = output;//PWM + hoac - mot gia tri output
 }
