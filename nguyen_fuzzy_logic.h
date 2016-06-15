@@ -109,10 +109,16 @@ void fuzzification(float x, MF *mf )
 {
 	float value = 0;
 	if(x <= mf->a)
-		value= 0;
+	{
+			if(mf->a == mf->b) value = 1;
+			else value = 0;
+	}
 	
 	else if(x >= mf->d )
-		value = 0;
+	{
+			if(mf->d == mf->c) value = 1;
+			else value = 0;
+	}
 	
 	else if(x > mf->a && x < mf->b)
 		value = ((float)(x - mf->a))/(mf->b - mf->a);
@@ -139,11 +145,11 @@ void fuzzification(float x, MF *mf )
 
 //----------------ONE RULE------------ 
 //Set input, output cho mot Rule
-void setOneRule(MF_rule* rule, MF inGocLech, MF  inGocLech_dot, MF  outValuePWMControl, int rule_index_number)
+void setOneRule(MF_rule* rule, MF * inGocLech, MF * inGocLech_dot, MF * outValuePWMControl, int rule_index_number)
 {
-	rule->inGocLech 						= &inGocLech;
-	rule->inGocLech_dot					= &inGocLech_dot;
-	rule->outValuePWMControl		= &outValuePWMControl;
+	rule->inGocLech 						= inGocLech;
+	rule->inGocLech_dot					= inGocLech_dot;
+	rule->outValuePWMControl		= outValuePWMControl;
 	rule->rule_index_number     = rule_index_number;
 	rule->h = 0;
 	rule->y = 0;
