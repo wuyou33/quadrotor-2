@@ -136,7 +136,7 @@ void 							delay_ms(uint32_t piMillis){	uint32_t iStartTime = g_iSysTicks;	whil
 
 //Fuzzy system
 void 							initFuzzySystem(void);
-void 							Fuzzification_All_MF(float x, FuzzyController * fuzzyController);	
+void 							Fuzzification_All_MF(float x, FuzzyController fuzzyController);
 void 							Apply_All_Rule( FuzzyController * fuzzyController );
 void 							Defuzzification( FuzzyController * fuzzyController );
 //-----------END Khai bao HAM-------------------------------------------------------
@@ -179,9 +179,9 @@ int main(void)
 
 
 //---Test ------------
-Fuzzification_All_MF(-25, &rollFuzzyControl);	
-Apply_All_Rule( 				 &rollFuzzyControl );
-Defuzzification( 				 &rollFuzzyControl );	
+Fuzzification_All_MF(-25, rollFuzzyControl);	
+Apply_All_Rule( 				  &rollFuzzyControl );
+Defuzzification( 				  &rollFuzzyControl );	
 //----------------
 		
 		//---MPU6050 cau hinh PB6, PB7 doc cam bien mpu6050---------------------------------------------------			
@@ -206,13 +206,13 @@ Defuzzification( 				 &rollFuzzyControl );
 		accY_angle =  ( atan2(mpu6050.Acc_X, sqrt(mpu6050.Acc_Y*mpu6050.Acc_Y + mpu6050.Acc_Z*mpu6050.Acc_Z) ) )* RAD_TO_DEG;
 		
 		//-----FUZZY SET Membership Function-------------------------------------------------------------------------
-		Fuzzification_All_MF(0, &rollFuzzyControl);	
+		Fuzzification_All_MF(0,  rollFuzzyControl);	
 		Apply_All_Rule( 				&rollFuzzyControl );
 		Defuzzification( 				&rollFuzzyControl );
 		
-		Fuzzification_All_MF(0, &pitchFuzzyControl);	
-		Apply_All_Rule( 				&pitchFuzzyControl );
-		Defuzzification( 				&pitchFuzzyControl );						
+		//Fuzzification_All_MF(0,  pitchFuzzyControl);	
+		//Apply_All_Rule( 				&pitchFuzzyControl );
+		//Defuzzification( 				&pitchFuzzyControl );						
 		
 		Check_EveryThing_OK();		
 		while(1)
@@ -278,8 +278,8 @@ Defuzzification( 				 &rollFuzzyControl );
 								//        / \          y____|
 								//    (4)/   \(3)				
 								//buoc 3: tinh toan degree cho tat ca MF
-								Fuzzification_All_MF(Kalman_angelX, &rollFuzzyControl);	
-								Fuzzification_All_MF(Kalman_angelY, &pitchFuzzyControl);
+								Fuzzification_All_MF(Kalman_angelX, rollFuzzyControl);	
+								//Fuzzification_All_MF(Kalman_angelY, pitchFuzzyControl);
 								
 								//buoc 4: ap dung luat mo (rule list) & tinh output cho moi~ rule.
 								Apply_All_Rule( &rollFuzzyControl );
@@ -1640,7 +1640,7 @@ void initFuzzySystem(void)
 	
 }
 
-void Fuzzification_All_MF(float x, FuzzyController *fuzzyController)
+void Fuzzification_All_MF(float x, FuzzyController fuzzyController)
 {
 	//Buoc 3: mo hoa ngo~ vao. tinh degree cho tat ca MF
 	float xx;
@@ -1650,19 +1650,19 @@ void Fuzzification_All_MF(float x, FuzzyController *fuzzyController)
 	for (i=0; i < 7; i++) 
 	{ 
 		//if( !fuzzyController->inGocLech[i] ) continue;
-		fuzzification( &fuzzyController->inGocLech[i] , x);
+		fuzzification( x, &fuzzyController.inGocLech[i] );
 		//fuzzyController->inGocLech[i].h = i;
 	}
 	
 	//Mo hoa input GocLech_dot
-	xx = (float)(( fuzzyController->pre_GocLech - x )/DT);
+	xx = (float)( ((float)( fuzzyController.pre_GocLech - x ))/DT );
 	for (j=0; j < 7; j++) 
 	{ 
 		//if( !fuzzyController->inGocLech_dot[j] ) continue;
-		fuzzification( &fuzzyController->inGocLech_dot[j] , xx);
+		fuzzification( xx,  &fuzzyController.inGocLech_dot[j] );
 		//fuzzyController->inGocLech_dot[j].h = j;
 	}
-	fuzzyController->pre_GocLech = x;
+	fuzzyController.pre_GocLech = x;
 }
 
 

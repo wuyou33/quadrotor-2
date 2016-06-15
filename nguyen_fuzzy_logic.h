@@ -105,7 +105,7 @@ Tong quat cho hinh tam giac' va hinh` thang
 |	 /                       \
 ..*.........................D................-> x 
 */
-void fuzzification(MF *mf, float x)
+void fuzzification(float x, MF *mf )
 {
 	float value = 0;
 	if(x <= mf->a)
@@ -115,13 +115,13 @@ void fuzzification(MF *mf, float x)
 		value = 0;
 	
 	else if(x > mf->a && x < mf->b)
-		value = (float)(x - mf->a)/(mf->b - mf->a);
+		value = ((float)(x - mf->a))/(mf->b - mf->a);
 	
 	else if(x >= mf->b && x <= mf->c )
 		value = 1;
 	
 	else if( x > mf->c && x < mf->d)
-		value= (float)(mf->d - x)/(mf->d - mf->c);
+		value= ((float)(mf->d - x))/(mf->d - mf->c);
 	
 	else 
 		value = 0;	
