@@ -199,9 +199,10 @@ int main(void)
 
 //---Test ------------
 initFuzzySystem(); 					//init fuzzy system
-Fuzzification_All_MF(-5, &rollFuzzyControl);	
+Fuzzification_All_MF(-30, &rollFuzzyControl);	
 Apply_All_Rule( 				  &rollFuzzyControl );
-//Defuzzification( 				  &rollFuzzyControl );	
+Defuzzification( 				  &rollFuzzyControl );	
+//HAL_RNG_GetRandomNumber();
 //----------------
 		
 		//---MPU6050 cau hinh PB6, PB7 doc cam bien mpu6050---------------------------------------------------			
