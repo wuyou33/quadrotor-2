@@ -67,6 +67,20 @@ PID 											pid_roll, pid_pitch, pid_yaw; //PID controller
 FuzzyController						rollFuzzyControl, pitchFuzzyControl, yawFuzzyControl;
 //----------END Khai bao BIEN-------------------------------------------------------------------------
 
+
+//---------------------------------------------------------------------------------------------------------
+//..........................code default of ARM
+#ifdef _RTE_
+	#include "RTE_Components.h"             
+#endif
+#ifdef RTE_CMSIS_RTOS                   
+	#include "cmsis_os.h"                   
+#endif
+#ifdef RTE_CMSIS_RTOS_RTX
+	extern uint32_t os_time;
+	uint32_t HAL_GetTick(void) { return os_time; }
+#endif
+
 																
 //-----------Khai bao HAM-------------------------------------------------------
 //Kalman filter
@@ -143,6 +157,11 @@ void 							Defuzzification( FuzzyController * fuzzyController );
 
 int main(void)
 {
+		/*..................code default cua ARM co san						*/
+		#ifdef RTE_CMSIS_RTOS                   
+			osKernelInitialize();                 
+		#endif		
+	
 		HAL_Init();
 		SystemClock_Config();	
 	
@@ -214,6 +233,10 @@ Fuzzification_All_MF(-5, &rollFuzzyControl);
 		//Apply_All_Rule( 				&pitchFuzzyControl );
 		//Defuzzification( 				&pitchFuzzyControl );						
 		
+		//.........code dafault cua ARM		
+		#ifdef RTE_CMSIS_RTOS 
+			osKernelStart();      // when using CMSIS RTOS	// start thread execution 
+		#endif
 		Check_EveryThing_OK();		
 		while(1)
 		{		
@@ -1519,9 +1542,11 @@ void initFuzzySystem(void)
 	
 	
 	//Buoc 2: RULE FuzzySystem  --------------------------------------------	
-	//GocLech =     {VerySmall,    LittleSmall,    Small,    Zero, Big,      LittleBig,      VeryBig}
-	//GocLech_dot = {VeryNagative, LittleNagative, Nagative, Zero, Positive, LittlePositive, VeryPositive}
-	//ValuePWM =    {VerySlow,     LittleSlow,     Slow,     Zero, Fast,     LittleFast,     VeryFast}
+	/*
+		GocLech =     {VerySmall,    LittleSmall,    Small,    Zero, Big,      LittleBig,      VeryBig}
+		GocLech_dot = {VeryNagative, LittleNagative, Nagative, Zero, Positive, LittlePositive, VeryPositive}
+		ValuePWM =    {VerySlow,     LittleSlow,     Slow,     Zero, Fast,     LittleFast,     VeryFast}
+	*/
 	//ROLL
 		setOneRule(&rollFuzzyControl.fuzzy_rules[0], &rollFuzzyControl.inGocLech[0], &rollFuzzyControl.inGocLech_dot[0], &rollFuzzyControl.outValuePWMControl[6], 1);//rule 1
 	setOneRule(&rollFuzzyControl.fuzzy_rules[1], &rollFuzzyControl.inGocLech[0], &rollFuzzyControl.inGocLech_dot[1], &rollFuzzyControl.outValuePWMControl[6], 2);//rule 2
