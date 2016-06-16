@@ -159,9 +159,22 @@ void setOneRule(MF_rule* rule, MF * inGocLech, MF * inGocLech_dot, MF * outValue
 //	dung vong for loop het NUMBER_RULE,//	voi moi Rule, dung MAX or MIN => h,//	tinh avg_x = (left+right)/2
 void calcule_H_and_Y_PerRule(MF_rule   * rule )
 {
+	float temp=0;
 		if(!rule) return;
 		rule->h = (float) MAXIMUM(  MINIMUM(rule->inGocLech->h, rule->inGocLech_dot->h ) , 0);
-		rule->y = (float)( (rule->outValuePWMControl->a + rule->outValuePWMControl->d)/2) ;
+	
+		if(rule->outValuePWMControl->a == rule->outValuePWMControl->b)
+		{
+			temp = ((float)(rule->outValuePWMControl->c + rule->outValuePWMControl->d)/2);
+			rule->y = (float)( (float)(rule->outValuePWMControl->a + temp)/2) ;
+		}
+		else if(rule->outValuePWMControl->c == rule->outValuePWMControl->d)
+		{
+			temp = ((float)(rule->outValuePWMControl->a + rule->outValuePWMControl->b)/2);
+			rule->y = (float)( (float)(rule->outValuePWMControl->d + temp)/2) ;
+		}
+		else
+			rule->y = (float)( (float)(rule->outValuePWMControl->a + rule->outValuePWMControl->d)/2) ;
 }
 
 

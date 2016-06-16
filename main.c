@@ -165,7 +165,7 @@ int main(void)
 		HAL_Init();
 		SystemClock_Config();	
 	
-		initFuzzySystem(); 					//init fuzzy system
+		
 		SetInitDataQuadrotor(); 		// set kalman filter, input cature
 	
 		//---cap xung clock------------------------------------
@@ -198,8 +198,9 @@ int main(void)
 
 
 //---Test ------------
+initFuzzySystem(); 					//init fuzzy system
 Fuzzification_All_MF(-5, &rollFuzzyControl);	
-//Apply_All_Rule( 				  &rollFuzzyControl );
+Apply_All_Rule( 				  &rollFuzzyControl );
 //Defuzzification( 				  &rollFuzzyControl );	
 //----------------
 		
@@ -1548,7 +1549,7 @@ void initFuzzySystem(void)
 		ValuePWM =    {VerySlow,     LittleSlow,     Slow,     Zero, Fast,     LittleFast,     VeryFast}
 	*/
 	//ROLL
-		setOneRule(&rollFuzzyControl.fuzzy_rules[0], &rollFuzzyControl.inGocLech[0], &rollFuzzyControl.inGocLech_dot[0], &rollFuzzyControl.outValuePWMControl[6], 1);//rule 1
+	setOneRule(&rollFuzzyControl.fuzzy_rules[0], &rollFuzzyControl.inGocLech[0], &rollFuzzyControl.inGocLech_dot[0], &rollFuzzyControl.outValuePWMControl[6], 1);//rule 1
 	setOneRule(&rollFuzzyControl.fuzzy_rules[1], &rollFuzzyControl.inGocLech[0], &rollFuzzyControl.inGocLech_dot[1], &rollFuzzyControl.outValuePWMControl[6], 2);//rule 2
 	setOneRule(&rollFuzzyControl.fuzzy_rules[2], &rollFuzzyControl.inGocLech[0], &rollFuzzyControl.inGocLech_dot[2], &rollFuzzyControl.outValuePWMControl[5], 3);//rule 3
 	setOneRule(&rollFuzzyControl.fuzzy_rules[3], &rollFuzzyControl.inGocLech[0], &rollFuzzyControl.inGocLech_dot[3], &rollFuzzyControl.outValuePWMControl[5], 4);//rule 4
@@ -1678,7 +1679,6 @@ void Fuzzification_All_MF(float x, FuzzyController * fuzzyController)
 	}
 	
 	//Mo hoa input GocLech_dot
-	//xx = (float)( ((float)( x - fuzzyController->pre_GocLech ))/DT );
 	xx = (float)( x - fuzzyController->pre_GocLech );
 	for (j=0; j < 7; j++) 
 	{ 
