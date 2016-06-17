@@ -41,31 +41,32 @@ TIM_HandleTypeDef 				htim2; //PA5 ->TIM2_CH1  //Rudder
 TIM_HandleTypeDef 				htim4; //PB8 ->TIM4_CH3  //Elevator
 TIM_HandleTypeDef 				htim5; //PA3 - TIM5_CH4  //Aileron
 
+				//---------RF Module, PWM Capture
 int16_t 									IC_Throttle1, IC_Throttle2, 								IC_Throttle_pusle_width; //Throttle (can ga) tang giam toc do quay
 int16_t 									IC_Rudder_Xoay1, IC_Rudder_Xoay2, 					IC_Rudder_Xoay_pusle_width; //Rudder (xoay theo truc z) - goc Yaw
 int16_t 									IC_Elevator_TienLui1, IC_Elevator_TienLui2, IC_Elevator_TienLui_pusle_width; //Elevator (tien - lui) - goc Pitch
 int16_t 									IC_Aileron_TraiPhai1, IC_Aileron_TraiPhai2, IC_Aileron_TraiPhai_pusle_width;//Aileron_TraiPhai (trai - phai) - goc Roll
 
-//PWM 4 motor
+				//---------PWM 4 motor
 int16_t 									pwm_motor_1, pwm_motor_2, pwm_motor_3, pwm_motor_4;
 int16_t 									FlyState; // 0: May bay ngung hoat dong, 1:may bay dang bay
 
-//sensor
+				//---------sensor
 uint8_t 									who_i_am_reg_value_MPU6050;
 int32_t 									timer;
-double 										accX_angle, accY_angle, accZ_angle;
-double 										gyroX_angle, gyroY_angle, gyroZ_angle;
-double 										Kalman_angelX, Kalman_angelY, Kalman_angelZ;
-double 										gyroXrate, gyroYrate, gyroZrate;
+float 										accX_angle, accY_angle, accZ_angle;
+float 										gyroX_angle, gyroY_angle, gyroZ_angle;
+float 										Kalman_angelX, Kalman_angelY, Kalman_angelZ;
+float 										gyroXrate, gyroYrate, gyroZrate;
 Kalman_Setting 						kalmanX,	kalmanY,   kalmanZ;
 TM_MPU6050_t 							mpu6050;
 
-//PID controller
+				//--------PID controller
 PID 											pid_roll, pid_pitch, pid_yaw; //PID controller
 
-//--------Fuzzy System--------------
+				//--------Fuzzy System--------------
 FuzzyController						rollFuzzyControl, pitchFuzzyControl, yawFuzzyControl;
-//----------END Khai bao BIEN-------------------------------------------------------------------------
+//--END Khai bao BIEN-------------------------------------------------------------------------
 
 
 //---------------------------------------------------------------------------------------------------------
@@ -83,15 +84,15 @@ FuzzyController						rollFuzzyControl, pitchFuzzyControl, yawFuzzyControl;
 
 																
 //-----------Khai bao HAM-------------------------------------------------------
-//Kalman filter
+				//Kalman filter
 float kalmanCalculate(Kalman_Setting *kalman, float newAngle, float newRate, float DT_);															
 																
-//ham handle error						
+				//ham handle error						
 static void 			SystemClock_Config(void);
 static void 			Error_Handler(void); 
 void 							Error_Handler_Custom(int type);
 															
-//ham Led Sang
+				//ham Led Sang
 void 							SANG_1_LED(int8_t pin);
 void 							SANG_2_LED(int8_t type);
 void 							SANG_4_LED(void);
@@ -101,22 +102,22 @@ void 							Check_EveryThing_OK(void);
 void 							Turn_On_Quadrotor(void);
 void 							Turn_Off_Quadrotor(void);
 															
-//Khoi Tao LED, BUTTON USER
+				//Khoi Tao LED, BUTTON USER
 void 							Init_LEDSANG_PORTD_12_13_14_15(void);
 void 							Init_BUTTON_USER_PORT_A_0(void);
 															
-//Khoi tao TIMER3 output PWM											
+				//Khoi tao TIMER3 output PWM											
 void 							Init_PWM_GPIO_PORT_C_4Channel(void);
 void 							Init_PWM_TIM3_Handle(void);
 void 							Init_TIM3_OUTPUT_COMPARE(void);
 															
-//timer 1 & 2 inputcapture for RF module
+				//timer 1 & 2 inputcapture for RF module
 void 							Init_Receiver_TIM_PWM_Capture_TIM1(void); //PE9 ->TIM1_CH1  //Throttle (can ga)
 void 							Init_Receiver_TIM_PWM_Capture_TIM2(void); //PA5 ->TIM2_CH1  //Rudder  (xoay)
 void 							Init_Receiver_TIM_PWM_Capture_TIM4(void); //PB8 ->TIM4_CH3  //Elevator (tien - lui)
 void 							Init_Receiver_TIM_PWM_Capture_TIM5(void); //PA3 - TIM5_CH4  //Ailenron (trai - phai)
 
-//Dieu chinh huong bay qua receiver
+				//Dieu chinh huong bay qua receiver
 void 							SetInitDataQuadrotor(void);
 void 							SetPWM_4_Motor(int16_t value);
 void 							UpdatePWM_4_Motor_By_TIM_CCRx(void);
@@ -126,7 +127,7 @@ void 							SetPWM_Motor_Giam(int16_t numberMotor, int16_t changeValue);
 void 							Direct_Quadrotor_By_Receiver(void);
 
 
-//i2c chip mpu6050 10truc
+				//i2c chip mpu6050 10truc
 void 							Init_I2C_GPIO_PortB(void);
 void 							Init_I2C_Handle_10truc(void);
 void 							TM_I2C_IS_DEVICE_CONNECTED(void);
@@ -143,15 +144,14 @@ void 							Calculate_Accel_Y_Angles(TM_MPU6050_t* output, float* angel_y);
 void 							Calculate_Accel_Z_Angles(TM_MPU6050_t* output, float* angel_z);
 void 							Sang_Led_By_MPU6050_Values(float angel_x, float angel_y, float angel_z );
 
-//ham delay default
+				//ham delay default
 volatile 					uint32_t g_iSysTicks = 0;
 void 							SysTick_Handler(){	g_iSysTicks++;}
 void 							delay_ms(uint32_t piMillis){	uint32_t iStartTime = g_iSysTicks;	while( (g_iSysTicks - iStartTime ) < piMillis)	{}}			
 
-//Fuzzy system
+				//Fuzzy system
 void 							initFuzzySystem(void);
-void 							Fuzzification_GocLech(float x, FuzzyController * fuzzyController);
-void 							Fuzzification_GocLech_Dot(float x, FuzzyController * fuzzyController);
+void 							Fuzzification_All_MF(float x, FuzzyController * fuzzyController);
 void 							Apply_All_Rule( FuzzyController * fuzzyController );
 void 							Defuzzification( FuzzyController * fuzzyController );
 //-----------END Khai bao HAM-------------------------------------------------------
@@ -166,76 +166,58 @@ int main(void)
 		HAL_Init();
 		SystemClock_Config();	
 	
-		
+		initFuzzySystem(); 					//init fuzzy system
 		SetInitDataQuadrotor(); 		// set kalman filter, input cature
 	
-		//---cap xung clock------------------------------------
-						__GPIOA_CLK_ENABLE();		__GPIOB_CLK_ENABLE();			__GPIOC_CLK_ENABLE();			__GPIOD_CLK_ENABLE();			__GPIOE_CLK_ENABLE();		
-						__TIM1_CLK_ENABLE(); 		__TIM2_CLK_ENABLE(); 		 __TIM3_CLK_ENABLE(); 			__TIM4_CLK_ENABLE(); 			__TIM5_CLK_ENABLE();    __TIM9_CLK_ENABLE(); 	 
-						__I2C1_CLK_ENABLE();
-		//---GPIO init cho 4 led sang--------gpio init cho button user-----------------------------------
+						//---cap xung clock------------------------------------
+		__GPIOA_CLK_ENABLE();		__GPIOB_CLK_ENABLE();			__GPIOC_CLK_ENABLE();			__GPIOD_CLK_ENABLE();			__GPIOE_CLK_ENABLE();		
+		__TIM1_CLK_ENABLE(); 		__TIM2_CLK_ENABLE(); 		 __TIM3_CLK_ENABLE(); 			__TIM4_CLK_ENABLE(); 			__TIM5_CLK_ENABLE();    __TIM9_CLK_ENABLE(); 	 
+		__I2C1_CLK_ENABLE();
+						//---GPIO init cho 4 led sang--------gpio init cho button user-----------------------------------
 		Init_LEDSANG_PORTD_12_13_14_15(); 	Init_BUTTON_USER_PORT_A_0();
 		
-		//---Setting cho 4 PIN of PWM		//Khoi tao timer 3//cau hinh timer 3 voi mode output PWM
+					//---Setting cho 4 PIN of PWM		//Khoi tao timer 3//cau hinh timer 3 voi mode output PWM
 		Init_PWM_GPIO_PORT_C_4Channel();	Init_PWM_TIM3_Handle();		Init_TIM3_OUTPUT_COMPARE();		
 
-		//---Output compare PWM. Khoi dong PWM motor---------------------------------------
+					//---Output compare PWM. Khoi dong PWM motor---------------------------------------
 		HAL_TIM_Base_Start_IT(&Tim3_Handle_PWM); 		
 		HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_1);			//HAL_TIMEx_PWMN_Start(&Tim3_Handle_PWM,TIM_CHANNEL_1);	
 		HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_2); HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_3);	HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_4);	
 		
-		//---Code config cho motor, luc dau tao clock PWM max 2000ms trong vong 2s, sau do giam xuong 700ms
+					//---Code config cho motor, luc dau tao clock PWM max 2000ms trong vong 2s, sau do giam xuong 700ms
 		TIM3->CCR1 = 2000; 		TIM3->CCR2 = 2000;		 TIM3->CCR3 = 2000;		 TIM3->CCR4 = 2000;		
 		SANG_4_LED(); delay_ms(2000); 		
 		TIM3->CCR1 =  700; 		TIM3->CCR2 =  700;			TIM3->CCR3 = 700;			TIM3->CCR4 = 700;		
 		SANG_4_LED_OFF();		
 		
-		//---Config DEVO 7 RF module - INPUT CAPTURE MODE---------------------------------------------
+					//---Config DEVO 7 RF module - INPUT CAPTURE MODE---------------------------------------------
 		Init_Receiver_TIM_PWM_Capture_TIM1(); //PE9 ->TIM1_CH1  //Throttle (can ga)
 		Init_Receiver_TIM_PWM_Capture_TIM2(); //PA5 ->TIM2_CH1  //Rudder  (xoay)
 		Init_Receiver_TIM_PWM_Capture_TIM4(); //PB8 ->TIM4_CH3  //Elevator (tien - lui)
 		Init_Receiver_TIM_PWM_Capture_TIM5(); //PA3 - TIM5_CH4  //Ailenron (trai - phai)	
 
-
-
-//---Test ------------
-initFuzzySystem(); 					//init fuzzy system
-Fuzzification_GocLech(-30, &rollFuzzyControl);
-Fuzzification_GocLech_Dot(-30, &rollFuzzyControl);
-Apply_All_Rule( 				  &rollFuzzyControl );
-Defuzzification( 				  &rollFuzzyControl );	
-//HAL_RNG_GetRandomNumber();
-//----------------
 		
-		//---MPU6050 cau hinh PB6, PB7 doc cam bien mpu6050---------------------------------------------------			
+					//---MPU6050 cau hinh PB6, PB7 doc cam bien mpu6050---------------------------------------------------			
 		Init_I2C_GPIO_PortB();		
 		Init_I2C_Handle_10truc();			
 		TM_I2C_IS_DEVICE_CONNECTED();//khong connect dc => LED VANG sang lien tuc
 				
-		//---Doc gia tri cua WHO I AM register, if error => LED RED(14) sang nhap nhay
+					//---Doc gia tri cua WHO I AM register, if error => LED RED(14) sang nhap nhay
 		who_i_am_reg_value_MPU6050 = TM_I2C_WHO_I_AM( MPU6050_I2C_ADDR, MPU6050_WHO_AM_I_REGISTER);
 		if( who_i_am_reg_value_MPU6050 != MPU6050_I_AM_VALUES )	{ Error_Handler_Custom(	ERROR_MPU6050_NOT_I_AM_VALUES ); }	
 
 		
-		//---Setting/config cho MPU6050-----------------------------------------------------------
+					//---Setting/config cho MPU6050-----------------------------------------------------------
 		TM_I2C_WRITE( MPU6050_I2C_ADDR, MPU6050_PWR_MGMT_1, 0x00); 
 		TM_MPU6050_SetDataRate( MPU6050_I2C_ADDR, MPU6050_SMPLRT_DIV, TM_MPU6050_DataRate_1KHz); 
 		TM_MPU6050_SetAccelerometer( MPU6050_I2C_ADDR, MPU6050_ACCEL_CONFIG, TM_MPU6050_Accelerometer_2G); 
 		TM_MPU6050_SetGyroscope( MPU6050_I2C_ADDR, MPU6050_GYRO_CONFIG, TM_MPU6050_Gyroscope_250s); 
 		TM_MPU6050_ReadAll( MPU6050_I2C_ADDR, &mpu6050);
 				
-		//-----------Caculate Roll/Pitch/Yaw Angel------------------------------------------------------------------------		
+					//-----------Caculate Roll/Pitch/Yaw Angel------------------------------------------------------------------------		
 		accX_angle  = ( atan2(-mpu6050.Acc_Y, mpu6050.Acc_Z)) * RAD_TO_DEG; 
 		accY_angle =  ( atan2(mpu6050.Acc_X, sqrt(mpu6050.Acc_Y*mpu6050.Acc_Y + mpu6050.Acc_Z*mpu6050.Acc_Z) ) )* RAD_TO_DEG;
-		
-		//-----FUZZY SET Membership Function-------------------------------------------------------------------------
-		//Fuzzification_All_MF(0,  rollFuzzyControl);	
-		//Apply_All_Rule( 				&rollFuzzyControl );
-		//Defuzzification( 				&rollFuzzyControl );
-		
-		//Fuzzification_All_MF(0,  pitchFuzzyControl);	
-		//Apply_All_Rule( 				&pitchFuzzyControl );
-		//Defuzzification( 				&pitchFuzzyControl );						
+
 		
 		//.........code dafault cua ARM		
 		#ifdef RTE_CMSIS_RTOS 
@@ -245,13 +227,12 @@ Defuzzification( 				  &rollFuzzyControl );
 		while(1)
 		{		
 				//---Khoi dong may bay	------------------------------------------------------------------------------
-				while(FlyState == 0)
+				/*while(FlyState == 0)
 				{					
 					Turn_On_Quadrotor();
-				}			
+				}*/		
 				//---END Khoi dong may bay	-------------------------------------------------------------------------
-				
-				
+
 				//---Read value from MPU6050
 				TM_MPU6050_ReadAll( MPU6050_I2C_ADDR, &mpu6050); 
 			
@@ -259,20 +240,32 @@ Defuzzification( 				  &rollFuzzyControl );
 				accX_angle  = ( atan2(-mpu6050.Acc_Y, mpu6050.Acc_Z)) * RAD_TO_DEG; //roll equation provides [-180, 180] range
 				accY_angle =  ( atan2(mpu6050.Acc_X, sqrt(mpu6050.Acc_Y*mpu6050.Acc_Y + mpu6050.Acc_Z*mpu6050.Acc_Z) ) )* RAD_TO_DEG; //[-90, 90] range, which is exactly what is expected for the pitch angle
 				
-				gyroXrate = (double)mpu6050.Gyro_X/131.0;
-				gyroYrate = (double)mpu6050.Gyro_Y/131.0;
-				
-				gyroX_angle += gyroXrate * DT; // Calculate gyro angle without any filter
-				gyroY_angle += gyroYrate * DT; // Calculate gyro angle without any filter
+				gyroXrate = ((float)mpu6050.Gyro_X)/131;
+				gyroYrate = ((float)mpu6050.Gyro_Y)/131;				
+				//gyroX_angle += gyroXrate * DT; // Calculate gyro angle without any filter
+				//gyroY_angle += gyroYrate * DT; // Calculate gyro angle without any filter
 								
 				Kalman_angelX = kalmanCalculate(&kalmanX, accX_angle, gyroXrate, DT);
 				Kalman_angelY = kalmanCalculate(&kalmanY, accY_angle, gyroYrate, DT);
 				//compAngleX = 0.93 * (compAngleX + gyroXrate * dt) + 0.07 * accX_angle; // Calculate the angle using a Complimentary filter
 				//-----------------------------------------------------------------------------------
+				Sang_Led_By_MPU6050_Values(Kalman_angelX, Kalman_angelY, Kalman_angelZ);	
 				
 				
-				//---Turn On LED when roll, pitch, yaw ----------------------------------------------------------------
-				Sang_Led_By_MPU6050_Values(Kalman_angelX, Kalman_angelY, Kalman_angelZ);			
+				
+				
+				/*test fuzzy system*/
+								Fuzzification_All_MF( (float) Kalman_angelX, &rollFuzzyControl);
+								//Fuzzification_All_MF( (float) Kalman_angelY , &pitchFuzzyControl);
+						
+								Apply_All_Rule( 				  &rollFuzzyControl );
+								//Apply_All_Rule( 				  &pitchFuzzyControl );
+								
+								Defuzzification( 				  &rollFuzzyControl );				
+								//Defuzzification( 				  &pitchFuzzyControl );	
+				/*end test fuzzy system*/
+				
+				
 				
 				
 				//if(HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_0)==GPIO_PIN_SET)
@@ -304,17 +297,17 @@ Defuzzification( 				  &rollFuzzyControl );
 								//         X				        |
 								//        / \          y____|
 								//    (4)/   \(3)				
-								//buoc 3: tinh toan degree cho tat ca MF
-								//Fuzzification_All_MF(Kalman_angelX, &rollFuzzyControl);	
-								//Fuzzification_All_MF(Kalman_angelY, pitchFuzzyControl);
 								
-								//buoc 4: ap dung luat mo (rule list) & tinh output cho moi~ rule.
-								//Apply_All_Rule( &rollFuzzyControl );
-								//Apply_All_Rule( &pitchFuzzyControl );
+								//-----FUZZY SET Membership Function-------------------------------------------------------------------------
+								Fuzzification_All_MF( (float) Kalman_angelX, &rollFuzzyControl);
+								Fuzzification_All_MF( (float) Kalman_angelY , &pitchFuzzyControl);
+						
+								Apply_All_Rule( 				  &rollFuzzyControl );
+								Apply_All_Rule( 				  &pitchFuzzyControl );
 								
-								//buoc 5: giai mo
-								//Defuzzification( &rollFuzzyControl );
-								//Defuzzification( &pitchFuzzyControl );
+								Defuzzification( 				  &rollFuzzyControl );				
+								Defuzzification( 				  &pitchFuzzyControl );	
+
 								
 								//Set PWM 4 rotor
 								pwm_motor_1 = IC_Throttle_pusle_width - rollFuzzyControl.output - pitchFuzzyControl.output;
@@ -399,13 +392,13 @@ void SetInitDataQuadrotor(void)
 void Turn_On_Quadrotor(void)
 {
 		int i=0;
-	int timedelay = 100;
+	int timedelay = 500;
 		if( (IC_Throttle_pusle_width             >= PWM_ON_OFF_MIN && IC_Throttle_pusle_width         <= PWM_ON_OFF_MAX) && 
 						(IC_Aileron_TraiPhai_pusle_width >= PWM_ON_OFF_MIN && IC_Aileron_TraiPhai_pusle_width <= PWM_ON_OFF_MAX) && 
 						(IC_Elevator_TienLui_pusle_width >= PWM_ON_OFF_MIN && IC_Elevator_TienLui_pusle_width <= PWM_ON_OFF_MAX) 
 				)
 				{
-						while(i<5)
+						while(i<3)
 						{
 							SANG_1_LED(12); delay_ms(timedelay);
 							SANG_1_LED(13); delay_ms(timedelay);
@@ -430,8 +423,8 @@ void Turn_On_Quadrotor(void)
 void Turn_Off_Quadrotor(void) //tat quadrotor
 {
 	int i=0;
-	int timedelay = 100;
-						while(i<5)
+	int timedelay = 500;
+						while(i<3)
 						{
 							SANG_1_LED(15); delay_ms(timedelay);
 							SANG_1_LED(14); delay_ms(timedelay);
@@ -448,7 +441,7 @@ void Turn_Off_Quadrotor(void) //tat quadrotor
 						{				
 								SANG_4_LED_OFF();
 								FlyState = 0;
-								SetPWM_4_Motor(500); //stop all motor
+								SetPWM_4_Motor(0); //stop all motor
 						}
 }
 //
@@ -737,14 +730,19 @@ void TIM5_IRQHandler(void) //PA3 - TIM5_CH4 ////Aileron_TraiPhai (trai - phai) -
 void Check_EveryThing_OK(void)
 {
 		int i = 0;
-		while(i < 10)
+		int time = 50;
+		while(i < 5)
 		{
-			SANG_1_LED(12); delay_ms(50);
-			SANG_1_LED(13); delay_ms(50);			
-			SANG_1_LED(14); delay_ms(50);	
-			SANG_1_LED(15); delay_ms(50);	
+			SANG_1_LED(12); delay_ms(time);
+			SANG_1_LED(13); delay_ms(time);			
+			SANG_1_LED(14); delay_ms(time);	
+			SANG_1_LED(15); delay_ms(time);
+			SANG_4_LED_OFF();			
+			delay_ms(100);
 			i++;
 		}
+		SANG_4_LED();
+		delay_ms(1000);	
 		SANG_4_LED_OFF();
 }
 
@@ -979,20 +977,24 @@ void TM_MPU6050_ReadAll( uint8_t device_address, TM_MPU6050_t* output )
 void Sang_Led_By_MPU6050_Values(float kalman_angel_x, float kalman_angel_y, float kalman_angel_z )
 {
 	SANG_4_LED_OFF();
-	if(kalman_angel_x > 15)
+	if(kalman_angel_x > 10)
 	{
-		SANG_1_LED(LED_YELLOW); 
-	}else if(kalman_angel_x < -15)
+		//SANG_1_LED(LED_YELLOW);
+		LED_D_12_HIGH;		
+	}else if(kalman_angel_x < -10)
 	{
-		SANG_1_LED(LED_RED); 	
+		//SANG_1_LED(LED_RED);
+		LED_D_14_HIGH;			
 	}
 	
-	if(kalman_angel_y > 15)
+	if(kalman_angel_y > 10)
 	{
-		SANG_1_LED(LED_BLUE);  
-	}else if(kalman_angel_y < -15)
+		//SANG_1_LED(LED_BLUE);  
+		LED_D_13_HIGH;	
+	}else if(kalman_angel_y < -10)
 	{
-		SANG_1_LED(LED_ORANGE);  
+		//SANG_1_LED(LED_ORANGE);  
+		LED_D_15_HIGH;	
 	}
 	delay_ms(10);
 }
@@ -1669,28 +1671,25 @@ void initFuzzySystem(void)
 	
 }
 
-void Fuzzification_GocLech(float x, FuzzyController * fuzzyController)
+void Fuzzification_All_MF(float x, FuzzyController * fuzzyController)
 {
 	//Buoc 3: mo hoa ngo~ vao. tinh degree cho tat ca MF
-	int i;
+	int i,j;
+	float xx;
 	//Mo hoa input GocLech
 	for (i=0; i < 7; i++) 
 	{ 
-		fuzzification( (float)x, &fuzzyController->inGocLech[i] );
+		//fuzzification( (float)x, &fuzzyController->inGocLech[i] );
+		fuzzification( (float)TEST_GOCLECH, &fuzzyController->inGocLech[i] );
+		
 	}
-}
-
-
-void Fuzzification_GocLech_Dot(float x, FuzzyController * fuzzyController)
-{
-	//Buoc 3: mo hoa ngo~ vao. tinh degree cho tat ca MF
-	float xx;
-	int j;	
+	
 	//Mo hoa input GocLech_dot
 	xx = (float)( x - fuzzyController->pre_GocLech );
 	for (j=0; j < 7; j++) 
 	{ 
-		fuzzification( (float)xx,  &fuzzyController->inGocLech_dot[j] );
+		//fuzzification( (float)xx,  &fuzzyController->inGocLech_dot[j] );
+		fuzzification( (float)TEST_GOCLECH_DOT,  &fuzzyController->inGocLech_dot[j] );
 	}
 	fuzzyController->pre_GocLech = x;
 }

@@ -49,3 +49,8 @@
 #define ERROR_TIM_5_INPUTCAPTURE										24
 
 
+#define TEST_GOCLECH  		(float)25
+#define TEST_GOCLECH_DOT  (float)-10
+
+
+
