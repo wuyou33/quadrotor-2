@@ -150,7 +150,8 @@ void 							delay_ms(uint32_t piMillis){	uint32_t iStartTime = g_iSysTicks;	whil
 
 //Fuzzy system
 void 							initFuzzySystem(void);
-void 							Fuzzification_All_MF(float x, FuzzyController * fuzzyController);
+void 							Fuzzification_GocLech(float x, FuzzyController * fuzzyController);
+void 							Fuzzification_GocLech_Dot(float x, FuzzyController * fuzzyController);
 void 							Apply_All_Rule( FuzzyController * fuzzyController );
 void 							Defuzzification( FuzzyController * fuzzyController );
 //-----------END Khai bao HAM-------------------------------------------------------
@@ -199,7 +200,8 @@ int main(void)
 
 //---Test ------------
 initFuzzySystem(); 					//init fuzzy system
-Fuzzification_All_MF(-30, &rollFuzzyControl);	
+Fuzzification_GocLech(-30, &rollFuzzyControl);
+Fuzzification_GocLech_Dot(-30, &rollFuzzyControl);
 Apply_All_Rule( 				  &rollFuzzyControl );
 Defuzzification( 				  &rollFuzzyControl );	
 //HAL_RNG_GetRandomNumber();
@@ -1667,18 +1669,23 @@ void initFuzzySystem(void)
 	
 }
 
-void Fuzzification_All_MF(float x, FuzzyController * fuzzyController)
+void Fuzzification_GocLech(float x, FuzzyController * fuzzyController)
 {
 	//Buoc 3: mo hoa ngo~ vao. tinh degree cho tat ca MF
-	float xx;
 	int i;
-	int j;
 	//Mo hoa input GocLech
 	for (i=0; i < 7; i++) 
 	{ 
 		fuzzification( (float)x, &fuzzyController->inGocLech[i] );
 	}
-	
+}
+
+
+void Fuzzification_GocLech_Dot(float x, FuzzyController * fuzzyController)
+{
+	//Buoc 3: mo hoa ngo~ vao. tinh degree cho tat ca MF
+	float xx;
+	int j;	
 	//Mo hoa input GocLech_dot
 	xx = (float)( x - fuzzyController->pre_GocLech );
 	for (j=0; j < 7; j++) 
@@ -1716,7 +1723,7 @@ void Defuzzification( FuzzyController * fuzzyController )
 	for (i=0; i < NUMBER_RULE; i++) 
 	{ 
 		//if(!fuzzyController->fuzzy_rules[i]) continue;
-		sum_h = 			(float)sum_h + fuzzyController->fuzzy_rules[i].h;
+		sum_h = 	(float)sum_h + fuzzyController->fuzzy_rules[i].h;
 		total_y = (float)total_y + (float)fuzzyController->fuzzy_rules[i].y * fuzzyController->fuzzy_rules[i].h;
 	}
 	if(sum_h != 0)
