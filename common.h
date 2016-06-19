@@ -50,7 +50,7 @@
 
 
 #define TEST_GOCLECH  		(float)25
-#define TEST_GOCLECH_DOT  (float)-10
+#define TEST_GOCLECH_DOT  (float)-5
 
 
 

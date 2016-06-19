@@ -54,6 +54,7 @@ int16_t 									FlyState; // 0: May bay ngung hoat dong, 1:may bay dang bay
 				//---------sensor
 uint8_t 									who_i_am_reg_value_MPU6050;
 int32_t 									timer;
+int 											i;
 float 										accX_angle, accY_angle, accZ_angle;
 float 										gyroX_angle, gyroY_angle, gyroZ_angle;
 float 										Kalman_angelX, Kalman_angelY, Kalman_angelZ;
@@ -255,7 +256,10 @@ int main(void)
 				
 				
 				/*test fuzzy system*/
-								Fuzzification_All_MF( (float) Kalman_angelX, &rollFuzzyControl);
+				for( i=-30; i<= 30; i++)
+				{
+					Fuzzification_All_MF( (float) i, &rollFuzzyControl);
+								//Fuzzification_All_MF( (float) Kalman_angelX, &rollFuzzyControl);
 								//Fuzzification_All_MF( (float) Kalman_angelY , &pitchFuzzyControl);
 						
 								Apply_All_Rule( 				  &rollFuzzyControl );
@@ -263,6 +267,9 @@ int main(void)
 								
 								Defuzzification( 				  &rollFuzzyControl );				
 								//Defuzzification( 				  &pitchFuzzyControl );	
+					
+					delay_ms(2000);
+				}
 				/*end test fuzzy system*/
 				
 				
@@ -1679,8 +1686,8 @@ void Fuzzification_All_MF(float x, FuzzyController * fuzzyController)
 	//Mo hoa input GocLech
 	for (i=0; i < 7; i++) 
 	{ 
-		//fuzzification( (float)x, &fuzzyController->inGocLech[i] );
-		fuzzification( (float)TEST_GOCLECH, &fuzzyController->inGocLech[i] );
+		fuzzification( (float)x, &fuzzyController->inGocLech[i] );
+		//fuzzification( (float)TEST_GOCLECH, &fuzzyController->inGocLech[i] );
 		
 	}
 	
