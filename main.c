@@ -986,22 +986,18 @@ void Sang_Led_By_MPU6050_Values(float kalman_angel_x, float kalman_angel_y, floa
 	SANG_4_LED_OFF();
 	if(kalman_angel_x > 10)
 	{
-		//SANG_1_LED(LED_YELLOW);
-		LED_D_12_HIGH;		
+		LED_D_15_HIGH;		 //SANG_1_LED(LED_YELLOW);
 	}else if(kalman_angel_x < -10)
 	{
-		//SANG_1_LED(LED_RED);
-		LED_D_14_HIGH;			
+		LED_D_13_HIGH;			//SANG_1_LED(LED_RED);
 	}
 	
 	if(kalman_angel_y > 10)
 	{
-		//SANG_1_LED(LED_BLUE);  
-		LED_D_13_HIGH;	
+		LED_D_14_HIGH;	//SANG_1_LED(LED_BLUE);  
 	}else if(kalman_angel_y < -10)
 	{
-		//SANG_1_LED(LED_ORANGE);  
-		LED_D_15_HIGH;	
+		LED_D_12_HIGH;	//SANG_1_LED(LED_ORANGE);  
 	}
 	delay_ms(10);
 }
