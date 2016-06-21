@@ -256,7 +256,7 @@ int main(void)
 				
 				
 				/*test fuzzy system*/
-				for( i=-30; i<= 30; i++)
+				/*for( i=-30; i<= 30; i++)
 				{
 					Fuzzification_All_MF( (float) i, &rollFuzzyControl);
 								//Fuzzification_All_MF( (float) Kalman_angelX, &rollFuzzyControl);
@@ -269,7 +269,7 @@ int main(void)
 								//Defuzzification( 				  &pitchFuzzyControl );	
 					
 					delay_ms(2000);
-				}
+				}*/
 				/*end test fuzzy system*/
 				
 				
@@ -1688,15 +1688,14 @@ void Fuzzification_All_MF(float x, FuzzyController * fuzzyController)
 	{ 
 		fuzzification( (float)x, &fuzzyController->inGocLech[i] );
 		//fuzzification( (float)TEST_GOCLECH, &fuzzyController->inGocLech[i] );
-		
 	}
 	
 	//Mo hoa input GocLech_dot
 	xx = (float)( x - fuzzyController->pre_GocLech );
 	for (j=0; j < 7; j++) 
 	{ 
-		//fuzzification( (float)xx,  &fuzzyController->inGocLech_dot[j] );
-		fuzzification( (float)TEST_GOCLECH_DOT,  &fuzzyController->inGocLech_dot[j] );
+		fuzzification( (float)xx,  &fuzzyController->inGocLech_dot[j] );
+		//fuzzification( (float)TEST_GOCLECH_DOT,  &fuzzyController->inGocLech_dot[j] );
 	}
 	fuzzyController->pre_GocLech = x;
 }
