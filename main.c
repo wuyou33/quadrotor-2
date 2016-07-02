@@ -1000,6 +1000,8 @@ void Sang_Led_By_MPU6050_Values(float kalman_angel_x, float kalman_angel_y, floa
 		LED_D_12_HIGH;	//SANG_1_LED(LED_ORANGE);  
 	}
 	delay_ms(10);
+	SANG_4_LED_OFF();
+	delay_ms(10);
 }
 /*
 void Calculate_Accel_X_Angles(TM_MPU6050_t* output, float* angel_x)
