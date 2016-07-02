@@ -183,12 +183,20 @@ int main(void)
 					//---Output compare PWM. Khoi dong PWM motor---------------------------------------
 		HAL_TIM_Base_Start_IT(&Tim3_Handle_PWM); 		
 		HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_1);			//HAL_TIMEx_PWMN_Start(&Tim3_Handle_PWM,TIM_CHANNEL_1);	
-		HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_2); HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_3);	HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_4);	
+		HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_2); 
+		HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_3);	
+		HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_4);	
 		
 					//---Code config cho motor, luc dau tao clock PWM max 2000ms trong vong 2s, sau do giam xuong 700ms
-		TIM3->CCR1 = 2000; 		TIM3->CCR2 = 2000;		 TIM3->CCR3 = 2000;		 TIM3->CCR4 = 2000;		
+		TIM3->CCR1 = 2000; 		
+		TIM3->CCR2 = 2000;		 
+		TIM3->CCR3 = 2000;		 
+		TIM3->CCR4 = 2000;		
 		SANG_4_LED(); delay_ms(2000); 		
-		TIM3->CCR1 =  700; 		TIM3->CCR2 =  700;			TIM3->CCR3 = 700;			TIM3->CCR4 = 700;		
+		TIM3->CCR1 =  700; 		
+		TIM3->CCR2 =  700;			
+		TIM3->CCR3 =  700;			
+		TIM3->CCR4 =  700;		
 		SANG_4_LED_OFF();		
 		
 					//---Config DEVO 7 RF module - INPUT CAPTURE MODE---------------------------------------------
@@ -196,7 +204,6 @@ int main(void)
 		Init_Receiver_TIM_PWM_Capture_TIM2(); //PA5 ->TIM2_CH1  //Rudder  (xoay)
 		Init_Receiver_TIM_PWM_Capture_TIM4(); //PB8 ->TIM4_CH3  //Elevator (tien - lui)
 		Init_Receiver_TIM_PWM_Capture_TIM5(); //PA3 - TIM5_CH4  //Ailenron (trai - phai)	
-
 		
 					//---MPU6050 cau hinh PB6, PB7 doc cam bien mpu6050---------------------------------------------------			
 		Init_I2C_GPIO_PortB();		
@@ -206,7 +213,6 @@ int main(void)
 					//---Doc gia tri cua WHO I AM register, if error => LED RED(14) sang nhap nhay
 		who_i_am_reg_value_MPU6050 = TM_I2C_WHO_I_AM( MPU6050_I2C_ADDR, MPU6050_WHO_AM_I_REGISTER);
 		if( who_i_am_reg_value_MPU6050 != MPU6050_I_AM_VALUES )	{ Error_Handler_Custom(	ERROR_MPU6050_NOT_I_AM_VALUES ); }	
-
 		
 					//---Setting/config cho MPU6050-----------------------------------------------------------
 		TM_I2C_WRITE( MPU6050_I2C_ADDR, MPU6050_PWR_MGMT_1, 0x00); 
@@ -218,7 +224,6 @@ int main(void)
 					//-----------Caculate Roll/Pitch/Yaw Angel------------------------------------------------------------------------		
 		accX_angle  = ( atan2(-mpu6050.Acc_Y, mpu6050.Acc_Z)) * RAD_TO_DEG; 
 		accY_angle =  ( atan2(mpu6050.Acc_X, sqrt(mpu6050.Acc_Y*mpu6050.Acc_Y + mpu6050.Acc_Z*mpu6050.Acc_Z) ) )* RAD_TO_DEG;
-
 		
 		//.........code dafault cua ARM		
 		#ifdef RTE_CMSIS_RTOS 
@@ -290,27 +295,24 @@ int main(void)
 								//vao trang thai can bang, k co tac dong tu receiver, PID controller dieu chinh can bang	
 								//fuzzy dieu khien can bang						
 								//	  (1)\   /(2)
-								//        \ /				        x
+								//        \ /				        y
 								//         X				        |
-								//        / \          y____|
+								//        / \          x____|
 								//    (4)/   \(3)				
 								
 								//-----FUZZY SET Membership Function-------------------------------------------------------------------------
 								Fuzzification_All_MF( (float) Kalman_angelX, &rollFuzzyControl);
-								Fuzzification_All_MF( (float) Kalman_angelY , &pitchFuzzyControl);
-						
+								Fuzzification_All_MF( (float) Kalman_angelY , &pitchFuzzyControl);						
 								Apply_All_Rule( 				  &rollFuzzyControl );
-								Apply_All_Rule( 				  &pitchFuzzyControl );
-								
+								Apply_All_Rule( 				  &pitchFuzzyControl );								
 								Defuzzification( 				  &rollFuzzyControl );				
-								Defuzzification( 				  &pitchFuzzyControl );	
-
+								Defuzzification( 				  &pitchFuzzyControl );
 								
 								//Set PWM 4 rotor
-								pwm_motor_1 = IC_Throttle_pusle_width - rollFuzzyControl.output - pitchFuzzyControl.output;
+								pwm_motor_1 = IC_Throttle_pusle_width + rollFuzzyControl.output + pitchFuzzyControl.output;
 								pwm_motor_2 = IC_Throttle_pusle_width + rollFuzzyControl.output - pitchFuzzyControl.output;				
-								pwm_motor_3 = IC_Throttle_pusle_width + rollFuzzyControl.output + pitchFuzzyControl.output;
-								pwm_motor_4 = IC_Throttle_pusle_width - rollFuzzyControl.output + pitchFuzzyControl.output;
+								pwm_motor_3 = IC_Throttle_pusle_width - rollFuzzyControl.output + pitchFuzzyControl.output;
+								pwm_motor_4 = IC_Throttle_pusle_width - rollFuzzyControl.output - pitchFuzzyControl.output;
 								
 								SetPWM_1_Motor(1, pwm_motor_1);
 								SetPWM_1_Motor(2, pwm_motor_2);
@@ -735,7 +737,7 @@ void Check_EveryThing_OK(void)
 {
 		int i = 0;
 		int time = 50;
-		while(i < 10)
+		while(i < 7)
 		{
 			SANG_1_LED(12); delay_ms(time);
 			SANG_1_LED(13); delay_ms(time);			
