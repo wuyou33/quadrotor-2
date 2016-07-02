@@ -228,10 +228,10 @@ int main(void)
 		while(1)
 		{		
 				//---Khoi dong may bay	------------------------------------------------------------------------------
-				/*while(FlyState == 0)
+				while(FlyState == 0)
 				{					
 					Turn_On_Quadrotor();
-				}*/		
+				}		
 				//---END Khoi dong may bay	-------------------------------------------------------------------------
 
 				//---Read value from MPU6050
@@ -253,30 +253,20 @@ int main(void)
 				Sang_Led_By_MPU6050_Values(Kalman_angelX, Kalman_angelY, Kalman_angelZ);	
 				
 				
+							
 				
-				
-				/*test fuzzy system*/
-				/*for( i=-30; i<= 30; i++)
-				{
-					Fuzzification_All_MF( (float) i, &rollFuzzyControl);
-								//Fuzzification_All_MF( (float) Kalman_angelX, &rollFuzzyControl);
-								//Fuzzification_All_MF( (float) Kalman_angelY , &pitchFuzzyControl);
-						
-								Apply_All_Rule( 				  &rollFuzzyControl );
-								//Apply_All_Rule( 				  &pitchFuzzyControl );
-								
-								Defuzzification( 				  &rollFuzzyControl );				
-								//Defuzzification( 				  &pitchFuzzyControl );	
-					
-					delay_ms(2000);
-				}*/
-				/*end test fuzzy system*/
-				
-				
-				
-				
-				//if(HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_0)==GPIO_PIN_SET)
-				//{		while(HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_0)== GPIO_PIN_SET){} }//khi nhan buttun USER ma chua tha ra -> khong lam gi
+				if(HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_0)==GPIO_PIN_SET)
+				{		
+					while(HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_0)== GPIO_PIN_SET){} 
+					/*
+					if(pwm_motor_1 < 1100)
+						pwm_motor_1 = 1100;
+					if(pwm_motor_1 > 2000)
+						pwm_motor_1 = 1100;				
+					pwm_motor_1 = pwm_motor_1 + 50;
+					SetPWM_1_Motor(1, pwm_motor_1);
+					*/
+				}//khi nhan buttun USER ma chua tha ra -> khong lam gi
 			
 			
 				//---Quadrotor Fly------------------------------------------------------------------
@@ -399,7 +389,7 @@ void SetInitDataQuadrotor(void)
 void Turn_On_Quadrotor(void)
 {
 		int i=0;
-	int timedelay = 500;
+		int timedelay = 500;
 		if( (IC_Throttle_pusle_width             >= PWM_ON_OFF_MIN && IC_Throttle_pusle_width         <= PWM_ON_OFF_MAX) && 
 						(IC_Aileron_TraiPhai_pusle_width >= PWM_ON_OFF_MIN && IC_Aileron_TraiPhai_pusle_width <= PWM_ON_OFF_MAX) && 
 						(IC_Elevator_TienLui_pusle_width >= PWM_ON_OFF_MIN && IC_Elevator_TienLui_pusle_width <= PWM_ON_OFF_MAX) 
@@ -424,7 +414,14 @@ void Turn_On_Quadrotor(void)
 								FlyState = 1;
 								SetPWM_4_Motor(1100);
 						}
-				}		
+				}
+		else
+		{
+			SANG_4_LED();
+			delay_ms(500);
+			SANG_4_LED_OFF();
+			delay_ms(500);
+		}
 }
 
 void Turn_Off_Quadrotor(void) //tat quadrotor
@@ -738,7 +735,7 @@ void Check_EveryThing_OK(void)
 {
 		int i = 0;
 		int time = 50;
-		while(i < 5)
+		while(i < 10)
 		{
 			SANG_1_LED(12); delay_ms(time);
 			SANG_1_LED(13); delay_ms(time);			
@@ -999,8 +996,6 @@ void Sang_Led_By_MPU6050_Values(float kalman_angel_x, float kalman_angel_y, floa
 	{
 		LED_D_12_HIGH;	//SANG_1_LED(LED_ORANGE);  
 	}
-	delay_ms(10);
-	SANG_4_LED_OFF();
 	delay_ms(10);
 }
 /*
