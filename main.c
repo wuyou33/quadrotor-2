@@ -178,7 +178,9 @@ int main(void)
 		Init_LEDSANG_PORTD_12_13_14_15(); 	Init_BUTTON_USER_PORT_A_0();
 		
 					//---Setting cho 4 PIN of PWM		//Khoi tao timer 3//cau hinh timer 3 voi mode output PWM
-		Init_PWM_GPIO_PORT_C_4Channel();	Init_PWM_TIM3_Handle();		Init_TIM3_OUTPUT_COMPARE();		
+		Init_PWM_GPIO_PORT_C_4Channel();	
+		Init_PWM_TIM3_Handle();		
+		Init_TIM3_OUTPUT_COMPARE();		
 
 					//---Output compare PWM. Khoi dong PWM motor---------------------------------------
 		HAL_TIM_Base_Start_IT(&Tim3_Handle_PWM); 		
@@ -318,7 +320,7 @@ int main(void)
 								SetPWM_1_Motor(2, pwm_motor_2);
 								SetPWM_1_Motor(3, pwm_motor_3);
 								SetPWM_1_Motor(4, pwm_motor_4);
-								delay_ms( 50);
+								delay_ms(50);
 					}
 					else
 					{		//co tac dong tu receiver, k phai trang thai CAN BANG
@@ -391,7 +393,7 @@ void SetInitDataQuadrotor(void)
 void Turn_On_Quadrotor(void)
 {
 		int i=0;
-		int timedelay = 500;
+		int timedelay = 200;
 		if( (IC_Throttle_pusle_width             >= PWM_ON_OFF_MIN && IC_Throttle_pusle_width         <= PWM_ON_OFF_MAX) && 
 						(IC_Aileron_TraiPhai_pusle_width >= PWM_ON_OFF_MIN && IC_Aileron_TraiPhai_pusle_width <= PWM_ON_OFF_MAX) && 
 						(IC_Elevator_TienLui_pusle_width >= PWM_ON_OFF_MIN && IC_Elevator_TienLui_pusle_width <= PWM_ON_OFF_MAX) 
@@ -414,15 +416,15 @@ void Turn_On_Quadrotor(void)
 								//Khoi dong quadrotor
 								SANG_4_LED_OFF();
 								FlyState = 1;
-								SetPWM_4_Motor(1100);
+								SetPWM_4_Motor(1150);
 						}
 				}
 		else
 		{
 			SANG_4_LED();
-			delay_ms(500);
+			delay_ms(300);
 			SANG_4_LED_OFF();
-			delay_ms(500);
+			delay_ms(300);
 		}
 }
 
@@ -1086,30 +1088,31 @@ void SetPWM_1_Motor(int16_t numberMotor, int16_t newValue) //set speed cho moi m
 				if(newValue <= PWM_Throtte_Min)							{	pwm_motor_1 = PWM_Throtte_Min;}
 				else if (newValue >= PWM_Throtte_Max)				{ pwm_motor_1 = PWM_Throtte_Max;}
 				else 																				{ pwm_motor_1 = newValue;					}
-				TIM3->CCR1 = pwm_motor_1;
+				//TIM3->CCR1 = pwm_motor_1;
 				break; 
 		
 		 case 2  :
 				if(newValue <= PWM_Throtte_Min)							{pwm_motor_2 = PWM_Throtte_Min;}
 				else if (newValue >= PWM_Throtte_Max)				{pwm_motor_2 = PWM_Throtte_Max;}
 				else 																				{pwm_motor_2 = newValue;	}
-				TIM3->CCR2 = pwm_motor_2;
+				//TIM3->CCR2 = pwm_motor_2;
 				break; 
 		 
 		 case 3  :
 				if(newValue <= PWM_Throtte_Min)							{pwm_motor_3 = PWM_Throtte_Min;}
 				else if (newValue >= PWM_Throtte_Max)				{pwm_motor_3 = PWM_Throtte_Max;}
 				else 																				{pwm_motor_3 = newValue;	}
-				TIM3->CCR3 = pwm_motor_3;
+				//TIM3->CCR3 = pwm_motor_3;
 				break; 
 		
 		 case 4  :
 				if(newValue <= PWM_Throtte_Min)							{pwm_motor_4 = PWM_Throtte_Min;}
 				else if (newValue >= PWM_Throtte_Max)				{pwm_motor_4 = PWM_Throtte_Max;}
 				else 																				{pwm_motor_4 = newValue;	}
-				TIM3->CCR4 = pwm_motor_4;
+				//TIM3->CCR4 = pwm_motor_4;
 				break; 
 	}
+	UpdatePWM_4_Motor_By_TIM_CCRx();
 }
 
 
