@@ -108,9 +108,7 @@ void 							Init_LEDSANG_PORTD_12_13_14_15(void);
 void 							Init_BUTTON_USER_PORT_A_0(void);
 															
 				//Khoi tao TIMER3 output PWM											
-void 							Init_PWM_GPIO_PORT_C_4Channel(void);
-void 							Init_PWM_TIM3_Handle(void);
-void 							Init_TIM3_OUTPUT_COMPARE(void);
+void 							Init_TIM3_OUTPUT_COMPARE_4_Channel(void);
 															
 				//timer 1 & 2 inputcapture for RF module
 void 							Init_Receiver_TIM_PWM_Capture_TIM1(void); //PE9 ->TIM1_CH1  //Throttle (can ga)
@@ -171,23 +169,25 @@ int main(void)
 		SetInitDataQuadrotor(); 		// set kalman filter, input cature
 	
 						//---cap xung clock------------------------------------
-		__GPIOA_CLK_ENABLE();		__GPIOB_CLK_ENABLE();			__GPIOC_CLK_ENABLE();			__GPIOD_CLK_ENABLE();			__GPIOE_CLK_ENABLE();		
-		__TIM1_CLK_ENABLE(); 		__TIM2_CLK_ENABLE(); 		 __TIM3_CLK_ENABLE(); 			__TIM4_CLK_ENABLE(); 			__TIM5_CLK_ENABLE();    __TIM9_CLK_ENABLE(); 	 
+		__GPIOA_CLK_ENABLE();		
+		__GPIOB_CLK_ENABLE();			
+		__GPIOC_CLK_ENABLE();			
+		__GPIOD_CLK_ENABLE();			
+		__GPIOE_CLK_ENABLE();		
+		__TIM1_CLK_ENABLE(); 		
+		__TIM2_CLK_ENABLE(); 		 
+		__TIM3_CLK_ENABLE(); 			
+		__TIM4_CLK_ENABLE(); 			
+		__TIM5_CLK_ENABLE();    
+		__TIM9_CLK_ENABLE(); 	 
 		__I2C1_CLK_ENABLE();
 						//---GPIO init cho 4 led sang--------gpio init cho button user-----------------------------------
 		Init_LEDSANG_PORTD_12_13_14_15(); 	Init_BUTTON_USER_PORT_A_0();
 		
 					//---Setting cho 4 PIN of PWM		//Khoi tao timer 3//cau hinh timer 3 voi mode output PWM
-		Init_PWM_GPIO_PORT_C_4Channel();	
-		Init_PWM_TIM3_Handle();		
-		Init_TIM3_OUTPUT_COMPARE();		
+		Init_TIM3_OUTPUT_COMPARE_4_Channel();		
 
-					//---Output compare PWM. Khoi dong PWM motor---------------------------------------
-		HAL_TIM_Base_Start_IT(&Tim3_Handle_PWM); 		
-		HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_1);			//HAL_TIMEx_PWMN_Start(&Tim3_Handle_PWM,TIM_CHANNEL_1);	
-		HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_2); 
-		HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_3);	
-		HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_4);	
+
 		
 					//---Code config cho motor, luc dau tao clock PWM max 2000ms trong vong 2s, sau do giam xuong 700ms
 		TIM3->CCR1 = 2000; 		
@@ -381,9 +381,9 @@ void SetInitDataQuadrotor(void)
 		IC_Rudder_Xoay2 = 0;
 		IC_Rudder_Xoay_pusle_width = 0;
 		
-		SetPWM_4_Motor(0);
 		FlyState = 0;
-				
+		
+		//SetPWM_4_Motor(0);
 		//set pid controller
 		//pid_setup_gain(&pid_roll,   ROLL_PID_KP,  ROLL_PID_KI,  ROLL_PID_KD);
 		//pid_setup_gain(&pid_pitch,  PITCH_PID_KP, PITCH_PID_KI, PITCH_PID_KD);
@@ -407,7 +407,9 @@ void Turn_On_Quadrotor(void)
 							SANG_1_LED(15); delay_ms(timedelay);
 							i++;
 						}
-						SANG_4_LED(); 	delay_ms(1000);  SANG_4_LED_OFF();						
+						SANG_4_LED(); 	
+						delay_ms(1000);  
+						SANG_4_LED_OFF();						
 						if( (IC_Throttle_pusle_width         >= PWM_ON_OFF_MIN && IC_Throttle_pusle_width         <= PWM_ON_OFF_MAX) && 
 								(IC_Aileron_TraiPhai_pusle_width >= PWM_ON_OFF_MIN && IC_Aileron_TraiPhai_pusle_width <= PWM_ON_OFF_MAX) && 
 								(IC_Elevator_TienLui_pusle_width >= PWM_ON_OFF_MIN && IC_Elevator_TienLui_pusle_width <= PWM_ON_OFF_MAX) 
@@ -416,7 +418,11 @@ void Turn_On_Quadrotor(void)
 								//Khoi dong quadrotor
 								SANG_4_LED_OFF();
 								FlyState = 1;
-								SetPWM_4_Motor(1150);
+								SetPWM_4_Motor(1200);
+							
+								SANG_4_LED(); 	
+								delay_ms(2000);  
+								SANG_4_LED_OFF();
 						}
 				}
 		else
@@ -739,7 +745,7 @@ void Check_EveryThing_OK(void)
 {
 		int i = 0;
 		int time = 50;
-		while(i < 7)
+		while(i < 5)
 		{
 			SANG_1_LED(12); delay_ms(time);
 			SANG_1_LED(13); delay_ms(time);			
@@ -778,43 +784,82 @@ void Init_BUTTON_USER_PORT_A_0(void)
 //
 //Timer 3 output PWM ra 4 channel
 //
-void Init_PWM_GPIO_PORT_C_4Channel(void)
+
+void Init_TIM3_OUTPUT_COMPARE_4_Channel()
 {
-	//Init PWM GPIOC cho 4 channel
 		GPIO_InitTypeDef GPIO_PWM_PORTC_6789;			
+		TIM_OC_InitTypeDef  TIM_Output_compare;
+	
+		//Init GPIOC cho 4 channel		
 		GPIO_PWM_PORTC_6789.Pin = GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8 | GPIO_PIN_9;
 		GPIO_PWM_PORTC_6789.Mode = GPIO_MODE_AF_PP;
 		GPIO_PWM_PORTC_6789.Pull = GPIO_NOPULL;
-		GPIO_PWM_PORTC_6789.Speed = GPIO_SPEED_FAST;
+		GPIO_PWM_PORTC_6789.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
 		GPIO_PWM_PORTC_6789.Alternate = GPIO_AF2_TIM3;
 		HAL_GPIO_Init(GPIOC, &GPIO_PWM_PORTC_6789);
-}
-
-void Init_PWM_TIM3_Handle()
-{
+		//-----------------------------------------
+	
+		//config tim3 handle	
 		Tim3_Handle_PWM.Instance = TIM3;
 		Tim3_Handle_PWM.Init.Prescaler = 84-1; 									//vi timer 3 co max clock la 84MHz, -1 la vi dem(count) tu 0
 		Tim3_Handle_PWM.Init.CounterMode = TIM_COUNTERMODE_UP; 	//dem len
 		Tim3_Handle_PWM.Init.Period = 20000-1;									//Period(chu ki) = 20 mili s
 		Tim3_Handle_PWM.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;// =0
 		HAL_TIM_PWM_Init(&Tim3_Handle_PWM);										//Init PWM voi TIM HANDLE
-}
-
-void Init_TIM3_OUTPUT_COMPARE()
-{
-		TIM_OC_InitTypeDef  TIM_Output_compare;
+		//----------------------------------------------------
+	
+		
 		TIM_Output_compare.OCMode 				= TIM_OCMODE_PWM1;
-		TIM_Output_compare.OCIdleState 		= TIM_OCIDLESTATE_SET;
+		//TIM_Output_compare.OCIdleState 		= TIM_OCIDLESTATE_SET;
 		TIM_Output_compare.Pulse 					= 2000;											//set dutty cycle = Pulse*100/Period = 2000*100 / 20000 = 10%
 		TIM_Output_compare.OCPolarity 		= TIM_OCPOLARITY_HIGH;
 		TIM_Output_compare.OCFastMode 		= TIM_OCFAST_ENABLE;		
-	
 		HAL_TIM_PWM_ConfigChannel(&Tim3_Handle_PWM, &TIM_Output_compare, TIM_CHANNEL_1); //config PWM cho channel 1 (PORTC.6)
-		HAL_TIM_PWM_ConfigChannel(&Tim3_Handle_PWM, &TIM_Output_compare, TIM_CHANNEL_2);
-		HAL_TIM_PWM_ConfigChannel(&Tim3_Handle_PWM, &TIM_Output_compare, TIM_CHANNEL_3);
-		HAL_TIM_PWM_ConfigChannel(&Tim3_Handle_PWM, &TIM_Output_compare, TIM_CHANNEL_4);
-		HAL_TIM_PWM_Init(&Tim3_Handle_PWM);
-		HAL_TIM_PWM_MspInit(&Tim3_Handle_PWM);
+		HAL_TIM_PWM_ConfigChannel(&Tim3_Handle_PWM, &TIM_Output_compare, TIM_CHANNEL_2); //config PWM cho channel 2 (PORTC.7)
+		HAL_TIM_PWM_ConfigChannel(&Tim3_Handle_PWM, &TIM_Output_compare, TIM_CHANNEL_3); //config PWM cho channel 3 (PORTC.8)
+		HAL_TIM_PWM_ConfigChannel(&Tim3_Handle_PWM, &TIM_Output_compare, TIM_CHANNEL_4); //config PWM cho channel 4 (PORTC.9)
+	
+		/*
+		//TIM_OC_InitTypeDef  TIM_Output_compare;
+		TIM_Output_compare.OCMode 				= TIM_OCMODE_PWM1;
+		TIM_Output_compare.Pulse 					= 2000;											//set dutty cycle = Pulse*100/Period = 2000*100 / 20000 = 10%
+		TIM_Output_compare.OCPolarity 		= TIM_OCPOLARITY_HIGH;
+		TIM_Output_compare.OCFastMode 		= TIM_OCFAST_ENABLE;		
+		HAL_TIM_PWM_ConfigChannel(&Tim3_Handle_PWM, &TIM_Output_compare, TIM_CHANNEL_2); //config PWM cho channel 1 (PORTC.7)
+
+		
+				
+		//TIM_OC_InitTypeDef  TIM_Output_compare;
+		TIM_Output_compare.OCMode 				= TIM_OCMODE_PWM1;
+		TIM_Output_compare.Pulse 					= 2000;											//set dutty cycle = Pulse*100/Period = 2000*100 / 20000 = 10%
+		TIM_Output_compare.OCPolarity 		= TIM_OCPOLARITY_HIGH;
+		TIM_Output_compare.OCFastMode 		= TIM_OCFAST_ENABLE;		
+		HAL_TIM_PWM_ConfigChannel(&Tim3_Handle_PWM, &TIM_Output_compare, TIM_CHANNEL_3); //config PWM cho channel 1 (PORTC.8)
+				
+		
+		
+		//TIM_OC_InitTypeDef  TIM_Output_compare;
+		TIM_Output_compare.OCMode 				= TIM_OCMODE_PWM1;
+		TIM_Output_compare.Pulse 					= 2000;											//set dutty cycle = Pulse*100/Period = 2000*100 / 20000 = 10%
+		TIM_Output_compare.OCPolarity 		= TIM_OCPOLARITY_HIGH;
+		TIM_Output_compare.OCFastMode 		= TIM_OCFAST_ENABLE;		
+		HAL_TIM_PWM_ConfigChannel(&Tim3_Handle_PWM, &TIM_Output_compare, TIM_CHANNEL_4); //config PWM cho channel 1 (PORTC.9)
+		*/
+		
+		//----------------------------------
+		HAL_TIM_PWM_Init(&Tim3_Handle_PWM);//		HAL_TIM_PWM_MspInit(&Tim3_Handle_PWM);
+		
+		//---Output compare PWM. Khoi dong PWM motor---------------------------------------
+		//HAL_TIM_Base_Start(&Tim3_Handle_PWM);	
+		HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_1);			//HAL_TIMEx_PWMN_Start(&Tim3_Handle_PWM,TIM_CHANNEL_1);	
+		HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_2); 
+		HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_3);	
+		HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_4);	
+		/*HAL_TIMEx_PWMN_Start(&Tim3_Handle_PWM,TIM_CHANNEL_1);	
+		HAL_TIMEx_PWMN_Start(&Tim3_Handle_PWM,TIM_CHANNEL_2);	
+		HAL_TIMEx_PWMN_Start(&Tim3_Handle_PWM,TIM_CHANNEL_3);	
+		HAL_TIMEx_PWMN_Start(&Tim3_Handle_PWM,TIM_CHANNEL_4);	
+		*/
 }
 //
 //
@@ -1048,6 +1093,14 @@ void Calculate_Accel_Z_Angles(TM_MPU6050_t* output, float* angel_z)
 //Lay gia tri cua Receiver de dieu khien 4 motor
 //
 //
+void UpdatePWM_4_Motor_By_TIM_CCRx(void) //update lai speed
+{
+		TIM3->CCR1 = pwm_motor_1;
+		TIM3->CCR2 = pwm_motor_2;
+		TIM3->CCR3 = pwm_motor_3;
+		TIM3->CCR4 = pwm_motor_4;
+}
+
 void SetPWM_4_Motor(int16_t value) //set 4 motor cung 1 speed
 {
 	if(value==0)
@@ -1072,13 +1125,6 @@ void SetPWM_4_Motor(int16_t value) //set 4 motor cung 1 speed
 	}
 }
 
-void UpdatePWM_4_Motor_By_TIM_CCRx(void) //update lai speed
-{
-		TIM3->CCR1 = pwm_motor_1;
-		TIM3->CCR2 = pwm_motor_2;
-		TIM3->CCR3 = pwm_motor_3;
-		TIM3->CCR4 = pwm_motor_4;
-}
 		
 void SetPWM_1_Motor(int16_t numberMotor, int16_t newValue) //set speed cho moi motor rieng le
 {

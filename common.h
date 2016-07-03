@@ -1,15 +1,15 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <math.h>
-#define PWM_Throtte_Min					1100
-#define PWM_Throtte_Max					1900
+#define PWM_Throtte_Min					1000
+#define PWM_Throtte_Max					2000
 #define PWM_Avg									1500
 #define PWM_Effect_Min					1470
 #define PWM_Effect_Max					1530
 
 //dung de khoi dong/tat quadrotor
-#define PWM_ON_OFF_MIN					1075
-#define PWM_ON_OFF_MAX					1125
+#define PWM_ON_OFF_MIN					1070
+#define PWM_ON_OFF_MAX					1130
 
 //----------------------//
 //				 ORANGE							//
