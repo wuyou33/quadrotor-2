@@ -847,19 +847,15 @@ void Init_TIM3_OUTPUT_COMPARE_4_Channel()
 		*/
 		
 		//----------------------------------
-		HAL_TIM_PWM_Init(&Tim3_Handle_PWM);//		HAL_TIM_PWM_MspInit(&Tim3_Handle_PWM);
+		HAL_TIM_PWM_Init(&Tim3_Handle_PWM);
+		//		HAL_TIM_PWM_MspInit(&Tim3_Handle_PWM);
 		
-		//---Output compare PWM. Khoi dong PWM motor---------------------------------------
-		//HAL_TIM_Base_Start(&Tim3_Handle_PWM);	
+		//---Khoi dong PWM motor---------------------------------------
+		HAL_TIM_Base_Start(&Tim3_Handle_PWM);	
 		HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_1);			//HAL_TIMEx_PWMN_Start(&Tim3_Handle_PWM,TIM_CHANNEL_1);	
 		HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_2); 
 		HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_3);	
-		HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_4);	
-		/*HAL_TIMEx_PWMN_Start(&Tim3_Handle_PWM,TIM_CHANNEL_1);	
-		HAL_TIMEx_PWMN_Start(&Tim3_Handle_PWM,TIM_CHANNEL_2);	
-		HAL_TIMEx_PWMN_Start(&Tim3_Handle_PWM,TIM_CHANNEL_3);	
-		HAL_TIMEx_PWMN_Start(&Tim3_Handle_PWM,TIM_CHANNEL_4);	
-		*/
+		HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_4);
 }
 //
 //
