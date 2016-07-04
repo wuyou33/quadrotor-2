@@ -35,6 +35,7 @@ PA3 ->TIM5_CH4  //Aileron_TraiPhai (trai - phai) - goc Roll     keo qua trai +, 
 //----------Khai bao BIEN-------------------------------------------------------------------------
 I2C_HandleTypeDef 				I2C_Handle_10truc;  //I2C handle, dung de doc value cua cam bien MPU6050
 TIM_HandleTypeDef 				Tim3_Handle_PWM;		//timer 3 dung de output PWM ra 4 channel
+TIM_HandleTypeDef 				Tim9_Handle_PWM;		//timer 9 dung de output PWM ra 4 channel
 
 TIM_HandleTypeDef 				htim1; //PE9 ->TIM1_CH1  //Throttle (can ga)
 TIM_HandleTypeDef 				htim2; //PA5 ->TIM2_CH1  //Rudder
@@ -104,11 +105,11 @@ void 							Turn_On_Quadrotor(void);
 void 							Turn_Off_Quadrotor(void);
 															
 				//Khoi Tao LED, BUTTON USER
-void 							Init_LEDSANG_PORTD_12_13_14_15(void);
-void 							Init_BUTTON_USER_PORT_A_0(void);
+void 							Init_LEDSANG_PD_12_13_14_15_AND_BUTTON_USER_PORT_A_0(void);
 															
 				//Khoi tao TIMER3 output PWM											
-void 							Init_TIM3_OUTPUT_COMPARE_4_Channel(void);
+void 							Init_TIM3_OUTPUT_PWM_4_Channel(void);
+void 							Init_TIM9_OUTPUT_PWM(void);
 															
 				//timer 1 & 2 & 4 & 5 Inputcapture for RF module
 void 							Init_Receiver_TIM_PWM_Capture_TIM1(void); 
@@ -147,7 +148,7 @@ void 							Sang_Led_By_MPU6050_Values(float angel_x, float angel_y, float angel
 volatile 					uint32_t g_iSysTicks = 0;
 void 							SysTick_Handler(){	g_iSysTicks++;}
 void 							delay_ms(uint32_t piMillis){	uint32_t iStartTime = g_iSysTicks;	while( (g_iSysTicks - iStartTime ) < piMillis)	{}}			
-
+void 							Delay_milisecond(__IO uint32_t nCount){  while(nCount--)  {  } }
 				//Fuzzy system
 void 							initFuzzySystem(void);
 void 							Fuzzification_All_MF(float x, FuzzyController * fuzzyController);
@@ -182,11 +183,10 @@ int main(void)
 		__TIM9_CLK_ENABLE(); 	 
 		__I2C1_CLK_ENABLE();
 						//---GPIO init cho 4 led sang--------gpio init cho button user-----------------------------------
-		Init_LEDSANG_PORTD_12_13_14_15(); 	
-		Init_BUTTON_USER_PORT_A_0();
+		Init_LEDSANG_PD_12_13_14_15_AND_BUTTON_USER_PORT_A_0();
 		
 					//---Setting cho 4 PIN of PWM		//Khoi tao timer 3//cau hinh timer 3 voi mode output PWM
-		Init_TIM3_OUTPUT_COMPARE_4_Channel();		
+		Init_TIM3_OUTPUT_PWM_4_Channel();		
 
 
 		
@@ -374,11 +374,6 @@ void SetInitDataQuadrotor(void)
 		FlyState = 0;
 		
 		//SetPWM_4_Motor(0);
-		//set pid controller
-		//pid_setup_gain(&pid_roll,   ROLL_PID_KP,  ROLL_PID_KI,  ROLL_PID_KD);
-		//pid_setup_gain(&pid_pitch,  PITCH_PID_KP, PITCH_PID_KI, PITCH_PID_KD);
-		//pid_setup_error(&pid_roll);
-		//pid_setup_error(&pid_pitch);
 }
 void Turn_On_Quadrotor(void)
 {
@@ -426,27 +421,27 @@ void Turn_On_Quadrotor(void)
 
 void Turn_Off_Quadrotor(void) //tat quadrotor
 {
-	int i=0;
-	int timedelay = 500;
-						while(i<3)
-						{
-							SANG_1_LED(15); delay_ms(timedelay);
-							SANG_1_LED(14); delay_ms(timedelay);
-							SANG_1_LED(13); delay_ms(timedelay);
-							SANG_1_LED(12); delay_ms(timedelay);
-							i++;
-						}
-						SANG_4_LED(); 	delay_ms(1000);  SANG_4_LED_OFF();
-						if( (IC_Throttle_pusle_width         >= PWM_ON_OFF_MIN && IC_Throttle_pusle_width         <= PWM_ON_OFF_MAX) && 
-								(IC_Aileron_TraiPhai_pusle_width >= PWM_ON_OFF_MIN && IC_Aileron_TraiPhai_pusle_width <= PWM_ON_OFF_MAX) && 
-								(IC_Elevator_TienLui_pusle_width >= PWM_ON_OFF_MIN && IC_Elevator_TienLui_pusle_width <= PWM_ON_OFF_MAX) &&
-								(IC_Rudder_Xoay_pusle_width      >= PWM_ON_OFF_MIN && IC_Rudder_Xoay_pusle_width      <= PWM_ON_OFF_MAX)
-						)
-						{				
-								SANG_4_LED_OFF();
-								FlyState = 0;
-								SetPWM_4_Motor(0); //stop all motor
-						}
+		int i=0;
+		int timedelay = 500;
+		while(i<3)
+		{
+			SANG_1_LED(15); delay_ms(timedelay);
+			SANG_1_LED(14); delay_ms(timedelay);
+			SANG_1_LED(13); delay_ms(timedelay);
+			SANG_1_LED(12); delay_ms(timedelay);
+			i++;
+		}
+		SANG_4_LED(); 	delay_ms(1000);  SANG_4_LED_OFF();
+		if( (IC_Throttle_pusle_width         >= PWM_ON_OFF_MIN && IC_Throttle_pusle_width         <= PWM_ON_OFF_MAX) && 
+				(IC_Aileron_TraiPhai_pusle_width >= PWM_ON_OFF_MIN && IC_Aileron_TraiPhai_pusle_width <= PWM_ON_OFF_MAX) && 
+				(IC_Elevator_TienLui_pusle_width >= PWM_ON_OFF_MIN && IC_Elevator_TienLui_pusle_width <= PWM_ON_OFF_MAX) &&
+				(IC_Rudder_Xoay_pusle_width      >= PWM_ON_OFF_MIN && IC_Rudder_Xoay_pusle_width      <= PWM_ON_OFF_MAX)
+		)
+		{				
+				SANG_4_LED_OFF();
+				FlyState = 0;
+				SetPWM_4_Motor(0); //stop all motor
+		}
 }
 //
 //
@@ -454,202 +449,202 @@ void Turn_Off_Quadrotor(void) //tat quadrotor
 //
 void Init_Receiver_TIM_PWM_Capture_TIM1(void)
 {
-	GPIO_InitTypeDef 						GPIO_PWM_InputCapture;	
-	TIM_ClockConfigTypeDef sClockSourceConfig;
-  TIM_SlaveConfigTypeDef sSlaveConfig;
-  TIM_MasterConfigTypeDef sMasterConfig;
-  TIM_IC_InitTypeDef sConfigIC;
-	
-	HAL_NVIC_SetPriority(TIM1_CC_IRQn, 0, 0);
-	HAL_NVIC_EnableIRQ(TIM1_CC_IRQn);
-	
-	GPIO_PWM_InputCapture.Pin 			= GPIO_PIN_9;
-	GPIO_PWM_InputCapture.Mode 			= GPIO_MODE_AF_PP; 
-	GPIO_PWM_InputCapture.Pull 			= GPIO_NOPULL;
-	GPIO_PWM_InputCapture.Speed 		= GPIO_SPEED_FAST;
-	GPIO_PWM_InputCapture.Alternate = GPIO_AF1_TIM1;
-	HAL_GPIO_Init(GPIOE, &GPIO_PWM_InputCapture);
+		GPIO_InitTypeDef 						GPIO_PWM_InputCapture;	
+		TIM_ClockConfigTypeDef sClockSourceConfig;
+		TIM_SlaveConfigTypeDef sSlaveConfig;
+		TIM_MasterConfigTypeDef sMasterConfig;
+		TIM_IC_InitTypeDef sConfigIC;
+		
+		HAL_NVIC_SetPriority(TIM1_CC_IRQn, 0, 0);
+		HAL_NVIC_EnableIRQ(TIM1_CC_IRQn);
+		
+		GPIO_PWM_InputCapture.Pin 			= GPIO_PIN_9;
+		GPIO_PWM_InputCapture.Mode 			= GPIO_MODE_AF_PP; 
+		GPIO_PWM_InputCapture.Pull 			= GPIO_NOPULL;
+		GPIO_PWM_InputCapture.Speed 		= GPIO_SPEED_FAST;
+		GPIO_PWM_InputCapture.Alternate = GPIO_AF1_TIM1;
+		HAL_GPIO_Init(GPIOE, &GPIO_PWM_InputCapture);
 
-  htim1.Instance = TIM1;
-  htim1.Init.Prescaler = 168-1;
-  htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 65535;
-  htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  HAL_TIM_Base_Init(&htim1);
+		htim1.Instance = TIM1;
+		htim1.Init.Prescaler = 168-1;
+		htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
+		htim1.Init.Period = 65535;
+		htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+		HAL_TIM_Base_Init(&htim1);
 
-  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-  HAL_TIM_ConfigClockSource(&htim1, &sClockSourceConfig);
+		sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+		HAL_TIM_ConfigClockSource(&htim1, &sClockSourceConfig);
 
-  HAL_TIM_IC_Init(&htim1);
+		HAL_TIM_IC_Init(&htim1);
 
-  sSlaveConfig.SlaveMode = TIM_SLAVEMODE_RESET;
-  sSlaveConfig.InputTrigger = TIM_TS_TI2FP2;
-  sSlaveConfig.TriggerPolarity = TIM_INPUTCHANNELPOLARITY_BOTHEDGE;
-  sSlaveConfig.TriggerFilter = 0;
-  HAL_TIM_SlaveConfigSynchronization(&htim1, &sSlaveConfig);
+		sSlaveConfig.SlaveMode = TIM_SLAVEMODE_RESET;
+		sSlaveConfig.InputTrigger = TIM_TS_TI2FP2;
+		sSlaveConfig.TriggerPolarity = TIM_INPUTCHANNELPOLARITY_BOTHEDGE;
+		sSlaveConfig.TriggerFilter = 0;
+		HAL_TIM_SlaveConfigSynchronization(&htim1, &sSlaveConfig);
 
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig);
+		sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+		sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+		HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig);
 
-  sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_BOTHEDGE;
-  sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
-  sConfigIC.ICPrescaler = TIM_ICPSC_DIV1;
-  sConfigIC.ICFilter = 0;
-  HAL_TIM_IC_ConfigChannel(&htim1, &sConfigIC, TIM_CHANNEL_1);
-	//__HAL_TIM_ENABLE_IT(&htim1, TIM_IT_CC1);
-	if(HAL_TIM_IC_Start_IT(&htim1, TIM_CHANNEL_1) != HAL_OK)		
-	{
-		Error_Handler_Custom(ERROR_TIM_1_INPUTCAPTURE);
-		//Error_Handler();			
-	}	
+		sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_BOTHEDGE;
+		sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
+		sConfigIC.ICPrescaler = TIM_ICPSC_DIV1;
+		sConfigIC.ICFilter = 0;
+		HAL_TIM_IC_ConfigChannel(&htim1, &sConfigIC, TIM_CHANNEL_1);
+		//__HAL_TIM_ENABLE_IT(&htim1, TIM_IT_CC1);
+		if(HAL_TIM_IC_Start_IT(&htim1, TIM_CHANNEL_1) != HAL_OK)		
+		{
+			Error_Handler_Custom(ERROR_TIM_1_INPUTCAPTURE);
+			//Error_Handler();			
+		}	
 }	
 
 void Init_Receiver_TIM_PWM_Capture_TIM2(void)
 {
-	GPIO_InitTypeDef 						GPIO_PWM_InputCapture;	
-	TIM_ClockConfigTypeDef sClockSourceConfig;
-  TIM_SlaveConfigTypeDef sSlaveConfig;
-  TIM_MasterConfigTypeDef sMasterConfig;
-  TIM_IC_InitTypeDef sConfigIC;
-	
-	HAL_NVIC_SetPriority(TIM2_IRQn, 0, 0);
-	HAL_NVIC_EnableIRQ(TIM2_IRQn);
-	//PA5 ->TIM2_CH1
-	GPIO_PWM_InputCapture.Pin 			= GPIO_PIN_5;
-	GPIO_PWM_InputCapture.Mode 			= GPIO_MODE_AF_PP; 
-	GPIO_PWM_InputCapture.Pull 			= GPIO_NOPULL;
-	GPIO_PWM_InputCapture.Speed 		= GPIO_SPEED_FAST;
-	GPIO_PWM_InputCapture.Alternate = GPIO_AF1_TIM2;
-	HAL_GPIO_Init(GPIOA, &GPIO_PWM_InputCapture);
+		GPIO_InitTypeDef 						GPIO_PWM_InputCapture;	
+		TIM_ClockConfigTypeDef sClockSourceConfig;
+		TIM_SlaveConfigTypeDef sSlaveConfig;
+		TIM_MasterConfigTypeDef sMasterConfig;
+		TIM_IC_InitTypeDef sConfigIC;
+		
+		HAL_NVIC_SetPriority(TIM2_IRQn, 0, 0);
+		HAL_NVIC_EnableIRQ(TIM2_IRQn);
+		//PA5 ->TIM2_CH1
+		GPIO_PWM_InputCapture.Pin 			= GPIO_PIN_5;
+		GPIO_PWM_InputCapture.Mode 			= GPIO_MODE_AF_PP; 
+		GPIO_PWM_InputCapture.Pull 			= GPIO_NOPULL;
+		GPIO_PWM_InputCapture.Speed 		= GPIO_SPEED_FAST;
+		GPIO_PWM_InputCapture.Alternate = GPIO_AF1_TIM2;
+		HAL_GPIO_Init(GPIOA, &GPIO_PWM_InputCapture);
 
-  htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 84-1;
-  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 65535;
-  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  HAL_TIM_Base_Init(&htim2);
+		htim2.Instance = TIM2;
+		htim2.Init.Prescaler = 84-1;
+		htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+		htim2.Init.Period = 65535;
+		htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+		HAL_TIM_Base_Init(&htim2);
 
-  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-  HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig);
+		sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+		HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig);
 
-  HAL_TIM_IC_Init(&htim2);
+		HAL_TIM_IC_Init(&htim2);
 
-  sSlaveConfig.SlaveMode = TIM_SLAVEMODE_RESET;
-  sSlaveConfig.InputTrigger = TIM_TS_TI2FP2;
-  sSlaveConfig.TriggerPolarity = TIM_INPUTCHANNELPOLARITY_BOTHEDGE;
-  sSlaveConfig.TriggerFilter = 0;
-  HAL_TIM_SlaveConfigSynchronization(&htim2, &sSlaveConfig);
+		sSlaveConfig.SlaveMode = TIM_SLAVEMODE_RESET;
+		sSlaveConfig.InputTrigger = TIM_TS_TI2FP2;
+		sSlaveConfig.TriggerPolarity = TIM_INPUTCHANNELPOLARITY_BOTHEDGE;
+		sSlaveConfig.TriggerFilter = 0;
+		HAL_TIM_SlaveConfigSynchronization(&htim2, &sSlaveConfig);
 
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig);
+		sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+		sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+		HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig);
 
-  sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_BOTHEDGE;
-  sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
-  sConfigIC.ICPrescaler = TIM_ICPSC_DIV1;
-  sConfigIC.ICFilter = 0;
-  HAL_TIM_IC_ConfigChannel(&htim2, &sConfigIC, TIM_CHANNEL_1);
-	if(HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1) != HAL_OK)		{							Error_Handler();			}
+		sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_BOTHEDGE;
+		sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
+		sConfigIC.ICPrescaler = TIM_ICPSC_DIV1;
+		sConfigIC.ICFilter = 0;
+		HAL_TIM_IC_ConfigChannel(&htim2, &sConfigIC, TIM_CHANNEL_1);
+		if(HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1) != HAL_OK)		{							Error_Handler();			}
 }	
 
 void Init_Receiver_TIM_PWM_Capture_TIM4(void)
 {
-	GPIO_InitTypeDef 						GPIO_PWM_InputCapture;	
-	TIM_ClockConfigTypeDef sClockSourceConfig;
-  TIM_SlaveConfigTypeDef sSlaveConfig;
-  TIM_MasterConfigTypeDef sMasterConfig;
-  TIM_IC_InitTypeDef sConfigIC;
-	
-	HAL_NVIC_SetPriority(TIM4_IRQn, 0, 0);
-	HAL_NVIC_EnableIRQ(TIM4_IRQn);
-	//PB8 -> TIM4_CH3
-	GPIO_PWM_InputCapture.Pin 			= GPIO_PIN_8;
-	GPIO_PWM_InputCapture.Mode 			= GPIO_MODE_AF_PP; 
-	GPIO_PWM_InputCapture.Pull 			= GPIO_NOPULL;
-	GPIO_PWM_InputCapture.Speed 		= GPIO_SPEED_FAST;
-	GPIO_PWM_InputCapture.Alternate = GPIO_AF2_TIM4;
-	HAL_GPIO_Init(GPIOB, &GPIO_PWM_InputCapture);
+		GPIO_InitTypeDef 						GPIO_PWM_InputCapture;	
+		TIM_ClockConfigTypeDef sClockSourceConfig;
+		TIM_SlaveConfigTypeDef sSlaveConfig;
+		TIM_MasterConfigTypeDef sMasterConfig;
+		TIM_IC_InitTypeDef sConfigIC;
+		
+		HAL_NVIC_SetPriority(TIM4_IRQn, 0, 0);
+		HAL_NVIC_EnableIRQ(TIM4_IRQn);
+		//PB8 -> TIM4_CH3
+		GPIO_PWM_InputCapture.Pin 			= GPIO_PIN_8;
+		GPIO_PWM_InputCapture.Mode 			= GPIO_MODE_AF_PP; 
+		GPIO_PWM_InputCapture.Pull 			= GPIO_NOPULL;
+		GPIO_PWM_InputCapture.Speed 		= GPIO_SPEED_FAST;
+		GPIO_PWM_InputCapture.Alternate = GPIO_AF2_TIM4;
+		HAL_GPIO_Init(GPIOB, &GPIO_PWM_InputCapture);
 
-  htim4.Instance = TIM4;
-  htim4.Init.Prescaler = 84-1;
-  htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim4.Init.Period = 65535;
-  htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  HAL_TIM_Base_Init(&htim4);
+		htim4.Instance = TIM4;
+		htim4.Init.Prescaler = 84-1;
+		htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
+		htim4.Init.Period = 65535;
+		htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+		HAL_TIM_Base_Init(&htim4);
 
-  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-  HAL_TIM_ConfigClockSource(&htim4, &sClockSourceConfig);
+		sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+		HAL_TIM_ConfigClockSource(&htim4, &sClockSourceConfig);
 
-  HAL_TIM_IC_Init(&htim4);
+		HAL_TIM_IC_Init(&htim4);
 
-  sSlaveConfig.SlaveMode = TIM_SLAVEMODE_RESET;
-  sSlaveConfig.InputTrigger = TIM_TS_TI2FP2;
-  sSlaveConfig.TriggerPolarity = TIM_INPUTCHANNELPOLARITY_BOTHEDGE;
-  sSlaveConfig.TriggerFilter = 0;
-  HAL_TIM_SlaveConfigSynchronization(&htim4, &sSlaveConfig);
+		sSlaveConfig.SlaveMode = TIM_SLAVEMODE_RESET;
+		sSlaveConfig.InputTrigger = TIM_TS_TI2FP2;
+		sSlaveConfig.TriggerPolarity = TIM_INPUTCHANNELPOLARITY_BOTHEDGE;
+		sSlaveConfig.TriggerFilter = 0;
+		HAL_TIM_SlaveConfigSynchronization(&htim4, &sSlaveConfig);
 
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  HAL_TIMEx_MasterConfigSynchronization(&htim4, &sMasterConfig);
+		sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+		sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+		HAL_TIMEx_MasterConfigSynchronization(&htim4, &sMasterConfig);
 
-  sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_BOTHEDGE;
-  sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
-  sConfigIC.ICPrescaler = TIM_ICPSC_DIV1;
-  sConfigIC.ICFilter = 0;
-	//PB8 -> TIM4_CH3
-  HAL_TIM_IC_ConfigChannel(&htim4, &sConfigIC, TIM_CHANNEL_3);
-	if(HAL_TIM_IC_Start_IT(&htim4, TIM_CHANNEL_3) != HAL_OK)		{							Error_Handler();			}
+		sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_BOTHEDGE;
+		sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
+		sConfigIC.ICPrescaler = TIM_ICPSC_DIV1;
+		sConfigIC.ICFilter = 0;
+		//PB8 -> TIM4_CH3
+		HAL_TIM_IC_ConfigChannel(&htim4, &sConfigIC, TIM_CHANNEL_3);
+		if(HAL_TIM_IC_Start_IT(&htim4, TIM_CHANNEL_3) != HAL_OK)		{							Error_Handler();			}
 }
 
 void Init_Receiver_TIM_PWM_Capture_TIM5(void) //PA1 - TIM5_CH2
 {
-	GPIO_InitTypeDef 						GPIO_PWM_InputCapture;	
-	TIM_ClockConfigTypeDef 			sClockSourceConfig;
-  TIM_SlaveConfigTypeDef 			sSlaveConfig;
-  TIM_MasterConfigTypeDef 		sMasterConfig;
-  TIM_IC_InitTypeDef 					sConfigIC;
-	
-	HAL_NVIC_SetPriority( TIM5_IRQn, 0, 0);
-	HAL_NVIC_EnableIRQ( TIM5_IRQn);
-	
-	
-	GPIO_PWM_InputCapture.Pin 			= GPIO_PIN_3;
-	GPIO_PWM_InputCapture.Mode 			= GPIO_MODE_AF_PP; 
-	GPIO_PWM_InputCapture.Pull 			= GPIO_NOPULL;
-	GPIO_PWM_InputCapture.Speed 		= GPIO_SPEED_FAST;
-	GPIO_PWM_InputCapture.Alternate = GPIO_AF2_TIM5;
-	HAL_GPIO_Init(GPIOA, &GPIO_PWM_InputCapture);
+		GPIO_InitTypeDef 						GPIO_PWM_InputCapture;	
+		TIM_ClockConfigTypeDef 			sClockSourceConfig;
+		TIM_SlaveConfigTypeDef 			sSlaveConfig;
+		TIM_MasterConfigTypeDef 		sMasterConfig;
+		TIM_IC_InitTypeDef 					sConfigIC;
+		
+		HAL_NVIC_SetPriority( TIM5_IRQn, 0, 0);
+		HAL_NVIC_EnableIRQ( TIM5_IRQn);
+		
+		
+		GPIO_PWM_InputCapture.Pin 			= GPIO_PIN_3;
+		GPIO_PWM_InputCapture.Mode 			= GPIO_MODE_AF_PP; 
+		GPIO_PWM_InputCapture.Pull 			= GPIO_NOPULL;
+		GPIO_PWM_InputCapture.Speed 		= GPIO_SPEED_FAST;
+		GPIO_PWM_InputCapture.Alternate = GPIO_AF2_TIM5;
+		HAL_GPIO_Init(GPIOA, &GPIO_PWM_InputCapture);
 
-  htim5.Instance = TIM5;
-  htim5.Init.Prescaler = 84-1;
-  htim5.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim5.Init.Period = 65535;
-  htim5.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  HAL_TIM_Base_Init(&htim5);
+		htim5.Instance = TIM5;
+		htim5.Init.Prescaler = 84-1;
+		htim5.Init.CounterMode = TIM_COUNTERMODE_UP;
+		htim5.Init.Period = 65535;
+		htim5.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+		HAL_TIM_Base_Init(&htim5);
 
-  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-  HAL_TIM_ConfigClockSource(&htim5, &sClockSourceConfig);
+		sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+		HAL_TIM_ConfigClockSource(&htim5, &sClockSourceConfig);
 
-  HAL_TIM_IC_Init(&htim5);
+		HAL_TIM_IC_Init(&htim5);
 
-  sSlaveConfig.SlaveMode = TIM_SLAVEMODE_RESET; // TIM_SLAVEMODE_RESET;
-  sSlaveConfig.InputTrigger = TIM_TS_TI2FP2;// TIM_TS_TI2FP2;
-  sSlaveConfig.TriggerPolarity = TIM_INPUTCHANNELPOLARITY_BOTHEDGE;
-  sSlaveConfig.TriggerFilter = 0;
-  HAL_TIM_SlaveConfigSynchronization(&htim5, &sSlaveConfig);
+		sSlaveConfig.SlaveMode = TIM_SLAVEMODE_RESET; // TIM_SLAVEMODE_RESET;
+		sSlaveConfig.InputTrigger = TIM_TS_TI2FP2;// TIM_TS_TI2FP2;
+		sSlaveConfig.TriggerPolarity = TIM_INPUTCHANNELPOLARITY_BOTHEDGE;
+		sSlaveConfig.TriggerFilter = 0;
+		HAL_TIM_SlaveConfigSynchronization(&htim5, &sSlaveConfig);
 
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  HAL_TIMEx_MasterConfigSynchronization(&htim5, &sMasterConfig);
+		sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+		sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+		HAL_TIMEx_MasterConfigSynchronization(&htim5, &sMasterConfig);
 
-  sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_BOTHEDGE;
-  sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
-  sConfigIC.ICPrescaler = TIM_ICPSC_DIV1;
-  sConfigIC.ICFilter = 0;
-	
-  HAL_TIM_IC_ConfigChannel(&htim5, &sConfigIC, TIM_CHANNEL_4);
-	if(HAL_TIM_IC_Start_IT(&htim5, TIM_CHANNEL_4) != HAL_OK)		{							Error_Handler();			}
+		sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_BOTHEDGE;
+		sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
+		sConfigIC.ICPrescaler = TIM_ICPSC_DIV1;
+		sConfigIC.ICFilter = 0;
+		
+		HAL_TIM_IC_ConfigChannel(&htim5, &sConfigIC, TIM_CHANNEL_4);
+		if(HAL_TIM_IC_Start_IT(&htim5, TIM_CHANNEL_4) != HAL_OK)		{							Error_Handler();			}
 }	
 
 
@@ -750,41 +745,116 @@ void Check_EveryThing_OK(void)
 		SANG_4_LED_OFF();
 }
 
-void Init_LEDSANG_PORTD_12_13_14_15(void)
+void Init_LEDSANG_PD_12_13_14_15_AND_BUTTON_USER_PORT_A_0(void)
 {
-  GPIO_InitTypeDef PIN_LED_SANG_PORTD;
-	PIN_LED_SANG_PORTD.Pin = GPIO_PIN_12 | GPIO_PIN_13 | GPIO_PIN_14 | GPIO_PIN_15;
-	PIN_LED_SANG_PORTD.Mode = GPIO_MODE_OUTPUT_PP;
-	PIN_LED_SANG_PORTD.Pull = GPIO_NOPULL;
-	PIN_LED_SANG_PORTD.Speed = GPIO_SPEED_HIGH;
-	HAL_GPIO_Init(GPIOD, &PIN_LED_SANG_PORTD);
-}
-
-void Init_BUTTON_USER_PORT_A_0(void)
-{
-  GPIO_InitTypeDef BUTTON_USER_PORTA_0;	
-	BUTTON_USER_PORTA_0.Pin = GPIO_PIN_0;
-	BUTTON_USER_PORTA_0.Mode = GPIO_MODE_INPUT;
-	BUTTON_USER_PORTA_0.Pull = GPIO_NOPULL;
-	BUTTON_USER_PORTA_0.Speed = GPIO_SPEED_HIGH;
-	HAL_GPIO_Init(GPIOA, &BUTTON_USER_PORTA_0);
+		GPIO_InitTypeDef PIN_LED_SANG_PORTD;
+		GPIO_InitTypeDef BUTTON_USER_PORTA_0;	
+	
+		PIN_LED_SANG_PORTD.Pin = GPIO_PIN_12 | GPIO_PIN_13 | GPIO_PIN_14 | GPIO_PIN_15;
+		PIN_LED_SANG_PORTD.Mode = GPIO_MODE_OUTPUT_PP;
+		PIN_LED_SANG_PORTD.Pull = GPIO_NOPULL;
+		PIN_LED_SANG_PORTD.Speed = GPIO_SPEED_HIGH;
+		HAL_GPIO_Init(GPIOD, &PIN_LED_SANG_PORTD);
+	
+		
+		BUTTON_USER_PORTA_0.Pin = GPIO_PIN_0;
+		BUTTON_USER_PORTA_0.Mode = GPIO_MODE_INPUT;
+		BUTTON_USER_PORTA_0.Pull = GPIO_NOPULL;
+		BUTTON_USER_PORTA_0.Speed = GPIO_SPEED_HIGH;
+		HAL_GPIO_Init(GPIOA, &BUTTON_USER_PORTA_0);
 }
 //
 //
 //
 //Timer 3 output PWM ra 4 channel
 //
+void Init_TIM9_OUTPUT_PWM(void)
+{
+		//PE5 and PE6
+		GPIO_InitTypeDef GPIO_PWM_PORTE_56;			
+		TIM_OC_InitTypeDef  TIM_Output_compare;
+	
+		//Init GPIOC cho 4 channel		
+		GPIO_PWM_PORTE_56.Pin = GPIO_PIN_5 | GPIO_PIN_6;
+		GPIO_PWM_PORTE_56.Mode = GPIO_MODE_AF_PP;
+		GPIO_PWM_PORTE_56.Pull = GPIO_NOPULL;
+		GPIO_PWM_PORTE_56.Speed = GPIO_SPEED_FREQ_HIGH;
+		GPIO_PWM_PORTE_56.Alternate = GPIO_AF3_TIM9;
+		HAL_GPIO_Init(GPIOE, &GPIO_PWM_PORTE_56);
+	
+		//config tim3 handle	
+		Tim9_Handle_PWM.Instance = TIM9;
+		Tim9_Handle_PWM.Init.Prescaler = 42-1; 									//vi timer 9 co max clock la 42MHz, -1 la vi dem(count) tu 0
+		Tim9_Handle_PWM.Init.CounterMode = TIM_COUNTERMODE_UP; 	//dem len
+		Tim9_Handle_PWM.Init.Period = 20000-1;									//Period(chu ki) = 20 mili s
+		Tim9_Handle_PWM.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;// =0
+		HAL_TIM_Base_Init(&Tim9_Handle_PWM);
+		HAL_TIM_PWM_Init(&Tim9_Handle_PWM);
+	
+		/* PWM mode 2 = Clear on compare match */
+    /* PWM mode 1 = Set on compare match */
+		TIM_Output_compare.OCMode 				= TIM_OCMODE_PWM1;		
+		TIM_Output_compare.OCIdleState 		= TIM_OCIDLESTATE_SET;
+		TIM_Output_compare.OCPolarity 		= TIM_OCPOLARITY_LOW;
+		TIM_Output_compare.OCFastMode 		= TIM_OCFAST_ENABLE;
+		TIM_Output_compare.Pulse 					= 2000;											//set dutty cycle = Pulse*100/Period = 2000*100 / 20000 = 10%	
 
-void Init_TIM3_OUTPUT_COMPARE_4_Channel()
+		HAL_TIM_PWM_ConfigChannel(&Tim9_Handle_PWM, &TIM_Output_compare, TIM_CHANNEL_1); //config PWM cho channel 1 (PE5)
+		HAL_TIM_PWM_Start(&Tim9_Handle_PWM, TIM_CHANNEL_1);
+		
+		HAL_TIM_PWM_ConfigChannel(&Tim9_Handle_PWM, &TIM_Output_compare, TIM_CHANNEL_2); //config PWM cho channel 1 (PE6)
+		HAL_TIM_PWM_Start(&Tim9_Handle_PWM, TIM_CHANNEL_2);
+	
+}
+
+void Init_TIM11_OUTPUT_PWM(void)
+{
+		/*GPIO_InitTypeDef GPIO_PWM_PORTE_56;			
+		TIM_OC_InitTypeDef  TIM_Output_compare;
+	
+		
+		GPIO_PWM_PORTE_56.Pin = GPIO_PIN_5 | GPIO_PIN_6;
+		GPIO_PWM_PORTE_56.Mode = GPIO_MODE_AF_PP;
+		GPIO_PWM_PORTE_56.Pull = GPIO_NOPULL;
+		GPIO_PWM_PORTE_56.Speed = GPIO_SPEED_FREQ_HIGH;
+		GPIO_PWM_PORTE_56.Alternate = GPIO_AF3_TIM9;
+		HAL_GPIO_Init(GPIOE, &GPIO_PWM_PORTE_56);
+	
+	
+		Tim9_Handle_PWM.Instance = TIM9;
+		Tim9_Handle_PWM.Init.Prescaler = 42-1; 									//vi timer 9 co max clock la 42MHz, -1 la vi dem(count) tu 0
+		Tim9_Handle_PWM.Init.CounterMode = TIM_COUNTERMODE_UP; 	//dem len
+		Tim9_Handle_PWM.Init.Period = 20000-1;									//Period(chu ki) = 20 mili s
+		Tim9_Handle_PWM.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;// =0
+		HAL_TIM_Base_Init(&Tim9_Handle_PWM);
+		HAL_TIM_PWM_Init(&Tim9_Handle_PWM);
+	
+		// PWM mode 2 = Clear on compare match 
+    // PWM mode 1 = Set on compare match 
+		TIM_Output_compare.OCMode 				= TIM_OCMODE_PWM1;		
+		TIM_Output_compare.OCIdleState 		= TIM_OCIDLESTATE_SET;
+		TIM_Output_compare.OCPolarity 		= TIM_OCPOLARITY_LOW;
+		TIM_Output_compare.OCFastMode 		= TIM_OCFAST_ENABLE;
+		TIM_Output_compare.Pulse 					= 2000;											//set dutty cycle = Pulse*100/Period = 2000*100 / 20000 = 10%	
+
+		HAL_TIM_PWM_ConfigChannel(&Tim9_Handle_PWM, &TIM_Output_compare, TIM_CHANNEL_1); //config PWM cho channel 1 (PE5)
+		HAL_TIM_PWM_Start(&Tim9_Handle_PWM, TIM_CHANNEL_1);
+		
+		HAL_TIM_PWM_ConfigChannel(&Tim9_Handle_PWM, &TIM_Output_compare, TIM_CHANNEL_2); //config PWM cho channel 1 (PE6)
+		HAL_TIM_PWM_Start(&Tim9_Handle_PWM, TIM_CHANNEL_2);
+		*/
+}
+
+void Init_TIM3_OUTPUT_PWM_4_Channel(void)
 {
 		GPIO_InitTypeDef GPIO_PWM_PORTC_6789;			
 		TIM_OC_InitTypeDef  TIM_Output_compare;
 	
 		//Init GPIOC cho 4 channel		
-		GPIO_PWM_PORTC_6789.Pin = GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8 | GPIO_PIN_9;
+		GPIO_PWM_PORTC_6789.Pin = GPIO_PIN_8 | GPIO_PIN_9 | GPIO_PIN_6 | GPIO_PIN_7;
 		GPIO_PWM_PORTC_6789.Mode = GPIO_MODE_AF_PP;
 		GPIO_PWM_PORTC_6789.Pull = GPIO_NOPULL;
-		GPIO_PWM_PORTC_6789.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+		GPIO_PWM_PORTC_6789.Speed = GPIO_SPEED_FREQ_HIGH;
 		GPIO_PWM_PORTC_6789.Alternate = GPIO_AF2_TIM3;
 		HAL_GPIO_Init(GPIOC, &GPIO_PWM_PORTC_6789);
 		//-----------------------------------------
@@ -795,56 +865,30 @@ void Init_TIM3_OUTPUT_COMPARE_4_Channel()
 		Tim3_Handle_PWM.Init.CounterMode = TIM_COUNTERMODE_UP; 	//dem len
 		Tim3_Handle_PWM.Init.Period = 20000-1;									//Period(chu ki) = 20 mili s
 		Tim3_Handle_PWM.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;// =0
-		HAL_TIM_PWM_Init(&Tim3_Handle_PWM);										//Init PWM voi TIM HANDLE
+		HAL_TIM_Base_Init(&Tim3_Handle_PWM);
+		HAL_TIM_PWM_Init(&Tim3_Handle_PWM);
 		//----------------------------------------------------
 	
 		
-		TIM_Output_compare.OCMode 				= TIM_OCMODE_PWM1;
-		//TIM_Output_compare.OCIdleState 		= TIM_OCIDLESTATE_SET;
-		TIM_Output_compare.Pulse 					= 2000;											//set dutty cycle = Pulse*100/Period = 2000*100 / 20000 = 10%
-		TIM_Output_compare.OCPolarity 		= TIM_OCPOLARITY_HIGH;
-		TIM_Output_compare.OCFastMode 		= TIM_OCFAST_ENABLE;		
-		HAL_TIM_PWM_ConfigChannel(&Tim3_Handle_PWM, &TIM_Output_compare, TIM_CHANNEL_1); //config PWM cho channel 1 (PORTC.6)
-		HAL_TIM_PWM_ConfigChannel(&Tim3_Handle_PWM, &TIM_Output_compare, TIM_CHANNEL_2); //config PWM cho channel 2 (PORTC.7)
-		HAL_TIM_PWM_ConfigChannel(&Tim3_Handle_PWM, &TIM_Output_compare, TIM_CHANNEL_3); //config PWM cho channel 3 (PORTC.8)
-		HAL_TIM_PWM_ConfigChannel(&Tim3_Handle_PWM, &TIM_Output_compare, TIM_CHANNEL_4); //config PWM cho channel 4 (PORTC.9)
-	
-		/*
-		//TIM_OC_InitTypeDef  TIM_Output_compare;
-		TIM_Output_compare.OCMode 				= TIM_OCMODE_PWM1;
-		TIM_Output_compare.Pulse 					= 2000;											//set dutty cycle = Pulse*100/Period = 2000*100 / 20000 = 10%
-		TIM_Output_compare.OCPolarity 		= TIM_OCPOLARITY_HIGH;
-		TIM_Output_compare.OCFastMode 		= TIM_OCFAST_ENABLE;		
-		HAL_TIM_PWM_ConfigChannel(&Tim3_Handle_PWM, &TIM_Output_compare, TIM_CHANNEL_2); //config PWM cho channel 1 (PORTC.7)
+		/* PWM mode 2 = Clear on compare match */
+    /* PWM mode 1 = Set on compare match */
+		TIM_Output_compare.OCMode 				= TIM_OCMODE_PWM1;		
+		TIM_Output_compare.OCIdleState 		= TIM_OCIDLESTATE_SET;
+		TIM_Output_compare.OCPolarity 		= TIM_OCPOLARITY_LOW;
+		TIM_Output_compare.OCFastMode 		= TIM_OCFAST_ENABLE;
+		TIM_Output_compare.Pulse 					= 2000;											//set dutty cycle = Pulse*100/Period = 2000*100 / 20000 = 10%	
 
 		
-				
-		//TIM_OC_InitTypeDef  TIM_Output_compare;
-		TIM_Output_compare.OCMode 				= TIM_OCMODE_PWM1;
-		TIM_Output_compare.Pulse 					= 2000;											//set dutty cycle = Pulse*100/Period = 2000*100 / 20000 = 10%
-		TIM_Output_compare.OCPolarity 		= TIM_OCPOLARITY_HIGH;
-		TIM_Output_compare.OCFastMode 		= TIM_OCFAST_ENABLE;		
-		HAL_TIM_PWM_ConfigChannel(&Tim3_Handle_PWM, &TIM_Output_compare, TIM_CHANNEL_3); //config PWM cho channel 1 (PORTC.8)
-				
+		HAL_TIM_PWM_ConfigChannel(&Tim3_Handle_PWM, &TIM_Output_compare, TIM_CHANNEL_1); //config PWM cho channel 1 (PORTC.6)
+		HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_1);
 		
+		HAL_TIM_PWM_ConfigChannel(&Tim3_Handle_PWM, &TIM_Output_compare, TIM_CHANNEL_2); //config PWM cho channel 2 (PORTC.7)
+		HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_2);
 		
-		//TIM_OC_InitTypeDef  TIM_Output_compare;
-		TIM_Output_compare.OCMode 				= TIM_OCMODE_PWM1;
-		TIM_Output_compare.Pulse 					= 2000;											//set dutty cycle = Pulse*100/Period = 2000*100 / 20000 = 10%
-		TIM_Output_compare.OCPolarity 		= TIM_OCPOLARITY_HIGH;
-		TIM_Output_compare.OCFastMode 		= TIM_OCFAST_ENABLE;		
-		HAL_TIM_PWM_ConfigChannel(&Tim3_Handle_PWM, &TIM_Output_compare, TIM_CHANNEL_4); //config PWM cho channel 1 (PORTC.9)
-		*/
+		HAL_TIM_PWM_ConfigChannel(&Tim3_Handle_PWM, &TIM_Output_compare, TIM_CHANNEL_3); //config PWM cho channel 3 (PORTC.8)
+		HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_3);
 		
-		//----------------------------------
-		HAL_TIM_PWM_Init(&Tim3_Handle_PWM);
-		//		HAL_TIM_PWM_MspInit(&Tim3_Handle_PWM);
-		
-		//---Khoi dong PWM motor---------------------------------------
-		HAL_TIM_Base_Start(&Tim3_Handle_PWM);	
-		HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_1);			//HAL_TIMEx_PWMN_Start(&Tim3_Handle_PWM,TIM_CHANNEL_1);	
-		HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_2); 
-		HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_3);	
+		HAL_TIM_PWM_ConfigChannel(&Tim3_Handle_PWM, &TIM_Output_compare, TIM_CHANNEL_4); //config PWM cho channel 4 (PORTC.9)
 		HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_4);
 }
 //
@@ -1033,42 +1077,6 @@ void Sang_Led_By_MPU6050_Values(float kalman_angel_x, float kalman_angel_y, floa
 	}
 	delay_ms(10);
 }
-/*
-void Calculate_Accel_X_Angles(TM_MPU6050_t* output, float* angel_x)
-{
-		float _sqrt;
-		float mot_180_do_chia_pi = (float)((float)180.0/PI);	
-		float ACCEL_XOUT = (float)(output->Acc_X/MPU6050_ACCE_SENS_2);
-		float ACCEL_YOUT = (float)(output->Acc_Y/MPU6050_ACCE_SENS_2);
-		float ACCEL_ZOUT = (float)(output->Acc_Z/MPU6050_ACCE_SENS_2);
-	
-		_sqrt = (float)sqrt( ACCEL_ZOUT*ACCEL_ZOUT + ACCEL_XOUT*ACCEL_XOUT );	
-		*angel_x = (float)(mot_180_do_chia_pi * (float)atan(ACCEL_YOUT/_sqrt));
-}
-
-void Calculate_Accel_Y_Angles(TM_MPU6050_t* output, float* angel_y)
-{
-		float _sqrt;
-		float mot_180_do_chia_pi = (float)((float)180.0/PI);	
-		float ACCEL_XOUT = (float)(output->Acc_X/MPU6050_ACCE_SENS_2);
-		float ACCEL_YOUT = (float)(output->Acc_Y/MPU6050_ACCE_SENS_2);
-		float ACCEL_ZOUT = (float)(output->Acc_Z/MPU6050_ACCE_SENS_2);
-		_sqrt = (float)sqrt( ACCEL_ZOUT*ACCEL_ZOUT + ACCEL_YOUT*ACCEL_YOUT );
-		*angel_y = (float)(mot_180_do_chia_pi * (float)-atan(ACCEL_XOUT /_sqrt));
-}
-
-	
-void Calculate_Accel_Z_Angles(TM_MPU6050_t* output, float* angel_z)
-{
-		float _sqrt;
-		float mot_180_do_chia_pi = (float)((float)180.0/PI);
-		float ACCEL_XOUT = (float)(output->Acc_X/MPU6050_ACCE_SENS_2);
-		float ACCEL_YOUT = (float)(output->Acc_Y/MPU6050_ACCE_SENS_2);
-		float ACCEL_ZOUT = (float)(output->Acc_Z/MPU6050_ACCE_SENS_2);
-		_sqrt= (float)sqrt( ACCEL_YOUT*ACCEL_YOUT + ACCEL_XOUT*ACCEL_XOUT );
-		*angel_z = (float)(mot_180_do_chia_pi * atan(_sqrt/ACCEL_ZOUT));
-}
-*/
 //end Accelerametor 10truc
 //
 //
