@@ -791,8 +791,8 @@ void Init_TIM9_OUTPUT_PWM(void)
 		HAL_TIM_Base_Init(&Tim9_Handle_PWM);
 		HAL_TIM_PWM_Init(&Tim9_Handle_PWM);
 	
-		/* PWM mode 2 = Clear on compare match */
-    /* PWM mode 1 = Set on compare match */
+		// PWM mode 2 = Clear on compare match 
+    // PWM mode 1 = Set on compare match 
 		TIM_Output_compare.OCMode 				= TIM_OCMODE_PWM1;		
 		TIM_Output_compare.OCIdleState 		= TIM_OCIDLESTATE_SET;
 		TIM_Output_compare.OCPolarity 		= TIM_OCPOLARITY_LOW;
@@ -865,13 +865,38 @@ void Init_TIM3_OUTPUT_PWM_4_Channel(void)
 		Tim3_Handle_PWM.Init.CounterMode = TIM_COUNTERMODE_UP; 	//dem len
 		Tim3_Handle_PWM.Init.Period = 20000-1;									//Period(chu ki) = 20 mili s
 		Tim3_Handle_PWM.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;// =0
-		HAL_TIM_Base_Init(&Tim3_Handle_PWM);
-		HAL_TIM_PWM_Init(&Tim3_Handle_PWM);
+		//HAL_TIM_Base_Init(&Tim3_Handle_PWM);
+		if(HAL_TIM_PWM_Init(&Tim3_Handle_PWM) != HAL_OK)
+     {
+        Error_Handler();
+     }
 		//----------------------------------------------------
 	
+				/*
+				https://my.st.com/public/STe2ecommunities/mcu/Lists/cortex_mx_stm32/Flat.aspx?RootFolder=https%3a%2f%2fmy%2est%2ecom%2fpublic%2fSTe2ecommunities%2fmcu%2fLists%2fcortex_mx_stm32%2fSTM32F4%20Discovery%20TIM1%20PWM%20Generation%20problem&FolderCTID=0x01200200770978C69A1141439FE559EB459D7580009C4E14902C3CDE46A77F0FFD06506F5B&currentviews=3606	
+				PWMConfig.Pulse = 840;
+        PWMConfig.OCMode = TIM_OCMODE_PWM1;
+        PWMConfig.OCPolarity = TIM_OCPOLARITY_HIGH;
+        PWMConfig.OCNPolarity = TIM_OCNPOLARITY_HIGH;
+        PWMConfig.OCIdleState = TIM_OCIDLESTATE_SET;
+        PWMConfig.OCNIdleState= TIM_OCNIDLESTATE_RESET;
+        PWMConfig.OCFastMode = TIM_OCFAST_DISABLE;
+				if(HAL_TIM_PWM_ConfigChannel(&TimHandle,&PWMConfig,TIM_CHANNEL_1) != HAL_OK)
+				{
+						Error_Handler();
+				}
+				if(HAL_TIM_PWM_Start(&TimHandle, TIM_CHANNEL_1) != HAL_OK)
+				{
+						Error_Handler();
+				}
+        if(HAL_TIMEx_PWMN_Start(&TimHandle,TIM_CHANNEL_1) != HAL_OK)
+        {
+            Error_Handler();
+        }
+				*/
 		
-		/* PWM mode 2 = Clear on compare match */
-    /* PWM mode 1 = Set on compare match */
+		// PWM mode 2 = Clear on compare match 
+    // PWM mode 1 = Set on compare match 
 		TIM_Output_compare.OCMode 				= TIM_OCMODE_PWM1;		
 		TIM_Output_compare.OCIdleState 		= TIM_OCIDLESTATE_SET;
 		TIM_Output_compare.OCPolarity 		= TIM_OCPOLARITY_LOW;
@@ -880,16 +905,28 @@ void Init_TIM3_OUTPUT_PWM_4_Channel(void)
 
 		
 		HAL_TIM_PWM_ConfigChannel(&Tim3_Handle_PWM, &TIM_Output_compare, TIM_CHANNEL_1); //config PWM cho channel 1 (PORTC.6)
-		HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_1);
+		if(HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_1) != HAL_OK)
+		{
+				Error_Handler();
+		}
 		
 		HAL_TIM_PWM_ConfigChannel(&Tim3_Handle_PWM, &TIM_Output_compare, TIM_CHANNEL_2); //config PWM cho channel 2 (PORTC.7)
-		HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_2);
+		if(HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_2) != HAL_OK)
+		{
+				Error_Handler();
+		}
 		
 		HAL_TIM_PWM_ConfigChannel(&Tim3_Handle_PWM, &TIM_Output_compare, TIM_CHANNEL_3); //config PWM cho channel 3 (PORTC.8)
-		HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_3);
+		if(HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_3) != HAL_OK)
+		{
+				Error_Handler();
+		}
 		
 		HAL_TIM_PWM_ConfigChannel(&Tim3_Handle_PWM, &TIM_Output_compare, TIM_CHANNEL_4); //config PWM cho channel 4 (PORTC.9)
-		HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_4);
+		if(HAL_TIM_PWM_Start(&Tim3_Handle_PWM, TIM_CHANNEL_4) != HAL_OK)
+		{
+				Error_Handler();
+		}
 }
 //
 //
