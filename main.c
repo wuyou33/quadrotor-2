@@ -110,11 +110,11 @@ void 							Init_BUTTON_USER_PORT_A_0(void);
 				//Khoi tao TIMER3 output PWM											
 void 							Init_TIM3_OUTPUT_COMPARE_4_Channel(void);
 															
-				//timer 1 & 2 inputcapture for RF module
-void 							Init_Receiver_TIM_PWM_Capture_TIM1(void); //PE9 ->TIM1_CH1  //Throttle (can ga)
-void 							Init_Receiver_TIM_PWM_Capture_TIM2(void); //PA5 ->TIM2_CH1  //Rudder  (xoay)
-void 							Init_Receiver_TIM_PWM_Capture_TIM4(void); //PB8 ->TIM4_CH3  //Elevator (tien - lui)
-void 							Init_Receiver_TIM_PWM_Capture_TIM5(void); //PA3 - TIM5_CH4  //Ailenron (trai - phai)
+				//timer 1 & 2 & 4 & 5 Inputcapture for RF module
+void 							Init_Receiver_TIM_PWM_Capture_TIM1(void); 
+void 							Init_Receiver_TIM_PWM_Capture_TIM2(void); 
+void 							Init_Receiver_TIM_PWM_Capture_TIM4(void);
+void 							Init_Receiver_TIM_PWM_Capture_TIM5(void);
 
 				//Dieu chinh huong bay qua receiver
 void 							SetInitDataQuadrotor(void);
@@ -182,7 +182,8 @@ int main(void)
 		__TIM9_CLK_ENABLE(); 	 
 		__I2C1_CLK_ENABLE();
 						//---GPIO init cho 4 led sang--------gpio init cho button user-----------------------------------
-		Init_LEDSANG_PORTD_12_13_14_15(); 	Init_BUTTON_USER_PORT_A_0();
+		Init_LEDSANG_PORTD_12_13_14_15(); 	
+		Init_BUTTON_USER_PORT_A_0();
 		
 					//---Setting cho 4 PIN of PWM		//Khoi tao timer 3//cau hinh timer 3 voi mode output PWM
 		Init_TIM3_OUTPUT_COMPARE_4_Channel();		
@@ -241,8 +242,8 @@ int main(void)
 				}		
 				//---END Khoi dong may bay	-------------------------------------------------------------------------
 
-				//---Read value from MPU6050
-				TM_MPU6050_ReadAll( MPU6050_I2C_ADDR, &mpu6050); 
+				
+				TM_MPU6050_ReadAll( MPU6050_I2C_ADDR, &mpu6050);  //---Read value from MPU6050
 			
 				//-----------Caculate Roll/Pitch/Yaw Angel------------------------------------------------------------------------		
 				accX_angle  = ( atan2(-mpu6050.Acc_Y, mpu6050.Acc_Z)) * RAD_TO_DEG; //roll equation provides [-180, 180] range
@@ -260,19 +261,9 @@ int main(void)
 				Sang_Led_By_MPU6050_Values(Kalman_angelX, Kalman_angelY, Kalman_angelZ);	
 				
 				
-							
-				
 				if(HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_0)==GPIO_PIN_SET)
 				{		
 					while(HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_0)== GPIO_PIN_SET){} 
-					/*
-					if(pwm_motor_1 < 1100)
-						pwm_motor_1 = 1100;
-					if(pwm_motor_1 > 2000)
-						pwm_motor_1 = 1100;				
-					pwm_motor_1 = pwm_motor_1 + 50;
-					SetPWM_1_Motor(1, pwm_motor_1);
-					*/
 				}//khi nhan buttun USER ma chua tha ra -> khong lam gi
 			
 			
@@ -294,8 +285,7 @@ int main(void)
 									 (IC_Rudder_Xoay_pusle_width      >= PWM_Effect_Min && IC_Rudder_Xoay_pusle_width      <= PWM_Effect_Max)
 						)
 					{			
-								//vao trang thai can bang, k co tac dong tu receiver, PID controller dieu chinh can bang	
-								//fuzzy dieu khien can bang						
+								//Trang thai can bang, Fuzzy controller
 								//	  (1)\   /(2)
 								//        \ /				        y
 								//         X				        |
@@ -304,10 +294,10 @@ int main(void)
 								
 								//-----FUZZY SET Membership Function-------------------------------------------------------------------------
 								Fuzzification_All_MF( (float) Kalman_angelX, &rollFuzzyControl);
-								Fuzzification_All_MF( (float) Kalman_angelY , &pitchFuzzyControl);						
-								Apply_All_Rule( 				  &rollFuzzyControl );
+								Fuzzification_All_MF( (float) Kalman_angelY, &pitchFuzzyControl);						
+								Apply_All_Rule( 				  &rollFuzzyControl  );
 								Apply_All_Rule( 				  &pitchFuzzyControl );								
-								Defuzzification( 				  &rollFuzzyControl );				
+								Defuzzification( 				  &rollFuzzyControl  );				
 								Defuzzification( 				  &pitchFuzzyControl );
 								
 								//Set PWM 4 rotor
@@ -320,7 +310,7 @@ int main(void)
 								SetPWM_1_Motor(2, pwm_motor_2);
 								SetPWM_1_Motor(3, pwm_motor_3);
 								SetPWM_1_Motor(4, pwm_motor_4);
-								delay_ms(50);
+								delay_ms(20);
 					}
 					else
 					{		//co tac dong tu receiver, k phai trang thai CAN BANG
