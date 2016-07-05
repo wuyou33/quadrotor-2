@@ -1,15 +1,21 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <math.h>
-#define PWM_Throtte_Min					1000
-#define PWM_Throtte_Max					2000
-#define PWM_Avg									1500
-#define PWM_Effect_Min					1470
-#define PWM_Effect_Max					1530
+
+#define Motor_Range_Min										1250
+#define Motor_Range_Max										2050
+#define Sub_Motor_Range_AND_RC_Range			150
+#define DO_VOT_LO								100
+
+#define RC_Throtte_Min					1100
+#define RC_Throtte_Max					1900
+#define RC_Medium									1500
+#define RC_Effect_Min					1470
+#define RC_Effect_Max					1530
 
 //dung de khoi dong/tat quadrotor
-#define PWM_ON_OFF_MIN					1070
-#define PWM_ON_OFF_MAX					1130
+#define RC_ON_OFF_MIN					1070
+#define RC_ON_OFF_MAX					1130
 
 //----------------------//
 //				 ORANGE							//
@@ -47,10 +53,6 @@
 #define ERROR_TIM_2_INPUTCAPTURE										22
 #define ERROR_TIM_4_INPUTCAPTURE										23
 #define ERROR_TIM_5_INPUTCAPTURE										24
-
-
-#define TEST_GOCLECH  		(float)25
-#define TEST_GOCLECH_DOT  (float)-5
 
 
 
