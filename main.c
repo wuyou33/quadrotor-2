@@ -178,14 +178,50 @@ int main(void)
 					//---Setting cho 4 PIN of PWM		//Khoi tao timer 3//cau hinh timer 3 voi mode output PWM
 		Init_TIM3_OUTPUT_PWM();
 		
+		//---Code config cho motor, luc dau tao clock PWM max 2000ms trong vong 2s, sau do giam xuong 700ms
+		TIM3->CCR1 = 2000;
+		TIM3->CCR2 = 2000;
+		TIM3->CCR3 = 2000;
+		TIM3->CCR4 = 2000;
+		SANG_4_LED(); 
+		delay_ms(3000);
+		TIM3->CCR1 =  700;
+		TIM3->CCR2 =  700;
+		TIM3->CCR3 =  700;
+		TIM3->CCR4 =  700;
+		SANG_4_LED(); 
+		delay_ms(2000);
+		SANG_4_LED_OFF();		
+		
+		/* cach 1
+		//sau khi start PWM cho tung channel xong, tien hanh sync ESC vs MOTOR
+		TIM3->CCR1 = 1000;
+		TIM3->CCR2 = 1000;
+		TIM3->CCR3 = 1000;
+		TIM3->CCR4 = 1000;
+		delay_ms(5000);
+		TIM3->CCR1 = 1100; //quay motor 1
+		TIM3->CCR2 = 1100; //
+		TIM3->CCR3 = 1100;
+		TIM3->CCR4 = 1100;
+		*/
+		
+		/* cach 2 http://www.aeq-web.com/buerstenloser-motor-mit-dem-arduino/?ref=frm
+		void calibrate() {
+			esc.write(2000);
+			delay(3000);
+			esc.write(700);
+			delay(2000);
+			esc.write(0);
+		}
+		*/
+		
+		
 					//---Config DEVO 7 RF module - INPUT CAPTURE MODE---------------------------------------------
 		Init_Receiver_TIM_PWM_Capture_TIM1(); 
 		Init_Receiver_TIM_PWM_Capture_TIM2(); 
 		Init_Receiver_TIM_PWM_Capture_TIM4(); 
-		Init_Receiver_TIM_PWM_Capture_TIM5();
-		SANG_4_LED();
-		delay_ms(1000);
-		SANG_4_LED_OFF();		
+		Init_Receiver_TIM_PWM_Capture_TIM5();		
 		
 					//---MPU6050 cau hinh PB6, PB7 doc cam bien mpu6050---------------------------------------------------			
 		Init_I2C_GPIO_PortB();		
@@ -211,10 +247,8 @@ int main(void)
 		#ifdef RTE_CMSIS_RTOS 
 			osKernelStart();      // when using CMSIS RTOS	// start thread execution 
 		#endif
-		
-		delay_ms(1000);
-		Check_EveryThing_OK();
-		delay_ms(1000);		
+
+		Check_EveryThing_OK();	
 		while(1)
 		{		
 				//---Khoi dong may bay	------------------------------------------------------------------------------
@@ -717,29 +751,6 @@ void Check_EveryThing_OK(void)
 			delay_ms(100);
 			i++;
 		}
-		
-		//---Code config cho motor, luc dau tao clock PWM max 2000ms trong vong 2s, sau do giam xuong 700ms
-		TIM3->CCR1 = 2000;
-		SANG_4_LED(); 
-		delay_ms(2000);
-		TIM3->CCR1 =  700; 		
- 		
-		TIM3->CCR2 = 2000;
-		SANG_4_LED(); 
-		delay_ms(2000);
-		TIM3->CCR2 =  700;
-		
-		TIM3->CCR3 = 2000; 		
-		SANG_4_LED(); 
-		delay_ms(2000);
-		TIM3->CCR3 =  700;
-		
-		TIM3->CCR4 = 2000;
-		SANG_4_LED(); 
-		delay_ms(2000);
-		TIM3->CCR2 =  700;
-		
-		SANG_4_LED_OFF();	
 }
 
 void Init_LEDSANG_AND_BUTTON_USER_PORT_A0(void)
@@ -798,13 +809,13 @@ void Init_TIM3_OUTPUT_PWM(void)
 		//----------------------------------------------------		
 		// PWM mode 2 = Clear on compare match 
     // PWM mode 1 = Set on compare match 
-		PWMConfig.OCMode = TIM_OCMODE_PWM1;
-		PWMConfig.OCPolarity = TIM_OCPOLARITY_HIGH;
-		PWMConfig.OCNPolarity = TIM_OCNPOLARITY_HIGH;
-		PWMConfig.OCIdleState = TIM_OCIDLESTATE_SET;
-		PWMConfig.OCNIdleState= TIM_OCNIDLESTATE_RESET;
-		PWMConfig.OCFastMode = TIM_OCFAST_DISABLE;
-		PWMConfig.Pulse 					= 2000;											//set dutty cycle = Pulse*100/Period = 2000*100 / 20000 = 10%	
+		PWMConfig.OCMode 					= TIM_OCMODE_PWM1;
+		PWMConfig.OCPolarity 			= TIM_OCPOLARITY_HIGH;
+		PWMConfig.OCNPolarity 		= TIM_OCNPOLARITY_HIGH;
+		PWMConfig.OCIdleState 		= TIM_OCIDLESTATE_SET;
+		PWMConfig.OCNIdleState		= TIM_OCNIDLESTATE_RESET;
+		PWMConfig.OCFastMode 			= TIM_OCFAST_DISABLE;
+		PWMConfig.Pulse 					= 0;
 		
 		HAL_TIM_PWM_ConfigChannel(&Tim3_Handle_PWM, &PWMConfig, TIM_CHANNEL_1); //config PWM cho channel 1 (PORTC.6)
 		HAL_TIM_PWM_ConfigChannel(&Tim3_Handle_PWM, &PWMConfig, TIM_CHANNEL_2);
