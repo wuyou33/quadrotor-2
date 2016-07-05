@@ -192,7 +192,10 @@ int main(void)
 		SANG_4_LED(); 
 		delay_ms(2000);
 		SANG_4_LED_OFF();		
-		
+		/*
+		http://www.instructables.com/id/ESC-Programming-on-Arduino-Hobbyking-ESC/
+		http://robots.dacloughb.com/project-2/esc-calibration-programming/
+		*/
 		/* cach 1
 		//sau khi start PWM cho tung channel xong, tien hanh sync ESC vs MOTOR
 		TIM3->CCR1 = 1000;
