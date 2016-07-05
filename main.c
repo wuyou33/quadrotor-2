@@ -1136,7 +1136,8 @@ void Direct_Quadrotor_By_Receiver(void)
 	}
 	
 	//Tien - Lui
-	if(IC_Elevator_TienLui_pusle_width >= 1000 && IC_Elevator_TienLui_pusle_width <= 2000)
+	if( IC_Elevator_TienLui_pusle_width >= 1000 && IC_Elevator_TienLui_pusle_width <= 2000 &&
+			IC_Throttle_pusle_width >= 1200 && IC_Throttle_pusle_width <= 2000 )
 	{
 		//truong hop can dieu khien bi lech, thi phai xu ly trong long vap While
 		//lay tin hieu cua recevier thay doi PWM 
@@ -1168,7 +1169,8 @@ void Direct_Quadrotor_By_Receiver(void)
 	}
 	
 	//Trai - Phai
-	if(IC_Aileron_TraiPhai_pusle_width >= 1000 && IC_Aileron_TraiPhai_pusle_width <= 2000)
+	if(IC_Aileron_TraiPhai_pusle_width >= 1000 && IC_Aileron_TraiPhai_pusle_width <= 2000 &&
+			IC_Throttle_pusle_width >= 1200 && IC_Throttle_pusle_width <= 2000 )
 	{
 		while(IC_Aileron_TraiPhai_pusle_width <= RC_Effect_Min )
 		{
@@ -1198,7 +1200,8 @@ void Direct_Quadrotor_By_Receiver(void)
 	}
 	
 	//Xoay
-	if(IC_Rudder_Xoay_pusle_width >= 1000 && IC_Rudder_Xoay_pusle_width <= 2000)
+	if(IC_Rudder_Xoay_pusle_width >= 1000 && IC_Rudder_Xoay_pusle_width <= 2000 &&
+			IC_Throttle_pusle_width >= 1200 && IC_Throttle_pusle_width <= 2000 )
 	{		
 		while(IC_Rudder_Xoay_pusle_width <= RC_Effect_Min )
 		{
