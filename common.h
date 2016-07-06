@@ -2,20 +2,20 @@
 #include <stdint.h>
 #include <math.h>
 
-#define Motor_Range_Min										1250
-#define Motor_Range_Max										2050
-#define Sub_Motor_Range_AND_RC_Range			150
-#define DO_VOT_LO								100
+#define Motor_Range_Min										1300
+#define Motor_Range_Max										2300
+#define Sub_Motor_Range_AND_RC_Range			200
+#define DO_VOT_LO													100
 
-#define RC_Throtte_Min					1100
-#define RC_Throtte_Max					1900
-#define RC_Medium									1500
-#define RC_Effect_Min					1470
-#define RC_Effect_Max					1530
+#define RC_Throtte_Min										1100
+#define RC_Throtte_Max										1900
+#define RC_Medium													1500
+#define RC_Effect_Min											1470
+#define RC_Effect_Max											1530
 
 //dung de khoi dong/tat quadrotor
-#define RC_ON_OFF_MIN					1070
-#define RC_ON_OFF_MAX					1130
+#define RC_ON_OFF_MIN											1070
+#define RC_ON_OFF_MAX											1130
 
 //----------------------//
 //				 ORANGE							//

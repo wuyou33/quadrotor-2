@@ -194,7 +194,8 @@ int main(void)
 			osKernelStart();      // when using CMSIS RTOS	// start thread execution 
 		#endif
 
-		Check_EveryThing_OK();	
+		Check_EveryThing_OK();
+		//pwm_test = 1300;
 		while(1)
 		{		
 				while(FlyState == 0){Turn_On_Quadrotor();} //---Khoi dong may bay	-----------
@@ -216,7 +217,11 @@ int main(void)
 				{		
 					while(HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_0)== GPIO_PIN_SET){} //khi nhan buttun USER ma chua tha ra -> khong lam gi
 					
-						/*SetPWM_4_Motor(pwm_test);
+						/*TIM3->CCR1 = pwm_test; //1200
+						TIM3->CCR2 = pwm_test+50; //1250
+						TIM3->CCR3 = pwm_test+100; //1300 quay
+						TIM3->CCR4 = pwm_test+150; //1350
+						SetPWM_4_Motor(pwm_test);
 						pwm_test = pwm_test + 50;
 						if(pwm_test >= 2250)
 						{														
@@ -235,7 +240,9 @@ int main(void)
 							(IC_Rudder_Xoay_pusle_width      >= RC_ON_OFF_MIN && IC_Rudder_Xoay_pusle_width      <= RC_ON_OFF_MAX) && 
 							(FlyState == 1)
 					)
-					{  Turn_Off_Quadrotor();  }
+					{  
+							Turn_Off_Quadrotor();  
+					}
 					//trang thai Can Bang, k co tac dong cua receiver
 					else 
 					if(  (IC_Aileron_TraiPhai_pusle_width >= RC_Effect_Min && IC_Aileron_TraiPhai_pusle_width <= RC_Effect_Max ) &&
@@ -261,13 +268,10 @@ int main(void)
 								//Set PWM 4 rotor
 								pwm_motor_1 = IC_Throttle_pusle_width + rollFuzzyControl.output + pitchFuzzyControl.output;
 								pwm_motor_2 = IC_Throttle_pusle_width + rollFuzzyControl.output - pitchFuzzyControl.output;				
-								pwm_motor_3 = IC_Throttle_pusle_width - rollFuzzyControl.output + pitchFuzzyControl.output;
-								pwm_motor_4 = IC_Throttle_pusle_width - rollFuzzyControl.output - pitchFuzzyControl.output;
+								pwm_motor_3 = IC_Throttle_pusle_width - rollFuzzyControl.output - pitchFuzzyControl.output;
+								pwm_motor_4 = IC_Throttle_pusle_width - rollFuzzyControl.output + pitchFuzzyControl.output;
 								
-								SetPWM_1_Motor(1, pwm_motor_1);
-								SetPWM_1_Motor(2, pwm_motor_2);
-								SetPWM_1_Motor(3, pwm_motor_3);
-								SetPWM_1_Motor(4, pwm_motor_4);
+								UpdatePWM_4_Motor_By_TIM_CCRx();
 								delay_ms(50);
 					}
 					else //co tac dong tu receiver, k phai trang thai CAN BANG
@@ -361,10 +365,10 @@ void Turn_On_Quadrotor(void)
 						)
 						{
 								//Khoi dong quadrotor								
-								FlyState = 1;
-								delay_ms(1000);							
+								FlyState = 1;						
 								SANG_4_LED_OFF();
-								SetPWM_4_Motor(RC_Throtte_Min);
+								SetPWM_4_Motor( RC_Throtte_Min + 50 );
+								delay_ms(2000);
 						}
 				}
 		else
@@ -379,8 +383,8 @@ void Turn_On_Quadrotor(void)
 void Turn_Off_Quadrotor(void) //tat quadrotor
 {
 		int i=0;
-		int timedelay = 50;
-		while(i<3)
+		int timedelay = 100;
+		while(i<5)
 		{
 			SANG_1_LED(15); delay_ms(timedelay);
 			SANG_1_LED(14); delay_ms(timedelay);
@@ -388,7 +392,7 @@ void Turn_Off_Quadrotor(void) //tat quadrotor
 			SANG_1_LED(12); delay_ms(timedelay);
 			i++;
 		}
-		SANG_4_LED(); 	delay_ms(1000);  SANG_4_LED_OFF();
+		SANG_4_LED(); 	delay_ms(1000);
 		if( (IC_Throttle_pusle_width         >= RC_ON_OFF_MIN && IC_Throttle_pusle_width         <= RC_ON_OFF_MAX) && 
 				(IC_Aileron_TraiPhai_pusle_width >= RC_ON_OFF_MIN && IC_Aileron_TraiPhai_pusle_width <= RC_ON_OFF_MAX) && 
 				(IC_Elevator_TienLui_pusle_width >= RC_ON_OFF_MIN && IC_Elevator_TienLui_pusle_width <= RC_ON_OFF_MAX) &&
@@ -398,7 +402,8 @@ void Turn_Off_Quadrotor(void) //tat quadrotor
 		{				
 				SANG_4_LED_OFF();
 				FlyState = 0;
-				SetPWM_4_Motor(RC_Throtte_Min);
+				SetPWM_4_Motor(0);
+				delay_ms(2000);
 		}
 }
 //-----------------------------------------------------------------------------------
@@ -951,7 +956,7 @@ void Sang_Led_By_MPU6050_Values(float kalman_angel_x, float kalman_angel_y, floa
 		{
 			LED_D_12_HIGH;	//SANG_1_LED(LED_ORANGE);  
 		}
-		delay_ms(10);
+		delay_ms(15);
 		SANG_4_LED_OFF();
 		delay_ms(10);
 }
@@ -967,25 +972,30 @@ void Sang_Led_By_MPU6050_Values(float kalman_angel_x, float kalman_angel_y, floa
 //
 void UpdatePWM_4_Motor_By_TIM_CCRx(void) //update lai speed
 {
-	if( (pwm_motor_1+Sub_Motor_Range_AND_RC_Range) <= Motor_Range_Min)
-		TIM3->CCR1 = 		Motor_Range_Min;
-	else
-		TIM3->CCR1 = (pwm_motor_1+Sub_Motor_Range_AND_RC_Range);
+	int16_t temp_motor_1 = pwm_motor_1+Sub_Motor_Range_AND_RC_Range;
+	int16_t temp_motor_2 = pwm_motor_2+Sub_Motor_Range_AND_RC_Range;
+	int16_t temp_motor_3 = pwm_motor_3+Sub_Motor_Range_AND_RC_Range;
+	int16_t temp_motor_4 = pwm_motor_4+Sub_Motor_Range_AND_RC_Range;
 	
-	if( (pwm_motor_2+Sub_Motor_Range_AND_RC_Range) <= Motor_Range_Min )
+	if( temp_motor_1 <= Motor_Range_Min)
+		TIM3->CCR1 = 	Motor_Range_Min;
+	else
+		TIM3->CCR1 = temp_motor_1;
+	
+	if( temp_motor_2 <= Motor_Range_Min )
 		TIM3->CCR2 = Motor_Range_Min;
 	else
-		TIM3->CCR2 = (pwm_motor_2+Sub_Motor_Range_AND_RC_Range);
+		TIM3->CCR2 = temp_motor_2;
 	
-	if( (pwm_motor_3+Sub_Motor_Range_AND_RC_Range) <= Motor_Range_Min )
+	if( temp_motor_3 <= Motor_Range_Min )
 		TIM3->CCR3 = Motor_Range_Min;
 	else
-		TIM3->CCR3 = (pwm_motor_3+Sub_Motor_Range_AND_RC_Range);
+		TIM3->CCR3 = temp_motor_3;
 	
-	if( (pwm_motor_4+Sub_Motor_Range_AND_RC_Range) <= Motor_Range_Min )
+	if( temp_motor_4 <= Motor_Range_Min )
 		TIM3->CCR4 = Motor_Range_Min;
 	else
-		TIM3->CCR4 = (pwm_motor_4+Sub_Motor_Range_AND_RC_Range);
+		TIM3->CCR4 = temp_motor_4;
 }
 
 void SetPWM_4_Motor(int16_t value) //set 4 motor cung 1 speed
@@ -998,16 +1008,22 @@ void SetPWM_4_Motor(int16_t value) //set 4 motor cung 1 speed
 	else{
 			if(value <= RC_Throtte_Min)
 			{
-					pwm_motor_1 = RC_Throtte_Min;					pwm_motor_2 = RC_Throtte_Min;					
-					pwm_motor_3 = RC_Throtte_Min;					pwm_motor_4 = RC_Throtte_Min;
+					pwm_motor_1 = RC_Throtte_Min;					
+					pwm_motor_2 = RC_Throtte_Min;					
+					pwm_motor_3 = RC_Throtte_Min;					
+					pwm_motor_4 = RC_Throtte_Min;
 			}else 
 			if(value >= RC_Throtte_Max)
 			{
-					pwm_motor_1 = RC_Throtte_Max;					pwm_motor_2 = RC_Throtte_Max;
-					pwm_motor_3 = RC_Throtte_Max;					pwm_motor_4 = RC_Throtte_Max;
+					pwm_motor_1 = RC_Throtte_Max;					
+					pwm_motor_2 = RC_Throtte_Max;
+					pwm_motor_3 = RC_Throtte_Max;					
+					pwm_motor_4 = RC_Throtte_Max;
 			}else{
-					pwm_motor_1 = value;										pwm_motor_2 = value;
-					pwm_motor_3 = value;										pwm_motor_4 = value;
+					pwm_motor_1 = value;										
+					pwm_motor_2 = value;
+					pwm_motor_3 = value;										
+					pwm_motor_4 = value;
 			}	
 	}
 	UpdatePWM_4_Motor_By_TIM_CCRx();
@@ -1113,72 +1129,66 @@ void Direct_Quadrotor_By_Receiver(void)
 	//Ga, tang-giam Ga
 	if(IC_Throttle_pusle_width >= 1000 && IC_Throttle_pusle_width <= 2000)
 	{
-		SetPWM_4_Motor( IC_Throttle_pusle_width );
-		delay_ms(50);
+			SetPWM_4_Motor( IC_Throttle_pusle_width );
+			delay_ms(50);
 	}
 	
 	//Tien - Lui
 	if( IC_Elevator_TienLui_pusle_width >= 1000 && IC_Elevator_TienLui_pusle_width <= 2000 &&
 			IC_Throttle_pusle_width >= 1200 && IC_Throttle_pusle_width <= 2000 )
 	{
-		//truong hop can dieu khien bi lech, thi phai xu ly trong long vap While
-		//lay tin hieu cua recevier thay doi PWM 
-		//cho den khi can dieu khien o vi tri can bang
-		while(IC_Elevator_TienLui_pusle_width <= RC_Effect_Min )
-		{
-					//Tien ve truoc, giam dong co 1+2 va tang dong co 3+4			
+		//LUI` ra sau => giam 3,4 ; tang 1,2
+		while(IC_Elevator_TienLui_pusle_width <= RC_Effect_Min ) 
+		{			
 					chenhLechGiaTri = RC_Medium - IC_Elevator_TienLui_pusle_width;
 					chenhLechGiaTri = Giam_Do_Vot_Lo(chenhLechGiaTri);
-					SetPWM_Motor_Giam(1,chenhLechGiaTri);
-					SetPWM_Motor_Giam(2,chenhLechGiaTri);
-					SetPWM_Motor_Tang(3,chenhLechGiaTri);
-					SetPWM_Motor_Tang(4,chenhLechGiaTri);
+					SetPWM_Motor_Tang(1,chenhLechGiaTri);
+					SetPWM_Motor_Tang(2,chenhLechGiaTri);
+					SetPWM_Motor_Giam(3,chenhLechGiaTri);
+					SetPWM_Motor_Giam(4,chenhLechGiaTri);
 					delay_ms(50);
 		}
-			
+		//TIEN' ve truoc => giam 1,2 ; tang 3,4
 		while(IC_Elevator_TienLui_pusle_width >= RC_Effect_Max )
 		{
 					//Lui ve phia sau, giam dong co 3+4 va tang dong co 1+2
 					chenhLechGiaTri = IC_Elevator_TienLui_pusle_width - RC_Medium;
 					chenhLechGiaTri = Giam_Do_Vot_Lo(chenhLechGiaTri);
-					SetPWM_Motor_Giam(3,chenhLechGiaTri);
-					SetPWM_Motor_Giam(4,chenhLechGiaTri);
-					SetPWM_Motor_Tang(1,chenhLechGiaTri);
-					SetPWM_Motor_Tang(2,chenhLechGiaTri);			
+					SetPWM_Motor_Tang(3,chenhLechGiaTri);
+					SetPWM_Motor_Tang(4,chenhLechGiaTri);
+					SetPWM_Motor_Giam(1,chenhLechGiaTri);
+					SetPWM_Motor_Giam(2,chenhLechGiaTri);			
 					delay_ms(50);
-		}			
-		
+		}					
 	}
 	
 	//Trai - Phai
 	if(IC_Aileron_TraiPhai_pusle_width >= 1000 && IC_Aileron_TraiPhai_pusle_width <= 2000 &&
 			IC_Throttle_pusle_width >= 1200 && IC_Throttle_pusle_width <= 2000 )
 	{
+		//PHAI => giam 2,3; tang 1,4
 		while(IC_Aileron_TraiPhai_pusle_width <= RC_Effect_Min )
-		{
-					//qua Trai, giam dong co 1+4 va tang dong co 2+3			
+		{		
 					chenhLechGiaTri = RC_Medium - IC_Aileron_TraiPhai_pusle_width;
 					chenhLechGiaTri = Giam_Do_Vot_Lo(chenhLechGiaTri);
-					SetPWM_Motor_Giam(1,chenhLechGiaTri);
-					SetPWM_Motor_Giam(4,chenhLechGiaTri);
-					SetPWM_Motor_Tang(2,chenhLechGiaTri);
-					SetPWM_Motor_Tang(3,chenhLechGiaTri);
-					delay_ms(50);
-		}
-
-		while(IC_Aileron_TraiPhai_pusle_width >= RC_Effect_Max )
-		{
-					//qua Phai, giam dong co 2+3 va tang dong co 1+4
-					chenhLechGiaTri = IC_Aileron_TraiPhai_pusle_width - RC_Medium;
-					chenhLechGiaTri = Giam_Do_Vot_Lo(chenhLechGiaTri);
+					SetPWM_Motor_Tang(1,chenhLechGiaTri);
+					SetPWM_Motor_Tang(4,chenhLechGiaTri);
 					SetPWM_Motor_Giam(2,chenhLechGiaTri);
 					SetPWM_Motor_Giam(3,chenhLechGiaTri);
-					SetPWM_Motor_Tang(1,chenhLechGiaTri);
-					SetPWM_Motor_Tang(4,chenhLechGiaTri);		
+					delay_ms(50);
+		}
+		//TRAI => giam 1,4; tang 2,3
+		while(IC_Aileron_TraiPhai_pusle_width >= RC_Effect_Max )
+		{
+					chenhLechGiaTri = IC_Aileron_TraiPhai_pusle_width - RC_Medium;
+					chenhLechGiaTri = Giam_Do_Vot_Lo(chenhLechGiaTri);
+					SetPWM_Motor_Tang(2,chenhLechGiaTri);
+					SetPWM_Motor_Tang(3,chenhLechGiaTri);
+					SetPWM_Motor_Giam(1,chenhLechGiaTri);
+					SetPWM_Motor_Giam(4,chenhLechGiaTri);		
 					delay_ms(50);
 		}
 		//trong khoang 1470 - 1530 khong lam gi		
-				
 	}
 	
 	//Xoay
@@ -1202,10 +1212,10 @@ void Direct_Quadrotor_By_Receiver(void)
 			//Xoay nguoc chieu kim dong ho, giam dong co 2+4 va tang dong co 1+3
 			chenhLechGiaTri = IC_Rudder_Xoay_pusle_width - RC_Medium;
 			chenhLechGiaTri = Giam_Do_Vot_Lo(chenhLechGiaTri);
-			SetPWM_Motor_Giam(2,chenhLechGiaTri);
-			SetPWM_Motor_Giam(4,chenhLechGiaTri);
 			SetPWM_Motor_Tang(1,chenhLechGiaTri);
-			SetPWM_Motor_Tang(3,chenhLechGiaTri);		
+			SetPWM_Motor_Tang(3,chenhLechGiaTri);	
+			SetPWM_Motor_Giam(2,chenhLechGiaTri);
+			SetPWM_Motor_Giam(4,chenhLechGiaTri);				
 			delay_ms(50);
 		}
 		//trong khoang 1470 - 1530 khong lam gi				
