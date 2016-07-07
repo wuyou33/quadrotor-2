@@ -2,9 +2,9 @@
 #include <stdint.h>
 #include <math.h>
 
-#define Motor_Range_Min										1300
-#define Motor_Range_Max										2300
-#define Sub_Motor_Range_AND_RC_Range			200
+#define Motor_Range_Min										1100
+#define Motor_Range_Max										2000
+#define Sub_Motor_Range_AND_RC_Range			0
 #define DO_VOT_LO													100
 
 #define RC_Throtte_Min										1100

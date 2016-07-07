@@ -159,15 +159,10 @@ int main(void)
 		__TIM1_CLK_ENABLE();  __TIM2_CLK_ENABLE(); 	__TIM3_CLK_ENABLE(); 	__TIM4_CLK_ENABLE(); 	__TIM5_CLK_ENABLE();  	 
 		__I2C1_CLK_ENABLE();						
 		Init_LEDSANG_AND_BUTTON_USER_PORT_A0(); //---GPIO 4 led & GPIO button user---------------				
-		Init_TIM3_OUTPUT_PWM();//---Timer 3 4 channel PWM				
-		//---Code config cho motor, luc dau tao clock PWM max 2000ms trong vong 2s, sau do giam xuong 700ms
-		SANG_4_LED();
-		TIM3->CCR1 = 2000;		TIM3->CCR2 = 2000;		TIM3->CCR3 = 2000;		TIM3->CCR4 = 2000;	
-		delay_ms(2000);
-		TIM3->CCR1 =  700;		TIM3->CCR2 =  700;		TIM3->CCR3 =  700;		TIM3->CCR4 =  700; 
-		delay_ms(1000);
+		
+		Init_TIM3_OUTPUT_PWM();//---Timer 3 4 channel PWM
 		TIM3->CCR1 =  0;			TIM3->CCR2 =  0;			TIM3->CCR3 =  0;			TIM3->CCR4 =  0;
-		SANG_4_LED_OFF();
+		
 					//---Config DEVO 7 RF module - INPUT CAPTURE MODE---------------------------------------------
 		PWM_Input_Capture_TIM1(); PWM_Input_Capture_TIM2(); PWM_Input_Capture_TIM4(); PWM_Input_Capture_TIM5();		
 		Init_I2C_Handle_GY86();				//---MPU6050 cau hinh PB6, PB7 doc cam bien
@@ -188,12 +183,26 @@ int main(void)
 			osKernelStart(); //.........code dafault cua ARM		// when using CMSIS RTOS	// start thread execution 
 		#endif
 		Check_EveryThing_OK();
-		//pwm_test = 1300;
+		
+		//---Code config cho motor, luc dau tao clock PWM max 2000ms trong vong 2s, sau do giam xuong 700ms
+		SANG_4_LED();
+		TIM3->CCR1 = 2000;		TIM3->CCR2 = 2000;		TIM3->CCR3 = 2000;		TIM3->CCR4 = 2000;	
+		delay_ms(2000);
+		TIM3->CCR1 =  700;		TIM3->CCR2 =  700;		TIM3->CCR3 =  700;		TIM3->CCR4 =  700; 
+		delay_ms(2000);
+		TIM3->CCR1 =  700;			
+		TIM3->CCR2 =  700;			
+		TIM3->CCR3 =  700;			
+		TIM3->CCR4 =  700;
+		SANG_4_LED_OFF();
+		pwm_test = 750;
 		while(1)
 		{		
 				while(FlyState == 0) //---Khoi dong may bay	-----------
-				{						Turn_On_Quadrotor();				}
-		
+				{
+						Turn_On_Quadrotor();				
+				}
+
 				TM_MPU6050_ReadAll( MPU6050_I2C_ADDR, &mpu6050);  //---Read value from MPU6050			
 				//-----------Caculate Roll/Pitch/Yaw Angel------------------------------------------------------------------------		
 				accX_angle  = ( atan2(-mpu6050.Acc_Y, mpu6050.Acc_Z)) * RAD_TO_DEG; //roll equation provides [-180, 180] range
@@ -204,15 +213,20 @@ int main(void)
 				Kalman_angelX = kalmanCalculate(&kalmanX, accX_angle, gyroXrate, DT);
 				Kalman_angelY = kalmanCalculate(&kalmanY, accY_angle, gyroYrate, DT);
 				//compAngleX = 0.93 * (compAngleX + gyroXrate * dt) + 0.07 * accX_angle; // Calculate the angle using a Complimentary filter
+				
+				Sang_Led_By_MPU6050_Values(Kalman_angelX, Kalman_angelY, Kalman_angelZ);			
 				//-----------------------------------------------------------------------------------
-				Sang_Led_By_MPU6050_Values(Kalman_angelX, Kalman_angelY, Kalman_angelZ);					
 				
 				if(HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_0)==GPIO_PIN_SET)
 				{		
 					while(HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_0)== GPIO_PIN_SET){} //khi nhan buttun USER ma chua tha ra -> khong lam gi
-					/*TIM3->CCR1 = pwm_test; //1300 quay
-						SetPWM_4_Motor(pwm_test);
-						pwm_test = pwm_test + 50;*/
+					TIM3->CCR1 =  pwm_test;			
+					TIM3->CCR2 =  pwm_test;			
+					TIM3->CCR3 =  pwm_test;			
+					TIM3->CCR4 =  pwm_test;
+					pwm_test = pwm_test + 50;
+					if(pwm_test >= 2000)
+						pwm_test = 750;
 				}
 	
 				//---Quadrotor Fly------------------------------------------------------------------
@@ -225,37 +239,51 @@ int main(void)
 							(IC_Rudder_Xoay_pusle_width      >= RC_ON_OFF_MIN && IC_Rudder_Xoay_pusle_width      <= RC_ON_OFF_MAX) 
 					)
 					{  		Turn_Off_Quadrotor();  	}
-					
 					//Trang thai can bang,  k co tac dong cua receiver
-					if(  (IC_Aileron_TraiPhai_pusle_width >= RC_Effect_Min && IC_Aileron_TraiPhai_pusle_width <= RC_Effect_Max ) &&
+					else if(  (IC_Aileron_TraiPhai_pusle_width >= RC_Effect_Min && IC_Aileron_TraiPhai_pusle_width <= RC_Effect_Max ) &&
 							 (IC_Elevator_TienLui_pusle_width >= RC_Effect_Min && IC_Elevator_TienLui_pusle_width <= RC_Effect_Max) &&
 							 (IC_Rudder_Xoay_pusle_width      >= RC_Effect_Min && IC_Rudder_Xoay_pusle_width      <= RC_Effect_Max)
 						)
-					{			//Fuzzy controller------------------------------------------------------------------------
+					{	
+								//Fuzzy controller------------------------------------------------------------------------
 								Fuzzification_All_MF( (float) Kalman_angelX, &rollFuzzyControl);
 								Fuzzification_All_MF( (float) Kalman_angelY, &pitchFuzzyControl);						
 								Apply_All_Rule( 				  &rollFuzzyControl  );
 								Apply_All_Rule( 				  &pitchFuzzyControl );								
 								Defuzzification( 				  &rollFuzzyControl  );				
-								Defuzzification( 				  &pitchFuzzyControl );
-								
-								//Set PWM 4 rotor
-								pwm_motor_1 = IC_Throttle_pusle_width + rollFuzzyControl.output + pitchFuzzyControl.output;
-								pwm_motor_2 = IC_Throttle_pusle_width + rollFuzzyControl.output - pitchFuzzyControl.output;				
-								pwm_motor_3 = IC_Throttle_pusle_width - rollFuzzyControl.output - pitchFuzzyControl.output;
-								pwm_motor_4 = IC_Throttle_pusle_width - rollFuzzyControl.output + pitchFuzzyControl.output;
-								
-								SetPWM_1_Motor(1,pwm_motor_1);
-								SetPWM_1_Motor(2,pwm_motor_2);
-								SetPWM_1_Motor(3,pwm_motor_3);
-								SetPWM_1_Motor(4,pwm_motor_4);
-								delay_ms(50);
+								Defuzzification( 				  &pitchFuzzyControl );								
+									
+								if(FlyState == 1 && IC_Throttle_pusle_width < 1200)
+								{
+											SetPWM_4_Motor(RC_Throtte_Min);
+								}else
+								if(FlyState == 1 && IC_Throttle_pusle_width >= 1200)
+								{
+										pwm_motor_1 = IC_Throttle_pusle_width + rollFuzzyControl.output + pitchFuzzyControl.output;
+										pwm_motor_2 = IC_Throttle_pusle_width + rollFuzzyControl.output - pitchFuzzyControl.output;				
+										pwm_motor_3 = IC_Throttle_pusle_width - rollFuzzyControl.output - pitchFuzzyControl.output;
+										pwm_motor_4 = IC_Throttle_pusle_width - rollFuzzyControl.output + pitchFuzzyControl.output;
+										
+										SetPWM_1_Motor(1,pwm_motor_1);
+										SetPWM_1_Motor(2,pwm_motor_2);
+										SetPWM_1_Motor(3,pwm_motor_3);
+										SetPWM_1_Motor(4,pwm_motor_4);
+										delay_ms(20);										
+								}								
 					}
 					else //co tac dong tu receiver, k phai trang thai CAN BANG
 					{		
-							Direct_Quadrotor_By_Receiver();
+							if(FlyState == 1 && IC_Throttle_pusle_width >= 1200)
+							{	
+									Direct_Quadrotor_By_Receiver();
+							}else 
+							if(FlyState == 1 && IC_Throttle_pusle_width < 1200)
+							{
+									SetPWM_4_Motor(RC_Throtte_Min);
+							}
 					}					
 				}
+				//end (FlyState == 1)
 				//---END Quadrotor Fly------------------------------------------------------------------
 		}		
 		//End while(1)
@@ -321,8 +349,7 @@ void Turn_On_Quadrotor(void)
 		if( (IC_Throttle_pusle_width             >= RC_ON_OFF_MIN && IC_Throttle_pusle_width         <= RC_ON_OFF_MAX) && 
 						(IC_Aileron_TraiPhai_pusle_width >= RC_ON_OFF_MIN && IC_Aileron_TraiPhai_pusle_width <= RC_ON_OFF_MAX) && 
 						(IC_Elevator_TienLui_pusle_width >= RC_ON_OFF_MIN && IC_Elevator_TienLui_pusle_width <= RC_ON_OFF_MAX) && 
-						(FlyState == 0	)
-				)
+						(FlyState == 0	))
 				{
 						while(i<5)
 						{
@@ -332,18 +359,19 @@ void Turn_On_Quadrotor(void)
 							SANG_1_LED(15); delay_ms(timedelay);
 							i++;
 						}
-						SANG_4_LED(); 	
-						delay_ms(1000);  
-						SANG_4_LED_OFF();						
+						SANG_4_LED(); 							delay_ms(1000);  						SANG_4_LED_OFF();						
 						if( (IC_Throttle_pusle_width         >= RC_ON_OFF_MIN && IC_Throttle_pusle_width         <= RC_ON_OFF_MAX) && 
 								(IC_Aileron_TraiPhai_pusle_width >= RC_ON_OFF_MIN && IC_Aileron_TraiPhai_pusle_width <= RC_ON_OFF_MAX) && 
 								(IC_Elevator_TienLui_pusle_width >= RC_ON_OFF_MIN && IC_Elevator_TienLui_pusle_width <= RC_ON_OFF_MAX) &&
-								(FlyState == 0	)
-						)
-						{
-								//Khoi dong quadrotor								
+								(FlyState == 0	)		)
+						{							
 								FlyState = 1;						
 								SANG_4_LED_OFF();
+								
+								TIM3->CCR1 = 750;
+								TIM3->CCR2 = 750;
+								TIM3->CCR3 = 750;
+								TIM3->CCR4 = 750;
 						}
 				}
 		else
@@ -375,7 +403,11 @@ void Turn_Off_Quadrotor(void) //tat quadrotor
 				SANG_4_LED_OFF();
 				FlyState = 0;
 				SetPWM_4_Motor(0);
-				delay_ms(3000);
+				pwm_motor_1 = 0;
+				pwm_motor_2 = 0;
+				pwm_motor_3 = 0;
+				pwm_motor_4 = 0;
+				delay_ms(2000);
 		}
 }
 //-----------------------------------------------------------------------------------
@@ -671,9 +703,9 @@ void Check_EveryThing_OK(void)
 			SANG_4_LED_OFF();	delay_ms(time);					
 			i++;
 		}
-		SANG_4_LED();	
-		delay_ms(1000);
-		SANG_4_LED_OFF();
+		//SANG_4_LED();	
+		//delay_ms(1000);
+		//SANG_4_LED_OFF();
 }
 
 void Init_LEDSANG_AND_BUTTON_USER_PORT_A0(void)
@@ -1100,16 +1132,9 @@ int16_t Giam_Do_Vot_Lo(int16_t value)
 void Direct_Quadrotor_By_Receiver(void)
 {
 	int16_t chenhLechGiaTri = 0;
-	/*Ga, tang-giam Ga
-	if(IC_Throttle_pusle_width >= 1000 && IC_Throttle_pusle_width <= 2000)
-	{
-			SetPWM_4_Motor( IC_Throttle_pusle_width );
-			delay_ms(50);
-	}*/
 	
 	//Tien - Lui
-	if( IC_Elevator_TienLui_pusle_width >= 1000 && IC_Elevator_TienLui_pusle_width <= 2000 &&
-			IC_Throttle_pusle_width >= 1200 && IC_Throttle_pusle_width <= 2000 )
+	if( IC_Elevator_TienLui_pusle_width >= 1000 && IC_Elevator_TienLui_pusle_width <= 2000  )
 	{
 		//LUI` ra sau => giam 3,4 ; tang 1,2
 		while(IC_Elevator_TienLui_pusle_width <= RC_Effect_Min ) 
@@ -1137,8 +1162,7 @@ void Direct_Quadrotor_By_Receiver(void)
 	}
 	
 	//Trai - Phai
-	if(IC_Aileron_TraiPhai_pusle_width >= 1000 && IC_Aileron_TraiPhai_pusle_width <= 2000 &&
-			IC_Throttle_pusle_width >= 1200 && IC_Throttle_pusle_width <= 2000 )
+	if(IC_Aileron_TraiPhai_pusle_width >= 1000 && IC_Aileron_TraiPhai_pusle_width <= 2000  )
 	{
 		//PHAI => giam 2,3; tang 1,4
 		while(IC_Aileron_TraiPhai_pusle_width <= RC_Effect_Min )
@@ -1166,8 +1190,7 @@ void Direct_Quadrotor_By_Receiver(void)
 	}
 	
 	//Xoay
-	if(IC_Rudder_Xoay_pusle_width >= 1000 && IC_Rudder_Xoay_pusle_width <= 2000 &&
-			IC_Throttle_pusle_width >= 1200 && IC_Throttle_pusle_width <= 2000 )
+	if(IC_Rudder_Xoay_pusle_width >= 1000 && IC_Rudder_Xoay_pusle_width <= 2000  )
 	{		
 		while(IC_Rudder_Xoay_pusle_width <= RC_Effect_Min )
 		{
