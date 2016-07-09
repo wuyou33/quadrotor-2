@@ -44,8 +44,8 @@ int16_t 									IC_Elevator_TienLui1, IC_Elevator_TienLui2, IC_Elevator_TienLui
 int16_t 									IC_Aileron_TraiPhai1, IC_Aileron_TraiPhai2, IC_Aileron_TraiPhai_pusle_width;//Aileron_TraiPhai (trai - phai) - goc Roll
 
 				//---------PWM 4 motor
-int16_t 									pwm_motor_1, pwm_motor_2, pwm_motor_3, pwm_motor_4, i ;
-int16_t										pwm_test;
+int16_t 									pwm_motor_1, pwm_motor_2, pwm_motor_3, pwm_motor_4;
+int16_t										pwm_test, is_already_config_pwm;
 int16_t 									FlyState; // 0: May bay ngung hoat dong, 1:may bay dang bay
 
 				//---------sensor
@@ -91,8 +91,9 @@ void 							Error_Handler_Custom(int type);
 void 							SANG_1_LED(int8_t pin);
 void 							SANG_2_LED(int8_t type);
 void 							SANG_4_LED(void);
-void 							SANG_4_LED_FOREVER(void);
 void 							SANG_4_LED_OFF(void);
+void 							SANG_4_LED_LAN_LUOT(int16_t n, int16_t delaytime);
+void 							SANG_4_LED_LOOP(int16_t n, int16_t delaytime);
 void 							Check_EveryThing_OK(void);
 void 							Turn_On_Quadrotor(void);
 void 							Turn_Off_Quadrotor(void);
@@ -118,7 +119,6 @@ void 							SetPWM_Motor_Tang(int16_t numberMotor, int16_t changeValue);
 void 							SetPWM_Motor_Giam(int16_t numberMotor, int16_t changeValue);
 void 							Direct_Quadrotor_By_Receiver(void);
 
-
 				//i2c chip mpu6050 10truc
 void 							Init_I2C_Handle_GY86(void);
 void 							TM_I2C_IS_DEVICE_CONNECTED(void);
@@ -134,7 +134,6 @@ void 							Calculate_Accel_X_Angles(TM_MPU6050_t* output, float* angel_x);
 void 							Calculate_Accel_Y_Angles(TM_MPU6050_t* output, float* angel_y);
 void 							Calculate_Accel_Z_Angles(TM_MPU6050_t* output, float* angel_z);
 void 							Sang_Led_By_MPU6050_Values(float angel_x, float angel_y, float angel_z );
-
 				//ham delay default
 volatile 					uint32_t g_iSysTicks = 0;
 void 							SysTick_Handler(){	g_iSysTicks++;}
@@ -166,15 +165,14 @@ int main(void)
 		SANG_4_LED_OFF(); delay_ms(500); 
 	
 		//-----------------------------------------------------------------------
-		pwm_test = 750;	
+		pwm_test = 750;
+		is_already_config_pwm = 0;
 		TIM3->CCR1 = CONFIG_PWM_MAX;		TIM3->CCR2 = CONFIG_PWM_MAX;		TIM3->CCR3 = CONFIG_PWM_MAX;		TIM3->CCR4 = CONFIG_PWM_MAX;	
 		SANG_4_LED(); delay_ms(2000); SANG_4_LED_OFF();
 		
 		TIM3->CCR1 =  CONFIG_PWM_MIN;		TIM3->CCR2 =  CONFIG_PWM_MIN;		TIM3->CCR3 =  CONFIG_PWM_MIN;		TIM3->CCR4 = CONFIG_PWM_MIN; 
 		delay_ms(1000);
-		TIM3->CCR1 =  ZERO_;		TIM3->CCR2 =  ZERO_;			TIM3->CCR3 =  ZERO_;			TIM3->CCR4 =  ZERO_;	
-		SANG_4_LED(); delay_ms(1000);	SANG_4_LED_OFF();	
-		
+		TIM3->CCR1 =  ZERO_;		TIM3->CCR2 =  ZERO_;			TIM3->CCR3 =  ZERO_;			TIM3->CCR4 =  ZERO_;			
 		//-----------------------------------------------------------------------
 		
 		TM_I2C_IS_DEVICE_CONNECTED();	//khong connect dc => LED VANG sang lien tuc									
@@ -193,6 +191,13 @@ int main(void)
 		
 		while(1)
 		{		
+				if(FlyState == STATE_FLY_OFF && is_already_config_pwm == 0)
+				{
+						SANG_4_LED_LOOP(5,100); //sang 4 led cung luc. loop 5 lan, delay 100ms
+						SetPWM_4_Motor(750);
+						SANG_4_LED(); delay_ms(3500); SANG_4_LED_OFF();
+						is_already_config_pwm = 1;
+				}
 				while(FlyState == STATE_FLY_OFF) {	Turn_On_Quadrotor(); }
 				
 				if(HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_0)==GPIO_PIN_SET) //khi nhan buttun USER ma chua tha ra -> khong lam gi
@@ -220,7 +225,7 @@ int main(void)
 					{				
 								if(FlyState == 1 && IC_Throttle_pusle_width < ENTER_BALANCE_STATE)
 								{
-										SetPWM_4_Motor(IC_Throttle_pusle_width);		
+										SetPWM_4_Motor(Motor_Range_Min_NOT_BALANCE_STATE);		
 								}else
 								if(FlyState == 1 && IC_Throttle_pusle_width >= ENTER_BALANCE_STATE)
 								{	
@@ -259,7 +264,7 @@ int main(void)
 					{		
 							if(FlyState == 1 && IC_Throttle_pusle_width < ENTER_BALANCE_STATE)
 							{
-									SetPWM_4_Motor(IC_Throttle_pusle_width);
+									SetPWM_4_Motor(Motor_Range_Min_NOT_BALANCE_STATE);
 							}else	
 							if(FlyState == 1 && IC_Throttle_pusle_width >= ENTER_BALANCE_STATE)
 							{	
@@ -305,21 +310,12 @@ void SetInitDataQuadrotor(void)
 void Turn_On_Quadrotor(void)
 {
 	//khoi dong quadrotor bang Receiver, ta gat 2 tick den vi tri thap nhat
-		int i=0;
-		int timedelay = 50;
 		if( (IC_Throttle_pusle_width             >= RC_ON_OFF_MIN && IC_Throttle_pusle_width         <= RC_ON_OFF_MAX) && 
 						(IC_Aileron_TraiPhai_pusle_width >= RC_ON_OFF_MIN && IC_Aileron_TraiPhai_pusle_width <= RC_ON_OFF_MAX) && 
 						(IC_Elevator_TienLui_pusle_width >= RC_ON_OFF_MIN && IC_Elevator_TienLui_pusle_width <= RC_ON_OFF_MAX) && 
 						(FlyState == 0	))
-				{
-						while(i<5)
-						{
-							SANG_1_LED(12); delay_ms(timedelay);
-							SANG_1_LED(13); delay_ms(timedelay);
-							SANG_1_LED(14); delay_ms(timedelay);
-							SANG_1_LED(15); delay_ms(timedelay);
-							i++;
-						}
+				{	
+						SANG_4_LED_LAN_LUOT(5, 50); //sang 4 led lan luot. loop 5 lan. delay 50ms						
 						SANG_4_LED(); 							delay_ms(1000);  						SANG_4_LED_OFF();						
 						if( (IC_Throttle_pusle_width         >= RC_ON_OFF_MIN && IC_Throttle_pusle_width         <= RC_ON_OFF_MAX) && 
 								(IC_Aileron_TraiPhai_pusle_width >= RC_ON_OFF_MIN && IC_Aileron_TraiPhai_pusle_width <= RC_ON_OFF_MAX) && 
@@ -327,9 +323,12 @@ void Turn_On_Quadrotor(void)
 								(FlyState == 0	)		)
 						{							
 								FlyState = STATE_FLY_ON;						
-								SANG_4_LED_OFF(); delay_ms(1000);  
-								SetPWM_4_Motor(750);
-								SANG_4_LED(); delay_ms(4000); SANG_4_LED_OFF();
+								SANG_4_LED_OFF(); 
+								delay_ms(1000);
+								SANG_4_LED();
+								SetPWM_4_Motor(Motor_Range_Min_NOT_BALANCE_STATE); 
+								delay_ms(1000);
+								SANG_4_LED_OFF();
 						}
 				}
 		else
@@ -646,20 +645,8 @@ void TIM5_IRQHandler(void) //PA3 - TIM5_CH4 ////Aileron_TraiPhai (trai - phai) -
 //-----------------------------------------------------------------------------------
 void Check_EveryThing_OK(void)
 {
-		int i = 0;
-		int time = 50;
-		while(i < 5)
-		{
-			SANG_1_LED(12); 	delay_ms(time);
-			SANG_1_LED(13); 	delay_ms(time);			
-			SANG_1_LED(14); 	delay_ms(time);	
-			SANG_1_LED(15); 	delay_ms(time);
-			SANG_4_LED_OFF();	delay_ms(time);					
-			i++;
-		}
-		SANG_4_LED();	
-		delay_ms(1000);
-		SANG_4_LED_OFF();
+		SANG_4_LED_LAN_LUOT(5,50); //sang 4 led lan luot. loop 5 lan, delay 50ms
+		SANG_4_LED();			delay_ms(1000);		SANG_4_LED_OFF();
 }
 
 void Init_LEDSANG_AND_BUTTON_USER_PORT_A0(void)
@@ -1330,15 +1317,35 @@ void SANG_4_LED()
 {
 		LED_D_12_HIGH;		LED_D_13_HIGH;		LED_D_14_HIGH;		LED_D_15_HIGH;
 }
-void SANG_4_LED_FOREVER()
-{
-		LED_D_12_HIGH;		LED_D_13_HIGH;		LED_D_14_HIGH;		LED_D_15_HIGH;		while(1){}
-}
+
 void SANG_4_LED_OFF()
 {
 		LED_D_12_LOW;		LED_D_13_LOW;		LED_D_14_LOW;		LED_D_15_LOW;
 }
 
+void SANG_4_LED_LOOP(int16_t n, int16_t delaytime)
+{
+	int16_t i = 0;
+	while(i < n)
+	{
+		SANG_4_LED();			delay_ms(delaytime);			SANG_4_LED_OFF();			delay_ms(delaytime);
+		i++;
+	}	
+}
+
+void SANG_4_LED_LAN_LUOT(int16_t n, int16_t delaytime)
+{
+	int16_t i = 0;
+	while(i < n)
+	{
+		SANG_1_LED(12); 	delay_ms(delaytime);
+		SANG_1_LED(13); 	delay_ms(delaytime);			
+		SANG_1_LED(14); 	delay_ms(delaytime);	
+		SANG_1_LED(15); 	delay_ms(delaytime);
+		SANG_4_LED_OFF();	delay_ms(delaytime);					
+		i++;
+	}	
+}
 
 
 float kalmanCalculate(Kalman_Setting *kalman, float newAngle, float newRate, float DT_)

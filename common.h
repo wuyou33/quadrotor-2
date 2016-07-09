@@ -3,7 +3,8 @@
 #include <math.h>
 
 #define Motor_Range_Min										1100
-#define Motor_Range_Max										1900
+#define Motor_Range_Max										2000
+#define Motor_Range_Min_NOT_BALANCE_STATE	1180
 #define DO_VOT_LO													100
 
 #define RC_Throtte_Min										1100
@@ -16,6 +17,7 @@
 #define CONFIG_PWM_MAX										2000
 #define CONFIG_PWM_MIN										700
 #define ENTER_BALANCE_STATE								1200
+
 
 //dung de khoi dong/tat quadrotor
 #define RC_ON_OFF_MIN											1070
