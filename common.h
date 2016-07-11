@@ -55,6 +55,8 @@
 #define STATE_FLY_ON									  1
 #define STATE_FLY_OFF								  	0
 
+#define MAIN_DELAY_TIME								  30
+
 #define ERROR_MPU6050_NOT_CONNECT									  11
 #define ERROR_MPU6050_NOT_I_AM_VALUES							  12
 #define ERROR_MPU6050_STATE_READY_NOT_OK						13

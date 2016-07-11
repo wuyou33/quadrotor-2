@@ -187,13 +187,12 @@ int main(void)
 		#ifdef RTE_CMSIS_RTOS 
 			osKernelStart(); //.........code dafault cua ARM		// when using CMSIS RTOS	// start thread execution 
 		#endif
-		Check_EveryThing_OK();		
-		
+		Check_EveryThing_OK();			
 		while(1)
 		{		
 				if(FlyState == STATE_FLY_OFF && is_already_config_pwm == 0)
 				{
-						SANG_4_LED_LOOP(5,100); //sang 4 led cung luc. loop 5 lan, delay 100ms
+						SANG_4_LED_LOOP(5,70); //sang 4 led cung luc. loop 5 lan, delay 100ms
 						SetPWM_4_Motor(750);
 						SANG_4_LED(); delay_ms(3500); SANG_4_LED_OFF();
 						is_already_config_pwm = 1;
@@ -225,7 +224,8 @@ int main(void)
 					{				
 								if(FlyState == 1 && IC_Throttle_pusle_width < ENTER_BALANCE_STATE)
 								{
-										SetPWM_4_Motor(Motor_Range_Min_NOT_BALANCE_STATE);		
+										SetPWM_4_Motor(Motor_Range_Min_NOT_BALANCE_STATE);
+										delay_ms(MAIN_DELAY_TIME);									
 								}else
 								if(FlyState == 1 && IC_Throttle_pusle_width >= ENTER_BALANCE_STATE)
 								{	
@@ -257,7 +257,7 @@ int main(void)
 										SetPWM_1_Motor(2,pwm_motor_2);
 										SetPWM_1_Motor(3,pwm_motor_3);
 										SetPWM_1_Motor(4,pwm_motor_4);
-										delay_ms(40);										
+										delay_ms(MAIN_DELAY_TIME);										
 								}								
 					}
 					else //K phai TRANG THAI CAN BANG
@@ -265,6 +265,7 @@ int main(void)
 							if(FlyState == 1 && IC_Throttle_pusle_width < ENTER_BALANCE_STATE)
 							{
 									SetPWM_4_Motor(Motor_Range_Min_NOT_BALANCE_STATE);
+									delay_ms(MAIN_DELAY_TIME);
 							}else	
 							if(FlyState == 1 && IC_Throttle_pusle_width >= ENTER_BALANCE_STATE)
 							{	
@@ -647,6 +648,14 @@ void Check_EveryThing_OK(void)
 {
 		SANG_4_LED_LAN_LUOT(5,50); //sang 4 led lan luot. loop 5 lan, delay 50ms
 		SANG_4_LED();			delay_ms(1000);		SANG_4_LED_OFF();
+		if(IC_Throttle_pusle_width == 0 || IC_Aileron_TraiPhai_pusle_width == 0 || IC_Elevator_TienLui_pusle_width == 0 || IC_Rudder_Xoay_pusle_width == 0)
+		{
+			Error_Handler();
+		}
+		if(IC_Throttle_pusle_width > 2000 || IC_Aileron_TraiPhai_pusle_width > 2000 || IC_Elevator_TienLui_pusle_width > 2000 || IC_Rudder_Xoay_pusle_width > 2000)
+		{
+			Error_Handler();
+		}		
 }
 
 void Init_LEDSANG_AND_BUTTON_USER_PORT_A0(void)
