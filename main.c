@@ -1,9 +1,10 @@
-//	  (1)\   /(2)
-//        \ /				        y
-//         X				        |
-//        / \          x____|
-//    (4)/   \(3)				
 /*
+	  (1)\   /(2)  ^^Head
+        \ /			 ||       y
+         X			 ||       |
+        / \          x____|
+    (4)/   \(3)				
+
 TONG HOP CAC PIN SU DUNG
 PORT A: PA0 																	=> Button User  
 PORT B: PB6, PB7 															=> I2C1 cam bien 10 truc mpu6050 (PB6->I2C1_SCL,	PB7->I2C1_SDA) 																										
@@ -1302,8 +1303,6 @@ void Error_Handler_Custom(int type)
 							SANG_1_LED(14); 	 delay_ms(50); 							SANG_4_LED_OFF();  delay_ms(50); 					
 						}
 				}
-		
-
 }
 
 void SANG_1_LED(int8_t PIN)
@@ -1610,7 +1609,6 @@ void Fuzzification_All_MF(float x, FuzzyController * fuzzyController)
 	for (i=0; i < 7; i++) 
 	{ 
 		fuzzification( (float)x, &fuzzyController->inGocLech[i] );
-		//fuzzification( (float)TEST_GOCLECH, &fuzzyController->inGocLech[i] );
 	}
 	
 	//Mo hoa input GocLech_dot
@@ -1618,7 +1616,6 @@ void Fuzzification_All_MF(float x, FuzzyController * fuzzyController)
 	for (j=0; j < 7; j++) 
 	{ 
 		fuzzification( (float)xx,  &fuzzyController->inGocLech_dot[j] );
-		//fuzzification( (float)TEST_GOCLECH_DOT,  &fuzzyController->inGocLech_dot[j] );
 	}
 	fuzzyController->pre_GocLech = x;
 }

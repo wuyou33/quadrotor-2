@@ -2,6 +2,26 @@
 #include <stdint.h>
 #include <math.h>
 
+//----------------------//
+//				 ORANGE							//
+//	Yellow 				Red					//
+//				  BLUE	 			//
+//----------------------//
+#define LED_YELLOW												12
+#define LED_ORANGE												13
+#define LED_RED														14
+#define LED_BLUE													15
+
+#define LED_D_12_HIGH 										HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, GPIO_PIN_SET)
+#define LED_D_13_HIGH 										HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, GPIO_PIN_SET)
+#define LED_D_14_HIGH 										HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_SET)
+#define LED_D_15_HIGH 										HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, GPIO_PIN_SET)
+#define LED_D_12_LOW 											HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, GPIO_PIN_RESET)
+#define LED_D_13_LOW 											HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, GPIO_PIN_RESET)
+#define LED_D_14_LOW 											HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_RESET)
+#define LED_D_15_LOW 											HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, GPIO_PIN_RESET)
+
+
 #define Motor_Range_Min										1100
 #define Motor_Range_Max										2000
 #define Motor_Range_Min_NOT_BALANCE_STATE	1180
@@ -22,27 +42,6 @@
 //dung de khoi dong/tat quadrotor
 #define RC_ON_OFF_MIN											1070
 #define RC_ON_OFF_MAX											1130
-
-//----------------------//
-//				 ORANGE							//
-//	Yellow 				Red					//
-//				  BLUE	 			//
-//----------------------//
-#define LED_YELLOW												12
-#define LED_ORANGE												13
-#define LED_RED														14
-#define LED_BLUE													15
-
-//khai bao hang so ----------
-#define LED_D_12_HIGH 										HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, GPIO_PIN_SET)
-#define LED_D_13_HIGH 										HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, GPIO_PIN_SET)
-#define LED_D_14_HIGH 										HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_SET)
-#define LED_D_15_HIGH 										HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, GPIO_PIN_SET)
-
-#define LED_D_12_LOW 											HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, GPIO_PIN_RESET)
-#define LED_D_13_LOW 											HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, GPIO_PIN_RESET)
-#define LED_D_14_LOW 											HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_RESET)
-#define LED_D_15_LOW 											HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, GPIO_PIN_RESET)
 
 #define ABS(x)         										((x < 0) ? (-x) : x)
 #define M_PI 															(float)3.1415926535
