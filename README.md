@@ -66,4 +66,15 @@ Type X quadrotor
     pwm_motor_4 = IC_Throttle_pusle_width - rollFuzzyControl.output + pitchFuzzyControl.output;
 ```
 --------------------------------------------------------------------------
-
+# Kalman Filter
+```javascript
+    //-----------Caculate Roll/Pitch/Yaw Angel------------------------------------------------------------------------		
+	TM_MPU6050_ReadAll( MPU6050_I2C_ADDR, &mpu6050);  //---Read value from MPU6050			
+	accX_angle  = ( atan2(-mpu6050.Acc_Y, mpu6050.Acc_Z)) * RAD_TO_DEG; //roll equation provides [-180, 180] range
+	accY_angle =  ( atan2(mpu6050.Acc_X, sqrt(mpu6050.Acc_Y*mpu6050.Acc_Y + mpu6050.Acc_Z*mpu6050.Acc_Z) ) )* RAD_TO_DEG; //[-90, 90] range, which is exactly what is expected for the pitch angle
+	gyroXrate = ((float)mpu6050.Gyro_X)/131;
+	gyroYrate = ((float)mpu6050.Gyro_Y)/131; //gyroX_angle += gyroXrate * DT; // Calculate gyro angle without any filter						
+	Kalman_angelX = kalmanCalculate(&kalmanX, accX_angle, gyroXrate, DT);
+	Kalman_angelY = kalmanCalculate(&kalmanY, accY_angle, gyroYrate, DT);
+```
+--------------------------------------------------------------------------
