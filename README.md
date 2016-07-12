@@ -1,7 +1,9 @@
 # quadrotor
-Quadrotor build on KIT stm32f407
-Author: Nguyen (xitrumuit1991)
-Email: tranvokhoinguyen@gmail.com
+*	Quadrotor build on KIT stm32f407
+*	Author: Nguyen (xitrumuit1991)
+*	Email: tranvokhoinguyen@gmail.com
+
+--------------------------------------------------------------------------
 
 Type X quadrotor
 	(1)\   /(2)   ^^Head
