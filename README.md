@@ -16,7 +16,6 @@ Type X quadrotor
 (1)(3) clockwise along
 (2)(4) not clockwise along
 ```
-
 --------------------------------------------------------------------------
 # Hardware: 
 - 4 ESC(electric speed control) and 4 bruless motor
@@ -51,3 +50,20 @@ Type X quadrotor
     PORT D: PD12, PD13, PD14, PD15  	=> LEDSang (PD12 GREEN, PD13 ORANGE, PD14 RED, PD15 BLUE)
 ```
 --------------------------------------------------------------------------
+# Fuzzy Controller 
+```javascript
+    //FUZZY SYSTEM------------------------------------------------------------------------
+    Fuzzification_All_MF( (float) Kalman_angelX, &rollFuzzyControl);
+    Fuzzification_All_MF( (float) Kalman_angelY, &pitchFuzzyControl);						
+    Apply_All_Rule( 				  &rollFuzzyControl  );
+    Apply_All_Rule( 				  &pitchFuzzyControl );								
+    Defuzzification( 				  &rollFuzzyControl  );				
+    Defuzzification( 				  &pitchFuzzyControl );	
+    
+    pwm_motor_1 = IC_Throttle_pusle_width + rollFuzzyControl.output + pitchFuzzyControl.output;
+    pwm_motor_2 = IC_Throttle_pusle_width + rollFuzzyControl.output - pitchFuzzyControl.output;				
+    pwm_motor_3 = IC_Throttle_pusle_width - rollFuzzyControl.output - pitchFuzzyControl.output;
+    pwm_motor_4 = IC_Throttle_pusle_width - rollFuzzyControl.output + pitchFuzzyControl.output;
+```
+--------------------------------------------------------------------------
+
