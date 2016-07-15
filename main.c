@@ -149,9 +149,9 @@ void 							Defuzzification( FuzzyController * fuzzyController );
 
 int main(void)
 {		
-		#ifdef RTE_CMSIS_RTOS                   
-			osKernelInitialize(); /*..................code default cua ARM co san						*/                 
-		#endif			
+																	#ifdef RTE_CMSIS_RTOS                   
+																		osKernelInitialize(); /*..................code default cua ARM co san						*/                 
+																	#endif			
 		HAL_Init();		SystemClock_Config();	
 	
 		initFuzzySystem(); 					//init fuzzy system
@@ -161,11 +161,18 @@ int main(void)
 		__I2C1_CLK_ENABLE();						
 		Init_LEDSANG_AND_BUTTON_USER_PORT_A0(); //---GPIO 4 led & GPIO button user---------------						
 		PWM_Input_Capture_TIM1(); PWM_Input_Capture_TIM2(); PWM_Input_Capture_TIM4(); PWM_Input_Capture_TIM5();	//---Config DEVO 7 RF module - INPUT CAPTURE MODE---------------------------------------------
-		Init_I2C_Handle_GY86();			//---MPU6050 cau hinh PB6, PB7 doc cam bien	
-		Init_TIM3_OUTPUT_PWM();//---Timer 3 4 channel PWM
-		SANG_4_LED_OFF(); delay_ms(500); 
+		
+		//-----------------------------------------------------------------------	
+		Init_I2C_Handle_GY86();			//---MPU6050 cau hinh PB6, PB7 doc cam bien
+		SANG_4_LED(); delay_ms(500); 
+		TM_I2C_WRITE( MPU6050_I2C_ADDR, MPU6050_PWR_MGMT_1, 0x00); //---Setting/config cho MPU6050-----------------------------------------------------------
+		TM_MPU6050_SetDataRate( MPU6050_I2C_ADDR, MPU6050_SMPLRT_DIV, TM_MPU6050_DataRate_1KHz); 
+		TM_MPU6050_SetAccelerometer( MPU6050_I2C_ADDR, MPU6050_ACCEL_CONFIG, TM_MPU6050_Accelerometer_2G); 
+		TM_MPU6050_SetGyroscope( MPU6050_I2C_ADDR, MPU6050_GYRO_CONFIG, TM_MPU6050_Gyroscope_250s); 
 	
 		//-----------------------------------------------------------------------
+		Init_TIM3_OUTPUT_PWM();//---Timer 3 4 channel PWM
+		SANG_4_LED_OFF(); delay_ms(500); 
 		pwm_test = 750;
 		is_already_config_pwm = 0;
 		TIM3->CCR1 = CONFIG_PWM_MAX;		TIM3->CCR2 = CONFIG_PWM_MAX;		TIM3->CCR3 = CONFIG_PWM_MAX;		TIM3->CCR4 = CONFIG_PWM_MAX;	
@@ -178,16 +185,12 @@ int main(void)
 		
 		TM_I2C_IS_DEVICE_CONNECTED();	//khong connect dc => LED VANG sang lien tuc									
 		who_i_am_reg_value_MPU6050 = TM_I2C_WHO_I_AM( MPU6050_I2C_ADDR, MPU6050_WHO_AM_I_REGISTER);//---Doc gia tri cua WHO I AM register, if error => LED RED(14) sang nhap nhay
-		if( who_i_am_reg_value_MPU6050 != MPU6050_I_AM_VALUES )	{ Error_Handler_Custom(	ERROR_MPU6050_NOT_I_AM_VALUES ); }		
-					
-		TM_I2C_WRITE( MPU6050_I2C_ADDR, MPU6050_PWR_MGMT_1, 0x00); //---Setting/config cho MPU6050-----------------------------------------------------------
-		TM_MPU6050_SetDataRate( MPU6050_I2C_ADDR, MPU6050_SMPLRT_DIV, TM_MPU6050_DataRate_1KHz); 
-		TM_MPU6050_SetAccelerometer( MPU6050_I2C_ADDR, MPU6050_ACCEL_CONFIG, TM_MPU6050_Accelerometer_2G); 
-		TM_MPU6050_SetGyroscope( MPU6050_I2C_ADDR, MPU6050_GYRO_CONFIG, TM_MPU6050_Gyroscope_250s); 
+		if( who_i_am_reg_value_MPU6050 != MPU6050_I_AM_VALUES )	{ Error_Handler_Custom(	ERROR_MPU6050_NOT_I_AM_VALUES ); }
+
 				
-		#ifdef RTE_CMSIS_RTOS 
-			osKernelStart(); //.........code dafault cua ARM		// when using CMSIS RTOS	// start thread execution 
-		#endif
+													#ifdef RTE_CMSIS_RTOS 
+														osKernelStart(); //.........code dafault cua ARM		// when using CMSIS RTOS	// start thread execution 
+													#endif
 		Check_EveryThing_OK();			
 		while(1)
 		{		
@@ -198,6 +201,8 @@ int main(void)
 						SANG_4_LED(); delay_ms(3500); SANG_4_LED_OFF();
 						is_already_config_pwm = 1;
 				}
+				
+				//---------------------------------------------------------
 				while(FlyState == STATE_FLY_OFF) {	Turn_On_Quadrotor(); }
 				
 				if(HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_0)==GPIO_PIN_SET) //khi nhan buttun USER ma chua tha ra -> khong lam gi
