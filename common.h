@@ -22,10 +22,10 @@
 #define LED_D_15_LOW 											HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, GPIO_PIN_RESET)
 
 
-#define Motor_Range_Min										1100
-#define Motor_Range_Max										2000
+#define Motor_Range_Min										1150
+#define Motor_Range_Max										1900
 #define Motor_Range_Min_NOT_BALANCE_STATE	1180
-#define DO_VOT_LO													100
+#define DO_VOT_LO													50
 
 #define RC_Throtte_Min										1100
 #define RC_Throtte_Max										1900

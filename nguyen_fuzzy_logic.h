@@ -159,7 +159,7 @@ void setOneRule(MF_rule* rule, MF * inGocLech, MF * inGocLech_dot, MF * outValue
 //	dung vong for loop het NUMBER_RULE,//	voi moi Rule, dung MAX or MIN => h,//	tinh avg_x = (left+right)/2
 void calcule_H_and_Y_PerRule(MF_rule   * rule )
 {
-	float temp=0;
+		float temp=0;
 		if(!rule) return;
 		rule->h = (float) MAXIMUM(  MINIMUM(rule->inGocLech->h, rule->inGocLech_dot->h ) , 0);
 	
