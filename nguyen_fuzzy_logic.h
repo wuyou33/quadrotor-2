@@ -39,8 +39,8 @@ Step 5: Defuzzification: caculate output via Loop all rule list
 #define GocLech_dot_maxXD 					 (float)10
 #define GocLech_dot_minXD 					(float)-10
 
-#define ValuePWMControl_maxXD 			 (float)200
-#define ValuePWMControl_minXD 			(float)-200
+#define ValuePWMControl_maxXD 			 (float)100
+#define ValuePWMControl_minXD 			(float)-100
 
 
 //-------MEMBERSHIP FUNCTION--------------------------------

@@ -47,6 +47,7 @@ PB1 pwm 4
 #include "nguyen_pid.h"
 #include "kalman_filter.h"
 #include "nguyen_fuzzy_logic.h"
+#include "nguyen_HMC5883L.h"
 
 //----------Khai bao BIEN-------------------------------------------------------------------------
 I2C_HandleTypeDef 				I2C_Handle_10truc;  //I2C handle, dung de doc value cua cam bien MPU6050
@@ -75,6 +76,7 @@ float 										Kalman_roll, Kalman_pitch, Kalman_yaw;
 
 Kalman_Setting 						kalmanX,	kalmanY,   kalmanZ;
 TM_MPU6050_t 							mpu6050;
+Compass_HMC5883L					compassHMC5883L;
 
 
 				//--------Fuzzy System--------------
@@ -150,11 +152,10 @@ void 							GY86_I2C_WRITE( uint8_t device_address, uint8_t register_address, ui
 void 							GY86_I2C_READ_MULTI( uint8_t device_address, uint8_t register_address, uint8_t* data, uint16_t count);
 void 							GY86_I2C_READ(  uint8_t device_address, uint8_t register_address, uint8_t* data);
 void 							GY86_MPU6050_ReadAll( uint8_t device_address, TM_MPU6050_t* output );
-void 							Calculate_Accel_X_Angles(TM_MPU6050_t* output, float* angel_x);
-void 							Calculate_Accel_Y_Angles(TM_MPU6050_t* output, float* angel_y);
-void 							Calculate_Accel_Z_Angles(TM_MPU6050_t* output, float* angel_z);
 void 							MPU6050_gyro_zero_offset(void);
-void 							Sang_Led_By_MPU6050_Values(float angel_x, float angel_y, float angel_z );
+void 							HMC5883L_set_config(void);
+void 							HMC5883L_read_compass_data(Compass_HMC5883L* compass);
+void 							Sang_Led_By_MPU6050_Values(float roll, float pitch, float yaw );
 				//ham delay default
 volatile 					uint32_t g_iSysTicks = 0;
 void 							SysTick_Handler(){	g_iSysTicks++;}
@@ -195,6 +196,8 @@ int main(void)
 		GY86_MPU6050_SetDataRate( MPU6050_I2C_ADDR, MPU6050_SMPLRT_DIV, TM_MPU6050_DataRate_1KHz); 
 		GY86_MPU6050_SetAccelerometer( MPU6050_I2C_ADDR, MPU6050_ACCEL_CONFIG, TM_MPU6050_Accelerometer_2G); 
 		GY86_MPU6050_SetGyroscope( MPU6050_I2C_ADDR, MPU6050_GYRO_CONFIG, TM_MPU6050_Gyroscope_250s); 
+		HMC5883L_set_config();
+		
 	
 		//-----------------------------------------------------------------------
 		SANG_4_LED_LOOP(10,100);
@@ -279,31 +282,43 @@ int main(void)
 										//BALANCE MODE-------------TRANG THAI CAN BANG
 										//Quadrotor can FLY ----- khi can` dieu khien Throttle value >= 1200
 										//-----------Caculate Roll/Pitch/Yaw Angel------------------------------------------------------------------------		
-										GY86_MPU6050_ReadAll( MPU6050_I2C_ADDR, &mpu6050);  //---Read value from MPU6050			
+										GY86_MPU6050_ReadAll( MPU6050_I2C_ADDR, &mpu6050);  //---Read value from MPU6050
+										HMC5883L_read_compass_data(&compassHMC5883L);
 										gyroX_rate = ((float)((float)mpu6050.Gyro_X - (float)gyro_x_zero_offset))/131;
 										gyroY_rate = ((float)((float)mpu6050.Gyro_Y - (float)gyro_y_zero_offset))/131;	
-										accX_angle  =  atan2(mpu6050.Acc_Y, mpu6050.Acc_Z)*RAD_TO_DEG; //roll equation provides [-180, 180] range
-										accY_angle =   atan2(-mpu6050.Acc_X, sqrt(mpu6050.Acc_Y*mpu6050.Acc_Y + mpu6050.Acc_Z*mpu6050.Acc_Z) )*RAD_TO_DEG; //[-90, 90] range, which is exactly what is expected for the pitch angle										
-
-										//gyroX_angle = gyroX_angle + gyroXrate * DT; // Calculate gyro angle without any filter						
-										Kalman_roll = kalmanCalculate(&kalmanX, accX_angle, gyroX_rate, DT);
-										Kalman_pitch = kalmanCalculate(&kalmanY, accY_angle, gyroY_rate, DT); 
+										gyroZ_rate = ((float)((float)mpu6050.Gyro_Z - (float)gyro_z_zero_offset))/131;	
+									
+										accX_angle =  	atan2(mpu6050.Acc_Y, mpu6050.Acc_Z)*RAD_TO_DEG; //roll equation provides [-180, 180] range
+										accY_angle =   	atan2(-mpu6050.Acc_X, sqrt(mpu6050.Acc_Y*mpu6050.Acc_Y + mpu6050.Acc_Z*mpu6050.Acc_Z) )*RAD_TO_DEG; //[-90, 90] range, which is exactly what is expected for the pitch angle										
+										accZ_angle = 		atan2((float)compassHMC5883L.Compass_Y, (float)compassHMC5883L.Compass_X)*RAD_TO_DEG;
+									
+										//gyroX_angle = gyroX_angle + gyroXrate * DT; // Calculate gyro angle without any filter	
+									
+										Kalman_roll  = kalmanCalculate(&kalmanX, accX_angle, gyroX_rate, DT);
+										Kalman_pitch = kalmanCalculate(&kalmanY, accY_angle, gyroY_rate, DT);
+										Kalman_yaw   = kalmanCalculate(&kalmanZ, accZ_angle, gyroZ_rate, DT);
+									
 										//compAngleX = 0.93 * (compAngleX + gyroXrate * dt) + 0.07 * accX_angle; // Calculate the angle using a Complimentary filter
 										Sang_Led_By_MPU6050_Values(Kalman_roll, Kalman_pitch, Kalman_yaw);			
 										//-----------------------------------------------------------------------------------
 															
 										//FUZZY SYSTEM------------------------------------------------------------------------
-										Fuzzification_All_MF( (float) Kalman_roll, &rollFuzzyControl);
-										Fuzzification_All_MF( (float) Kalman_pitch, &pitchFuzzyControl);						
+										Fuzzification_All_MF( (float) Kalman_roll, 	&rollFuzzyControl);
+										Fuzzification_All_MF( (float) Kalman_pitch, &pitchFuzzyControl);			
+										Fuzzification_All_MF( (float) Kalman_yaw, 	&yawFuzzyControl);
+										
 										Apply_All_Rule( 				  &rollFuzzyControl  );
-										Apply_All_Rule( 				  &pitchFuzzyControl );								
+										Apply_All_Rule( 				  &pitchFuzzyControl );			
+										Apply_All_Rule( 				  &yawFuzzyControl );	
+										
 										Defuzzification( 				  &rollFuzzyControl  );				
 										Defuzzification( 				  &pitchFuzzyControl );	
+										Defuzzification( 				  &yawFuzzyControl );
 										
-										pwm_motor_1 = IC_Throttle_pusle_width + limitOutputPWMFuzzy( rollFuzzyControl.output   + pitchFuzzyControl.output );
-										pwm_motor_2 = IC_Throttle_pusle_width + limitOutputPWMFuzzy( - rollFuzzyControl.output + pitchFuzzyControl.output );				
-										pwm_motor_3 = IC_Throttle_pusle_width + limitOutputPWMFuzzy( rollFuzzyControl.output   - pitchFuzzyControl.output );
-										pwm_motor_4 = IC_Throttle_pusle_width + limitOutputPWMFuzzy( - rollFuzzyControl.output - pitchFuzzyControl.output );
+										pwm_motor_1 = IC_Throttle_pusle_width + limitOutputPWMFuzzy( rollFuzzyControl.output   + pitchFuzzyControl.output + yawFuzzyControl.output);
+										pwm_motor_2 = IC_Throttle_pusle_width + limitOutputPWMFuzzy( - rollFuzzyControl.output + pitchFuzzyControl.output - yawFuzzyControl.output);				
+										pwm_motor_3 = IC_Throttle_pusle_width + limitOutputPWMFuzzy( rollFuzzyControl.output   - pitchFuzzyControl.output + yawFuzzyControl.output);
+										pwm_motor_4 = IC_Throttle_pusle_width + limitOutputPWMFuzzy( - rollFuzzyControl.output - pitchFuzzyControl.output - yawFuzzyControl.output);
 										
 										SetPWM_1_Motor(1,pwm_motor_1);
 										SetPWM_1_Motor(2,pwm_motor_2);
@@ -1009,6 +1024,25 @@ void MPU6050_gyro_zero_offset(void)//tinh gyro offset 3 truc
 }
 
 
+void HMC5883L_set_config(void) 
+{
+		GY86_I2C_WRITE( HMC5883L_Device_Address, HMC5883L_Register_A, 0x18);//set rate = 75Hz
+		GY86_I2C_WRITE( HMC5883L_Device_Address, HMC5883L_Register_B, 0x60);//full scale = +/- 2.5 Gauss
+		GY86_I2C_WRITE( HMC5883L_Device_Address, HMC5883L_Measurement_Mode_Register, Mode_Measurement_Continuous);
+		while(HAL_I2C_GetState(&I2C_Handle_10truc)!=HAL_I2C_STATE_READY){}
+}
+
+void HMC5883L_read_compass_data(Compass_HMC5883L* compass)
+{
+		uint8_t data[6];
+		GY86_I2C_READ_MULTI( HMC5883L_Device_Address, HMC5883L_Data_Register_Begin, data, 6); //select register 3
+		while(HAL_I2C_GetState(&I2C_Handle_10truc)!=HAL_I2C_STATE_READY){}
+			
+		compass->Compass_X = (int16_t)(data[0] << 8 | data[1]);
+		compass->Compass_Y = (int16_t)(data[2] << 8 | data[3]);
+		compass->Compass_Z = (int16_t)(data[4] << 8 | data[5]);
+}	
+
 
 
 
@@ -1557,8 +1591,11 @@ void initFuzzySystem(void)
 {
 	rollFuzzyControl.pre_GocLech = 0;
 	pitchFuzzyControl.pre_GocLech = 0;
+	yawFuzzyControl.pre_GocLech = 0;
+	
 	rollFuzzyControl.output = 0;
 	pitchFuzzyControl.output = 0;
+	yawFuzzyControl.output = 0;
 	
 	//Buoc 1: Khai bao MF:
 	/*GocLech*/
@@ -1579,6 +1616,14 @@ void initFuzzySystem(void)
 	setABCD_MF(&pitchFuzzyControl.inGocLech[5],    6,    12,    12,   18, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//LittleBig
 	setABCD_MF(&pitchFuzzyControl.inGocLech[6],   12,    18,    30,   30, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//VeryBig
 	
+	setABCD_MF(&yawFuzzyControl.inGocLech[0],  -30,   -30,   -18,  -12, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//VerySmall
+	setABCD_MF(&yawFuzzyControl.inGocLech[1],  -18,   -12,   -12,   -6, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//LittleSmall
+	setABCD_MF(&yawFuzzyControl.inGocLech[2],  -12,    -6,    -6,    0, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//Small
+	setABCD_MF(&yawFuzzyControl.inGocLech[3],   -6,     0,     0,    6, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//Zero
+	setABCD_MF(&yawFuzzyControl.inGocLech[4],    0,     6,     6,   12, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//Big
+	setABCD_MF(&yawFuzzyControl.inGocLech[5],    6,    12,    12,   18, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//LittleBig
+	setABCD_MF(&yawFuzzyControl.inGocLech[6],   12,    18,    30,   30, TYPE_INPUT_GOCLECH, GocLech_minXD, GocLech_maxXD);//VeryBig
+	
 
 	/*GocLech_dot*/
 	setABCD_MF(&rollFuzzyControl.inGocLech_dot[0] ,  -10,   -10,   -6,   -4, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//VeryNagative
@@ -1597,6 +1642,14 @@ void initFuzzySystem(void)
 	setABCD_MF(&pitchFuzzyControl.inGocLech_dot[4],    0,     2,    2,    4, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//Positive
 	setABCD_MF(&pitchFuzzyControl.inGocLech_dot[5],    2,     4,    4,    6, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//LittlePositive
 	setABCD_MF(&pitchFuzzyControl.inGocLech_dot[6],    4,     6,   10,   10, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//VeryPositive
+	
+	setABCD_MF(&yawFuzzyControl.inGocLech_dot[0],  -10,   -10,   -6,   -4, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//VeryNagative
+	setABCD_MF(&yawFuzzyControl.inGocLech_dot[1],   -6,    -4,   -4,   -2, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//LittleNagative
+	setABCD_MF(&yawFuzzyControl.inGocLech_dot[2],   -4,    -2,   -2,    0, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//Nagative
+	setABCD_MF(&yawFuzzyControl.inGocLech_dot[3],   -2,     0,    0,    2, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//Zero
+	setABCD_MF(&yawFuzzyControl.inGocLech_dot[4],    0,     2,    2,    4, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//Positive
+	setABCD_MF(&yawFuzzyControl.inGocLech_dot[5],    2,     4,    4,    6, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//LittlePositive
+	setABCD_MF(&yawFuzzyControl.inGocLech_dot[6],    4,     6,   10,   10, TYPE_INPUT_GOCLECH_DOT, GocLech_dot_minXD, GocLech_dot_maxXD);//VeryPositive
 	
 	
 	/*ValuePWMControl*/
@@ -1617,6 +1670,14 @@ void initFuzzySystem(void)
 	setABCD_MF(&pitchFuzzyControl.outValuePWMControl[5],   10,    25,    25,    70, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//LittleFast
 	setABCD_MF(&pitchFuzzyControl.outValuePWMControl[6],   20,    80,   100,   100, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//VeryFast
 	
+	
+	setABCD_MF(&yawFuzzyControl.outValuePWMControl[0], -100,  -100,   -80,   -20, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//VerySlow
+	setABCD_MF(&yawFuzzyControl.outValuePWMControl[1],  -70,   -25,   -25,   -10, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//LittleSlow
+	setABCD_MF(&yawFuzzyControl.outValuePWMControl[2],  -40,   -15,   -15,     0, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//Slow
+	setABCD_MF(&yawFuzzyControl.outValuePWMControl[3],  -15,     0,     0,    15, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//Zero
+	setABCD_MF(&yawFuzzyControl.outValuePWMControl[4],    0,    15,    15,    40, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//Fast
+	setABCD_MF(&yawFuzzyControl.outValuePWMControl[5],   10,    25,    25,    70, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//LittleFast
+	setABCD_MF(&yawFuzzyControl.outValuePWMControl[6],   20,    80,   100,   100, TYPE_OUTPUT_ValuePWMControl, ValuePWMControl_minXD, ValuePWMControl_maxXD);//VeryFast
 	
 	//Buoc 2: RULE FuzzySystem  --------------------------------------------	
 	/*
@@ -1740,6 +1801,63 @@ void initFuzzySystem(void)
 	setOneRule(&pitchFuzzyControl.fuzzy_rules[47], &pitchFuzzyControl.inGocLech[6], &pitchFuzzyControl.inGocLech_dot[5], &pitchFuzzyControl.outValuePWMControl[0], 48);//rule 48
 	setOneRule(&pitchFuzzyControl.fuzzy_rules[48], &pitchFuzzyControl.inGocLech[6], &pitchFuzzyControl.inGocLech_dot[6], &pitchFuzzyControl.outValuePWMControl[0], 49);//rule 49
 	
+	
+	//YAW
+	setOneRule(&yawFuzzyControl.fuzzy_rules[0], &yawFuzzyControl.inGocLech[0], &yawFuzzyControl.inGocLech_dot[0], &yawFuzzyControl.outValuePWMControl[6], 1);//rule 1
+	setOneRule(&yawFuzzyControl.fuzzy_rules[1], &yawFuzzyControl.inGocLech[0], &yawFuzzyControl.inGocLech_dot[1], &yawFuzzyControl.outValuePWMControl[6], 2);//rule 2
+	setOneRule(&yawFuzzyControl.fuzzy_rules[2], &yawFuzzyControl.inGocLech[0], &yawFuzzyControl.inGocLech_dot[2], &yawFuzzyControl.outValuePWMControl[5], 3);//rule 3
+	setOneRule(&yawFuzzyControl.fuzzy_rules[3], &yawFuzzyControl.inGocLech[0], &yawFuzzyControl.inGocLech_dot[3], &yawFuzzyControl.outValuePWMControl[5], 4);//rule 4
+	setOneRule(&yawFuzzyControl.fuzzy_rules[4], &yawFuzzyControl.inGocLech[0], &yawFuzzyControl.inGocLech_dot[4], &yawFuzzyControl.outValuePWMControl[4], 5);//rule 5
+	setOneRule(&yawFuzzyControl.fuzzy_rules[5], &yawFuzzyControl.inGocLech[0], &yawFuzzyControl.inGocLech_dot[5], &yawFuzzyControl.outValuePWMControl[4], 6);//rule 6
+	setOneRule(&yawFuzzyControl.fuzzy_rules[6], &yawFuzzyControl.inGocLech[0], &yawFuzzyControl.inGocLech_dot[6], &yawFuzzyControl.outValuePWMControl[3], 7);//rule 7
+	
+	setOneRule(&yawFuzzyControl.fuzzy_rules[7],  &yawFuzzyControl.inGocLech[1], &yawFuzzyControl.inGocLech_dot[0], &yawFuzzyControl.outValuePWMControl[6], 8);//rule 8
+	setOneRule(&yawFuzzyControl.fuzzy_rules[8],  &yawFuzzyControl.inGocLech[1], &yawFuzzyControl.inGocLech_dot[1], &yawFuzzyControl.outValuePWMControl[5], 9);//rule 9
+	setOneRule(&yawFuzzyControl.fuzzy_rules[9],  &yawFuzzyControl.inGocLech[1], &yawFuzzyControl.inGocLech_dot[2], &yawFuzzyControl.outValuePWMControl[5], 10);//rule 10
+	setOneRule(&yawFuzzyControl.fuzzy_rules[10], &yawFuzzyControl.inGocLech[1], &yawFuzzyControl.inGocLech_dot[3], &yawFuzzyControl.outValuePWMControl[4], 11);//rule 11
+	setOneRule(&yawFuzzyControl.fuzzy_rules[11], &yawFuzzyControl.inGocLech[1], &yawFuzzyControl.inGocLech_dot[4], &yawFuzzyControl.outValuePWMControl[4], 12);//rule 12
+	setOneRule(&yawFuzzyControl.fuzzy_rules[12], &yawFuzzyControl.inGocLech[1], &yawFuzzyControl.inGocLech_dot[5], &yawFuzzyControl.outValuePWMControl[3], 13);//rule 13
+	setOneRule(&yawFuzzyControl.fuzzy_rules[13], &yawFuzzyControl.inGocLech[1], &yawFuzzyControl.inGocLech_dot[6], &yawFuzzyControl.outValuePWMControl[2], 14);//rule 14
+	
+	setOneRule(&yawFuzzyControl.fuzzy_rules[14], &yawFuzzyControl.inGocLech[2], &yawFuzzyControl.inGocLech_dot[0], &yawFuzzyControl.outValuePWMControl[5], 15);//rule 15
+	setOneRule(&yawFuzzyControl.fuzzy_rules[15], &yawFuzzyControl.inGocLech[2], &yawFuzzyControl.inGocLech_dot[1], &yawFuzzyControl.outValuePWMControl[5], 16);//rule 16
+	setOneRule(&yawFuzzyControl.fuzzy_rules[16], &yawFuzzyControl.inGocLech[2], &yawFuzzyControl.inGocLech_dot[2], &yawFuzzyControl.outValuePWMControl[4], 17);//rule 17
+	setOneRule(&yawFuzzyControl.fuzzy_rules[17], &yawFuzzyControl.inGocLech[2], &yawFuzzyControl.inGocLech_dot[3], &yawFuzzyControl.outValuePWMControl[4], 18);//rule 18
+	setOneRule(&yawFuzzyControl.fuzzy_rules[18], &yawFuzzyControl.inGocLech[2], &yawFuzzyControl.inGocLech_dot[4], &yawFuzzyControl.outValuePWMControl[3], 19);//rule 19
+	setOneRule(&yawFuzzyControl.fuzzy_rules[19], &yawFuzzyControl.inGocLech[2], &yawFuzzyControl.inGocLech_dot[5], &yawFuzzyControl.outValuePWMControl[2], 20);//rule 20
+	setOneRule(&yawFuzzyControl.fuzzy_rules[20], &yawFuzzyControl.inGocLech[2], &yawFuzzyControl.inGocLech_dot[6], &yawFuzzyControl.outValuePWMControl[2], 21);//rule 21
+	
+	setOneRule(&yawFuzzyControl.fuzzy_rules[21], &yawFuzzyControl.inGocLech[3], &yawFuzzyControl.inGocLech_dot[0], &yawFuzzyControl.outValuePWMControl[5], 22);//rule 22
+	setOneRule(&yawFuzzyControl.fuzzy_rules[22], &yawFuzzyControl.inGocLech[3], &yawFuzzyControl.inGocLech_dot[1], &yawFuzzyControl.outValuePWMControl[4], 23);//rule 23
+	setOneRule(&yawFuzzyControl.fuzzy_rules[23], &yawFuzzyControl.inGocLech[3], &yawFuzzyControl.inGocLech_dot[2], &yawFuzzyControl.outValuePWMControl[4], 24);//rule 24
+	setOneRule(&yawFuzzyControl.fuzzy_rules[24], &yawFuzzyControl.inGocLech[3], &yawFuzzyControl.inGocLech_dot[3], &yawFuzzyControl.outValuePWMControl[3], 25);//rule 25
+	setOneRule(&yawFuzzyControl.fuzzy_rules[25], &yawFuzzyControl.inGocLech[3], &yawFuzzyControl.inGocLech_dot[4], &yawFuzzyControl.outValuePWMControl[2], 26);//rule 26
+	setOneRule(&yawFuzzyControl.fuzzy_rules[26], &yawFuzzyControl.inGocLech[3], &yawFuzzyControl.inGocLech_dot[5], &yawFuzzyControl.outValuePWMControl[2], 27);//rule 27
+	setOneRule(&yawFuzzyControl.fuzzy_rules[27], &yawFuzzyControl.inGocLech[3], &yawFuzzyControl.inGocLech_dot[6], &yawFuzzyControl.outValuePWMControl[1], 28);//rule 28
+	
+	setOneRule(&yawFuzzyControl.fuzzy_rules[28], &yawFuzzyControl.inGocLech[4], &yawFuzzyControl.inGocLech_dot[0], &yawFuzzyControl.outValuePWMControl[4], 29);//rule 29
+	setOneRule(&yawFuzzyControl.fuzzy_rules[29], &yawFuzzyControl.inGocLech[4], &yawFuzzyControl.inGocLech_dot[1], &yawFuzzyControl.outValuePWMControl[4], 30);//rule 30
+	setOneRule(&yawFuzzyControl.fuzzy_rules[30], &yawFuzzyControl.inGocLech[4], &yawFuzzyControl.inGocLech_dot[2], &yawFuzzyControl.outValuePWMControl[3], 31);//rule 31
+	setOneRule(&yawFuzzyControl.fuzzy_rules[31], &yawFuzzyControl.inGocLech[4], &yawFuzzyControl.inGocLech_dot[3], &yawFuzzyControl.outValuePWMControl[2], 32);//rule 32
+	setOneRule(&yawFuzzyControl.fuzzy_rules[32], &yawFuzzyControl.inGocLech[4], &yawFuzzyControl.inGocLech_dot[4], &yawFuzzyControl.outValuePWMControl[2], 33);//rule 33
+	setOneRule(&yawFuzzyControl.fuzzy_rules[33], &yawFuzzyControl.inGocLech[4], &yawFuzzyControl.inGocLech_dot[5], &yawFuzzyControl.outValuePWMControl[1], 34);//rule 34
+	setOneRule(&yawFuzzyControl.fuzzy_rules[34], &yawFuzzyControl.inGocLech[4], &yawFuzzyControl.inGocLech_dot[6], &yawFuzzyControl.outValuePWMControl[1], 35);//rule 35
+	
+	setOneRule(&yawFuzzyControl.fuzzy_rules[35], &yawFuzzyControl.inGocLech[5], &yawFuzzyControl.inGocLech_dot[0], &yawFuzzyControl.outValuePWMControl[4], 36);//rule 36
+	setOneRule(&yawFuzzyControl.fuzzy_rules[36], &yawFuzzyControl.inGocLech[5], &yawFuzzyControl.inGocLech_dot[1], &yawFuzzyControl.outValuePWMControl[3], 37);//rule 37
+	setOneRule(&yawFuzzyControl.fuzzy_rules[37], &yawFuzzyControl.inGocLech[5], &yawFuzzyControl.inGocLech_dot[2], &yawFuzzyControl.outValuePWMControl[2], 38);//rule 38
+	setOneRule(&yawFuzzyControl.fuzzy_rules[38], &yawFuzzyControl.inGocLech[5], &yawFuzzyControl.inGocLech_dot[3], &yawFuzzyControl.outValuePWMControl[2], 39);//rule 39
+	setOneRule(&yawFuzzyControl.fuzzy_rules[39], &yawFuzzyControl.inGocLech[5], &yawFuzzyControl.inGocLech_dot[4], &yawFuzzyControl.outValuePWMControl[1], 40);//rule 40
+	setOneRule(&yawFuzzyControl.fuzzy_rules[40], &yawFuzzyControl.inGocLech[5], &yawFuzzyControl.inGocLech_dot[5], &yawFuzzyControl.outValuePWMControl[1], 41);//rule 41
+	setOneRule(&yawFuzzyControl.fuzzy_rules[41], &yawFuzzyControl.inGocLech[5], &yawFuzzyControl.inGocLech_dot[6], &yawFuzzyControl.outValuePWMControl[0], 42);//rule 42
+
+	setOneRule(&yawFuzzyControl.fuzzy_rules[42], &yawFuzzyControl.inGocLech[6], &yawFuzzyControl.inGocLech_dot[0], &yawFuzzyControl.outValuePWMControl[3], 43);//rule 43
+	setOneRule(&yawFuzzyControl.fuzzy_rules[43], &yawFuzzyControl.inGocLech[6], &yawFuzzyControl.inGocLech_dot[1], &yawFuzzyControl.outValuePWMControl[2], 44);//rule 44
+	setOneRule(&yawFuzzyControl.fuzzy_rules[44], &yawFuzzyControl.inGocLech[6], &yawFuzzyControl.inGocLech_dot[2], &yawFuzzyControl.outValuePWMControl[2], 45);//rule 45
+	setOneRule(&yawFuzzyControl.fuzzy_rules[45], &yawFuzzyControl.inGocLech[6], &yawFuzzyControl.inGocLech_dot[3], &yawFuzzyControl.outValuePWMControl[1], 46);//rule 46
+	setOneRule(&yawFuzzyControl.fuzzy_rules[46], &yawFuzzyControl.inGocLech[6], &yawFuzzyControl.inGocLech_dot[4], &yawFuzzyControl.outValuePWMControl[1], 47);//rule 47
+	setOneRule(&yawFuzzyControl.fuzzy_rules[47], &yawFuzzyControl.inGocLech[6], &yawFuzzyControl.inGocLech_dot[5], &yawFuzzyControl.outValuePWMControl[0], 48);//rule 48
+	setOneRule(&yawFuzzyControl.fuzzy_rules[48], &yawFuzzyControl.inGocLech[6], &yawFuzzyControl.inGocLech_dot[6], &yawFuzzyControl.outValuePWMControl[0], 49);//rule 49
 }
 
 void Fuzzification_All_MF(float x, FuzzyController * fuzzyController)
