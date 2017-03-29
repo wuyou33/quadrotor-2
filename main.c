@@ -291,6 +291,36 @@ int main(void)
 										accX_angle =  	atan2(mpu6050.Acc_Y, mpu6050.Acc_Z)*RAD_TO_DEG; //roll equation provides [-180, 180] range
 										accY_angle =   	atan2(-mpu6050.Acc_X, sqrt(mpu6050.Acc_Y*mpu6050.Acc_Y + mpu6050.Acc_Z*mpu6050.Acc_Z) )*RAD_TO_DEG; //[-90, 90] range, which is exactly what is expected for the pitch angle										
 										accZ_angle = 		atan2((float)compassHMC5883L.Compass_Y, (float)compassHMC5883L.Compass_X)*RAD_TO_DEG;
+										if (( atan2((float)compassHMC5883L.Compass_Y, (float)compassHMC5883L.Compass_X) )>=0) 
+									  {
+												 accZ_angle = atan2((float)compassHMC5883L.Compass_Y, (float)compassHMC5883L.Compass_X)*RAD_TO_DEG;
+										}
+									  if (( atan2((float)compassHMC5883L.Compass_Y, (float)compassHMC5883L.Compass_X) ) < 0) 
+									  {
+												accZ_angle = 360-(atan2((float)compassHMC5883L.Compass_Y, (float)compassHMC5883L.Compass_X)*RAD_TO_DEG);
+									  }
+										/*heading = atan2(com_y,com_x);
+											heading-=declination_angle;
+
+											//heading+=declination_angle; 
+
+											if(heading < 0.0) 
+											{ 
+											heading += (2.0 * 3.141592654); 
+											} 
+
+											if(heading > (2.0 * 3.141592654)) 
+											{ 
+											heading -= (2.0 * 3.141592654); 
+											} 
+
+											zDegrees=heading*rad_to_degree;
+											if(zDegrees >= 1 && zDegrees < 240)
+											{com_z_angle = (zDegrees*179/239);}
+											else{
+											if(zDegrees >= 240)
+											{com_z_angle = (zDegrees*180/120);}
+											}*/
 									
 										//gyroX_angle = gyroX_angle + gyroXrate * DT; // Calculate gyro angle without any filter	
 									
