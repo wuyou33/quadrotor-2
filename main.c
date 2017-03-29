@@ -65,12 +65,14 @@ int16_t										pwm_test, is_already_config_pwm;
 int16_t 									FlyState; // 0: May bay ngung hoat dong, 1:may bay dang bay
 
 				//---------sensor
-uint8_t 									who_i_am_reg_value_MPU6050;
+uint8_t 									who_i_am_reg_value_MPU6050, i;
 int32_t 									timer;
+float 										gyro_x_zero_offset, gyro_y_zero_offset, gyro_z_zero_offset;
 float 										accX_angle, accY_angle, accZ_angle;
+float 										gyroX_rate, gyroY_rate, gyroZ_rate;
 float 										gyroX_angle, gyroY_angle, gyroZ_angle;
-float 										Kalman_angelX, Kalman_angelY, Kalman_angelZ;
-float 										gyroXrate, gyroYrate, gyroZrate;
+float 										Kalman_roll, Kalman_pitch, Kalman_yaw;
+
 Kalman_Setting 						kalmanX,	kalmanY,   kalmanZ;
 TM_MPU6050_t 							mpu6050;
 
@@ -138,19 +140,20 @@ void 							SetPWM_Motor_Giam(int16_t numberMotor, int16_t changeValue);
 void 							Direct_Quadrotor_By_Receiver(void);
 
 				//i2c chip mpu6050 10truc
-void 							Init_I2C_Handle_GY86(void);
-void 							TM_I2C_IS_DEVICE_CONNECTED(void);
-uint8_t 					TM_I2C_WHO_I_AM( uint8_t device_address, uint8_t register_address);
-void 							TM_MPU6050_SetDataRate(uint8_t device_address, uint8_t register_address, uint8_t rate);
-void 							TM_MPU6050_SetAccelerometer(uint8_t device_address, uint8_t register_address, uint8_t Acc_8G_Value);
-void 							TM_MPU6050_SetGyroscope(uint8_t device_address, uint8_t register_address, uint8_t Gyro_250s_Value); 
-void 							TM_I2C_WRITE( uint8_t device_address, uint8_t register_address, uint8_t data);
-void 							TM_I2C_READ_MULTI( uint8_t device_address, uint8_t register_address, uint8_t* data, uint16_t count);
-void 							TM_I2C_READ(  uint8_t device_address, uint8_t register_address, uint8_t* data);
-void 							TM_MPU6050_ReadAll( uint8_t device_address, TM_MPU6050_t* output );
+void 							GY86_I2C_Handle_GY86(void);
+void 							GY86_I2C_IS_DEVICE_CONNECTED(void);
+uint8_t 					GY86_I2C_WHO_I_AM( uint8_t device_address, uint8_t register_address);
+void 							GY86_MPU6050_SetDataRate(uint8_t device_address, uint8_t register_address, uint8_t rate);
+void 							GY86_MPU6050_SetAccelerometer(uint8_t device_address, uint8_t register_address, uint8_t Acc_8G_Value);
+void 							GY86_MPU6050_SetGyroscope(uint8_t device_address, uint8_t register_address, uint8_t Gyro_250s_Value); 
+void 							GY86_I2C_WRITE( uint8_t device_address, uint8_t register_address, uint8_t data);
+void 							GY86_I2C_READ_MULTI( uint8_t device_address, uint8_t register_address, uint8_t* data, uint16_t count);
+void 							GY86_I2C_READ(  uint8_t device_address, uint8_t register_address, uint8_t* data);
+void 							GY86_MPU6050_ReadAll( uint8_t device_address, TM_MPU6050_t* output );
 void 							Calculate_Accel_X_Angles(TM_MPU6050_t* output, float* angel_x);
 void 							Calculate_Accel_Y_Angles(TM_MPU6050_t* output, float* angel_y);
 void 							Calculate_Accel_Z_Angles(TM_MPU6050_t* output, float* angel_z);
+void 							MPU6050_gyro_zero_offset(void);
 void 							Sang_Led_By_MPU6050_Values(float angel_x, float angel_y, float angel_z );
 				//ham delay default
 volatile 					uint32_t g_iSysTicks = 0;
@@ -187,15 +190,13 @@ int main(void)
 		PWM_Input_Capture_TIM5();	
 		
 		//-----------------------------------------------------------------------	
-		Init_I2C_Handle_GY86();			//---MPU6050 cau hinh PB6, PB7 doc cam bien
-		
-		TM_I2C_WRITE( MPU6050_I2C_ADDR, MPU6050_PWR_MGMT_1, 0x00); //---Setting/config cho MPU6050-----------------------------------------------------------
-		TM_MPU6050_SetDataRate( MPU6050_I2C_ADDR, MPU6050_SMPLRT_DIV, TM_MPU6050_DataRate_1KHz); 
-		TM_MPU6050_SetAccelerometer( MPU6050_I2C_ADDR, MPU6050_ACCEL_CONFIG, TM_MPU6050_Accelerometer_2G); 
-		TM_MPU6050_SetGyroscope( MPU6050_I2C_ADDR, MPU6050_GYRO_CONFIG, TM_MPU6050_Gyroscope_250s); 
+		GY86_I2C_Handle_GY86();			//---MPU6050 cau hinh PB6, PB7 doc cam bien
+		GY86_I2C_WRITE( MPU6050_I2C_ADDR, MPU6050_PWR_MGMT_1, 0x00); //---Setting/config cho MPU6050-----------------------------------------------------------
+		GY86_MPU6050_SetDataRate( MPU6050_I2C_ADDR, MPU6050_SMPLRT_DIV, TM_MPU6050_DataRate_1KHz); 
+		GY86_MPU6050_SetAccelerometer( MPU6050_I2C_ADDR, MPU6050_ACCEL_CONFIG, TM_MPU6050_Accelerometer_2G); 
+		GY86_MPU6050_SetGyroscope( MPU6050_I2C_ADDR, MPU6050_GYRO_CONFIG, TM_MPU6050_Gyroscope_250s); 
 	
 		//-----------------------------------------------------------------------
-		//SANG_4_LED(); 
 		SANG_4_LED_LOOP(10,100);
 		SANG_4_LED(); 
 		delay_ms(500); 
@@ -203,25 +204,20 @@ int main(void)
 		Init_TIM3_OUTPUT_PWM();//---Timer 3 4 channel PWM
 		SANG_4_LED_OFF(); 
 		delay_ms(500); 
-		
-		//pwm_test = 750;
 		is_already_config_pwm = 0;
 		setPWM_4_Motor_Cung_Value(CONFIG_PWM_MAX);
-		//TIM3->CCR1 = CONFIG_PWM_MAX;	TIM3->CCR2 = CONFIG_PWM_MAX;		TIM3->CCR3 = CONFIG_PWM_MAX; 		TIM3->CCR4 = CONFIG_PWM_MAX;	
 		SANG_4_LED(); 
 		delay_ms(2000); 
 		SANG_4_LED_OFF();
 		setPWM_4_Motor_Cung_Value(CONFIG_PWM_MIN);
-		//TIM3->CCR1 =  CONFIG_PWM_MIN;	 TIM3->CCR2 =  CONFIG_PWM_MIN;	 TIM3->CCR3 =  CONFIG_PWM_MIN; 	TIM3->CCR4 = 	CONFIG_PWM_MIN; 
 		delay_ms(1000);
 		SANG_4_LED_LOOP(5,100);
 		SANG_4_LED_OFF();
-		setPWM_4_Motor_Cung_Value(ZERO_);
-		//TIM3->CCR1 =  ZERO_;	 TIM3->CCR2 =  ZERO_;			 TIM3->CCR3 =  ZERO_;    TIM3->CCR4 =  ZERO_;			
+		setPWM_4_Motor_Cung_Value(ZERO_);		
 		//-----------------------------------------------------------------------
 		
-		TM_I2C_IS_DEVICE_CONNECTED();	//ERROR khong connect dc GY-86 => LED VANG sang lien tuc	
-		who_i_am_reg_value_MPU6050 = TM_I2C_WHO_I_AM( MPU6050_I2C_ADDR, MPU6050_WHO_AM_I_REGISTER);
+		GY86_I2C_IS_DEVICE_CONNECTED();	//ERROR khong connect dc GY-86 => LED VANG sang lien tuc	
+		who_i_am_reg_value_MPU6050 = GY86_I2C_WHO_I_AM( MPU6050_I2C_ADDR, MPU6050_WHO_AM_I_REGISTER);
 		if( who_i_am_reg_value_MPU6050 != MPU6050_I_AM_VALUES )	
 		{ 
 			//---Doc gia tri cua WHO I AM register, if error => LED RED(14) sang nhap nhay
@@ -230,6 +226,8 @@ int main(void)
 													#ifdef RTE_CMSIS_RTOS 
 														osKernelStart(); //.........code dafault cua ARM		// when using CMSIS RTOS	// start thread execution 
 													#endif
+		//tinh gyro offset 3 truc 
+		MPU6050_gyro_zero_offset();
 		Check_EveryThing_OK();			//ERROR => 4 led sang tat lien tuc 20ms
 		while(1)
 		{		
@@ -241,7 +239,6 @@ int main(void)
 						delay_ms(1000); 
 						SANG_4_LED_OFF(); 
 						setPWM_4_Motor_Cung_Value(1000);
-						//TIM3->CCR1 =  1000; TIM3->CCR2 =  1000;	 TIM3->CCR3 =  1000;	 TIM3->CCR4 = 	1000; 
 						is_already_config_pwm = 1;
 				}
 				
@@ -250,9 +247,7 @@ int main(void)
 				
 				if(HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_0)==GPIO_PIN_SET) //TEST 
 				{		//khi nhan buttun USER ma chua tha ra -> khong lam gi
-					while(HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_0)== GPIO_PIN_SET){} 
-					//TIM3->CCR1 =  pwm_test;		//TIM3->CCR2 =  pwm_test;		//TIM3->CCR3 =  pwm_test;			//TIM3->CCR4 =  pwm_test;			
-					//pwm_test = pwm_test + 50; //if(pwm_test >= 2000) pwm_test = 700;
+					while(HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_0)== GPIO_PIN_SET){}
 				}				
 	
 				//---Quadrotor Fly------------------------------------------------------------------
@@ -284,32 +279,31 @@ int main(void)
 										//BALANCE MODE-------------TRANG THAI CAN BANG
 										//Quadrotor can FLY ----- khi can` dieu khien Throttle value >= 1200
 										//-----------Caculate Roll/Pitch/Yaw Angel------------------------------------------------------------------------		
-										TM_MPU6050_ReadAll( MPU6050_I2C_ADDR, &mpu6050);  //---Read value from MPU6050			
+										GY86_MPU6050_ReadAll( MPU6050_I2C_ADDR, &mpu6050);  //---Read value from MPU6050			
+										gyroX_rate = ((float)((float)mpu6050.Gyro_X - (float)gyro_x_zero_offset))/131;
+										gyroY_rate = ((float)((float)mpu6050.Gyro_Y - (float)gyro_y_zero_offset))/131;	
 										accX_angle  =  atan2(mpu6050.Acc_Y, mpu6050.Acc_Z)*RAD_TO_DEG; //roll equation provides [-180, 180] range
-										accY_angle =   atan2(-mpu6050.Acc_X, sqrt(mpu6050.Acc_Y*mpu6050.Acc_Y + mpu6050.Acc_Z*mpu6050.Acc_Z) )*RAD_TO_DEG; //[-90, 90] range, which is exactly what is expected for the pitch angle
-										
-										gyroXrate = ((float)mpu6050.Gyro_X)/131;
-										gyroYrate = ((float)mpu6050.Gyro_Y)/131;
-									
-										//gyroX_angle += gyroXrate * DT; // Calculate gyro angle without any filter						
-										Kalman_angelX = kalmanCalculate(&kalmanX, accX_angle, gyroXrate, DT);
-										Kalman_angelY = kalmanCalculate(&kalmanY, accY_angle, gyroYrate, DT); 
+										accY_angle =   atan2(-mpu6050.Acc_X, sqrt(mpu6050.Acc_Y*mpu6050.Acc_Y + mpu6050.Acc_Z*mpu6050.Acc_Z) )*RAD_TO_DEG; //[-90, 90] range, which is exactly what is expected for the pitch angle										
+
+										//gyroX_angle = gyroX_angle + gyroXrate * DT; // Calculate gyro angle without any filter						
+										Kalman_roll = kalmanCalculate(&kalmanX, accX_angle, gyroX_rate, DT);
+										Kalman_pitch = kalmanCalculate(&kalmanY, accY_angle, gyroY_rate, DT); 
 										//compAngleX = 0.93 * (compAngleX + gyroXrate * dt) + 0.07 * accX_angle; // Calculate the angle using a Complimentary filter
-										Sang_Led_By_MPU6050_Values(Kalman_angelX, Kalman_angelY, Kalman_angelZ);			
+										Sang_Led_By_MPU6050_Values(Kalman_roll, Kalman_pitch, Kalman_yaw);			
 										//-----------------------------------------------------------------------------------
 															
 										//FUZZY SYSTEM------------------------------------------------------------------------
-										Fuzzification_All_MF( (float) Kalman_angelX, &rollFuzzyControl);
-										Fuzzification_All_MF( (float) Kalman_angelY, &pitchFuzzyControl);						
+										Fuzzification_All_MF( (float) Kalman_roll, &rollFuzzyControl);
+										Fuzzification_All_MF( (float) Kalman_pitch, &pitchFuzzyControl);						
 										Apply_All_Rule( 				  &rollFuzzyControl  );
 										Apply_All_Rule( 				  &pitchFuzzyControl );								
 										Defuzzification( 				  &rollFuzzyControl  );				
 										Defuzzification( 				  &pitchFuzzyControl );	
 										
-										pwm_motor_1 = IC_Throttle_pusle_width + limitOutputPWMFuzzy( rollFuzzyControl.output + pitchFuzzyControl.output );
-										pwm_motor_2 = IC_Throttle_pusle_width + limitOutputPWMFuzzy( rollFuzzyControl.output - pitchFuzzyControl.output );				
-										pwm_motor_3 = IC_Throttle_pusle_width + limitOutputPWMFuzzy( - rollFuzzyControl.output - pitchFuzzyControl.output );
-										pwm_motor_4 = IC_Throttle_pusle_width + limitOutputPWMFuzzy( - rollFuzzyControl.output + pitchFuzzyControl.output );
+										pwm_motor_1 = IC_Throttle_pusle_width + limitOutputPWMFuzzy( rollFuzzyControl.output   + pitchFuzzyControl.output );
+										pwm_motor_2 = IC_Throttle_pusle_width + limitOutputPWMFuzzy( - rollFuzzyControl.output + pitchFuzzyControl.output );				
+										pwm_motor_3 = IC_Throttle_pusle_width + limitOutputPWMFuzzy( rollFuzzyControl.output   - pitchFuzzyControl.output );
+										pwm_motor_4 = IC_Throttle_pusle_width + limitOutputPWMFuzzy( - rollFuzzyControl.output - pitchFuzzyControl.output );
 										
 										SetPWM_1_Motor(1,pwm_motor_1);
 										SetPWM_1_Motor(2,pwm_motor_2);
@@ -376,6 +370,10 @@ void SetInitDataQuadrotor(void)
 		IC_Rudder_Xoay_pusle_width = 0;		
 		
 		FlyState = STATE_FLY_OFF;
+		
+		gyro_x_zero_offset = 0;
+		gyro_y_zero_offset = 0;
+		gyro_z_zero_offset = 0;
 }
 void Turn_On_Quadrotor(void)
 {
@@ -840,7 +838,7 @@ void Init_TIM3_OUTPUT_PWM(void)
 //Accelerametor 10truc mpu6050
 //
 
-void Init_I2C_Handle_GY86()
+void GY86_I2C_Handle_GY86()
 {
 		//I2C1 GPIO Configuration    
     //PB6     ------> I2C1_SCL
@@ -865,7 +863,7 @@ void Init_I2C_Handle_GY86()
 		HAL_I2C_Init(&I2C_Handle_10truc);	
 		__HAL_I2C_ENABLE(&I2C_Handle_10truc);
 }
-void TM_I2C_IS_DEVICE_CONNECTED()
+void GY86_I2C_IS_DEVICE_CONNECTED()
 {
 	if(HAL_I2C_IsDeviceReady(&I2C_Handle_10truc, MPU6050_I2C_ADDR, 2, 5) != HAL_OK) 
 	{
@@ -878,7 +876,7 @@ void TM_I2C_IS_DEVICE_CONNECTED()
 	}
 }
 
-uint8_t TM_I2C_WHO_I_AM(uint8_t device_address, uint8_t register_address)
+uint8_t GY86_I2C_WHO_I_AM(uint8_t device_address, uint8_t register_address)
 {	
 	uint8_t data;
 	if (HAL_I2C_Master_Transmit(&I2C_Handle_10truc, (uint16_t)device_address, &register_address, 1, 1000) != HAL_OK) 
@@ -892,7 +890,7 @@ uint8_t TM_I2C_WHO_I_AM(uint8_t device_address, uint8_t register_address)
 }
 
 
-void TM_I2C_WRITE( uint8_t device_address, uint8_t register_address, uint8_t data) 
+void GY86_I2C_WRITE( uint8_t device_address, uint8_t register_address, uint8_t data) 
 {
 	uint8_t d[2];		
 	d[0] = register_address;
@@ -903,7 +901,7 @@ void TM_I2C_WRITE( uint8_t device_address, uint8_t register_address, uint8_t dat
 }
 	
 	
-void TM_I2C_READ(  uint8_t device_address, uint8_t register_address, uint8_t* data)
+void GY86_I2C_READ(  uint8_t device_address, uint8_t register_address, uint8_t* data)
 {
 	if (HAL_I2C_Master_Transmit(&I2C_Handle_10truc, (uint16_t)device_address, &register_address, 1, 1000) != HAL_OK) 
 	{}
@@ -915,7 +913,7 @@ void TM_I2C_READ(  uint8_t device_address, uint8_t register_address, uint8_t* da
 }
 
 
-void TM_I2C_READ_MULTI( uint8_t device_address, uint8_t register_address, uint8_t* data, uint16_t count)  
+void GY86_I2C_READ_MULTI( uint8_t device_address, uint8_t register_address, uint8_t* data, uint16_t count)  
 {
 	if (HAL_I2C_Master_Transmit(&I2C_Handle_10truc, (uint16_t)device_address, &register_address, 1, 1000) != HAL_OK) 
 	{}
@@ -927,36 +925,36 @@ void TM_I2C_READ_MULTI( uint8_t device_address, uint8_t register_address, uint8_
 }
 
 
-void TM_MPU6050_SetDataRate(uint8_t device_address, uint8_t register_address, uint8_t rate) 
+void GY86_MPU6050_SetDataRate(uint8_t device_address, uint8_t register_address, uint8_t rate) 
 {
-	TM_I2C_WRITE( device_address, register_address, rate);
+	GY86_I2C_WRITE( device_address, register_address, rate);
 	while(HAL_I2C_GetState(&I2C_Handle_10truc)!=HAL_I2C_STATE_READY){}
 }
 
-void TM_MPU6050_SetAccelerometer(uint8_t device_address, uint8_t register_address, uint8_t Acc_8G_Value) 
+void GY86_MPU6050_SetAccelerometer(uint8_t device_address, uint8_t register_address, uint8_t Acc_8G_Value) 
 {
 	uint8_t temp;		
-	TM_I2C_READ( device_address, register_address, &temp);
+	GY86_I2C_READ( device_address, register_address, &temp);
 	while(HAL_I2C_GetState(&I2C_Handle_10truc)!=HAL_I2C_STATE_READY){}
 	temp = (temp & 0xE7) | (uint8_t)Acc_8G_Value << 3;
-	TM_I2C_WRITE( device_address, register_address, temp);
+	GY86_I2C_WRITE( device_address, register_address, temp);
 	while(HAL_I2C_GetState(&I2C_Handle_10truc)!=HAL_I2C_STATE_READY){}
 }
 
-void TM_MPU6050_SetGyroscope( uint8_t device_address, uint8_t register_address, uint8_t Gyro_250s_Value) 
+void GY86_MPU6050_SetGyroscope( uint8_t device_address, uint8_t register_address, uint8_t Gyro_250s_Value) 
 {
 	uint8_t temp;		
-	TM_I2C_READ( device_address, register_address, &temp);
+	GY86_I2C_READ( device_address, register_address, &temp);
 	while(HAL_I2C_GetState(&I2C_Handle_10truc)!=HAL_I2C_STATE_READY){}
 	temp = (temp & 0xE7) | (uint8_t)Gyro_250s_Value << 3;
-	TM_I2C_WRITE( device_address, register_address, temp);
+	GY86_I2C_WRITE( device_address, register_address, temp);
 	while(HAL_I2C_GetState(&I2C_Handle_10truc)!=HAL_I2C_STATE_READY){}
 }
 
-void TM_MPU6050_ReadAccelerometer( uint8_t device_address, TM_MPU6050_t* output )
+void GY86_MPU6050_ReadAccelerometer( uint8_t device_address, TM_MPU6050_t* output )
 {
 	uint8_t data[6];
-	TM_I2C_READ_MULTI( device_address, MPU6050_ACCEL_XOUT_H, data, 6);
+	GY86_I2C_READ_MULTI( device_address, MPU6050_ACCEL_XOUT_H, data, 6);
 	while(HAL_I2C_GetState(&I2C_Handle_10truc)!=HAL_I2C_STATE_READY){}
 		
 	output->Acc_X = (int16_t)(data[0] << 8 | data[1]);
@@ -964,10 +962,10 @@ void TM_MPU6050_ReadAccelerometer( uint8_t device_address, TM_MPU6050_t* output 
 	output->Acc_Z = (int16_t)(data[4] << 8 | data[5]);
 }
 
-void TM_MPU6050_ReadGyroscope( uint8_t device_address, TM_MPU6050_t* output )
+void GY86_MPU6050_ReadGyroscope( uint8_t device_address, TM_MPU6050_t* output )
 {
 	uint8_t data[6];
-	TM_I2C_READ_MULTI( device_address, MPU6050_GYRO_XOUT_H, data, 6);
+	GY86_I2C_READ_MULTI( device_address, MPU6050_GYRO_XOUT_H, data, 6);
 	while(HAL_I2C_GetState(&I2C_Handle_10truc)!=HAL_I2C_STATE_READY){}
 		
 	output->Gyro_X = (int16_t)(data[0] << 8 | data[1]);
@@ -975,12 +973,12 @@ void TM_MPU6050_ReadGyroscope( uint8_t device_address, TM_MPU6050_t* output )
 	output->Gyro_Z = (int16_t)(data[4] << 8 | data[5]);
 }	
 
-void TM_MPU6050_ReadAll( uint8_t device_address, TM_MPU6050_t* output )
+void GY86_MPU6050_ReadAll( uint8_t device_address, TM_MPU6050_t* output )
 {
 	uint8_t data[14];
 	int16_t temp;	
 	
-	TM_I2C_READ_MULTI( device_address, MPU6050_ACCEL_XOUT_H, data, 14); /* Read full raw data, 14bytes */
+	GY86_I2C_READ_MULTI( device_address, MPU6050_ACCEL_XOUT_H, data, 14); /* Read full raw data, 14bytes */
 	while(HAL_I2C_GetState(&I2C_Handle_10truc)!=HAL_I2C_STATE_READY){}	
 	
 	output->Acc_X = (int16_t)(data[0] << 8 | data[1]);	/* Format accelerometer data */
@@ -994,6 +992,23 @@ void TM_MPU6050_ReadAll( uint8_t device_address, TM_MPU6050_t* output )
 	output->Gyro_Y = (int16_t)(data[10] << 8 | data[11]);
 	output->Gyro_Z = (int16_t)(data[12] << 8 | data[13]);
 }
+
+void MPU6050_gyro_zero_offset(void)//tinh gyro offset 3 truc
+{
+		int8_t i;
+		for(i=0; i<100;i++)
+		{
+			GY86_MPU6050_ReadAll( MPU6050_I2C_ADDR, &mpu6050);  //---Read value from MPU6050
+			gyro_x_zero_offset = gyro_x_zero_offset + mpu6050.Gyro_X;
+			gyro_y_zero_offset = gyro_y_zero_offset + mpu6050.Gyro_Y;
+			gyro_z_zero_offset = gyro_z_zero_offset + mpu6050.Gyro_Z;
+		}
+		gyro_x_zero_offset = gyro_x_zero_offset/100;
+		gyro_y_zero_offset = gyro_y_zero_offset/100;
+		gyro_z_zero_offset = gyro_z_zero_offset/100;
+}
+
+
 
 
 
