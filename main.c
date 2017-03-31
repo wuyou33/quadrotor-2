@@ -200,21 +200,21 @@ int main(void)
 		
 	
 		//-----------------------------------------------------------------------
-		SANG_4_LED_LOOP(10,100);
+		SANG_4_LED_LAN_LUOT(10,50);
 		SANG_4_LED(); 
-		delay_ms(500); 
+		delay_ms(1000); 
 		
 		Init_TIM3_OUTPUT_PWM();//---Timer 3 4 channel PWM
 		SANG_4_LED_OFF(); 
-		delay_ms(500); 
+		delay_ms(1000); 
 		is_already_config_pwm = 0;
 		setPWM_4_Motor_Cung_Value(CONFIG_PWM_MAX);
 		SANG_4_LED(); 
 		delay_ms(2000); 
-		SANG_4_LED_OFF();
 		setPWM_4_Motor_Cung_Value(CONFIG_PWM_MIN);
+		SANG_4_LED_OFF();
 		delay_ms(1000);
-		SANG_4_LED_LOOP(5,100);
+		SANG_4_LED_LAN_LUOT(5,50);
 		SANG_4_LED_OFF();
 		setPWM_4_Motor_Cung_Value(ZERO_);		
 		//-----------------------------------------------------------------------
@@ -236,11 +236,11 @@ int main(void)
 		{		
 				if(FlyState == STATE_FLY_OFF && is_already_config_pwm == 0)
 				{
-						//SANG_4_LED_LOOP(10,50); //sang 4 led cung luc. loop 5 lan, delay 100ms
-						SANG_4_LED_LAN_LUOT(5,70);
+						SANG_4_LED_LAN_LUOT(5,50);
 						SANG_4_LED(); 
-						delay_ms(1000); 
+						delay_ms(2000); 
 						SANG_4_LED_OFF(); 
+						delay_ms(1000); 
 						setPWM_4_Motor_Cung_Value(1000);
 						is_already_config_pwm = 1;
 				}
@@ -345,10 +345,15 @@ int main(void)
 										Defuzzification( 				  &pitchFuzzyControl );	
 										Defuzzification( 				  &yawFuzzyControl );
 										
-										pwm_motor_1 = IC_Throttle_pusle_width + limitOutputPWMFuzzy( rollFuzzyControl.output   + pitchFuzzyControl.output + yawFuzzyControl.output);
-										pwm_motor_2 = IC_Throttle_pusle_width + limitOutputPWMFuzzy( - rollFuzzyControl.output + pitchFuzzyControl.output - yawFuzzyControl.output);				
-										pwm_motor_3 = IC_Throttle_pusle_width + limitOutputPWMFuzzy( rollFuzzyControl.output   - pitchFuzzyControl.output + yawFuzzyControl.output);
-										pwm_motor_4 = IC_Throttle_pusle_width + limitOutputPWMFuzzy( - rollFuzzyControl.output - pitchFuzzyControl.output - yawFuzzyControl.output);
+										//pwm_motor_1 = IC_Throttle_pusle_width + limitOutputPWMFuzzy( rollFuzzyControl.output   + pitchFuzzyControl.output + yawFuzzyControl.output);
+										//pwm_motor_2 = IC_Throttle_pusle_width + limitOutputPWMFuzzy( - rollFuzzyControl.output + pitchFuzzyControl.output - yawFuzzyControl.output);				
+										//pwm_motor_3 = IC_Throttle_pusle_width + limitOutputPWMFuzzy( rollFuzzyControl.output   - pitchFuzzyControl.output + yawFuzzyControl.output);
+										//pwm_motor_4 = IC_Throttle_pusle_width + limitOutputPWMFuzzy( - rollFuzzyControl.output - pitchFuzzyControl.output - yawFuzzyControl.output);
+										
+										pwm_motor_1 = IC_Throttle_pusle_width + limitOutputPWMFuzzy( rollFuzzyControl.output   - pitchFuzzyControl.output );
+										pwm_motor_2 = IC_Throttle_pusle_width + limitOutputPWMFuzzy( - rollFuzzyControl.output - pitchFuzzyControl.output );				
+										pwm_motor_3 = IC_Throttle_pusle_width + limitOutputPWMFuzzy( - rollFuzzyControl.output + pitchFuzzyControl.output );
+										pwm_motor_4 = IC_Throttle_pusle_width + limitOutputPWMFuzzy( rollFuzzyControl.output   + pitchFuzzyControl.output );
 										
 										SetPWM_1_Motor(1,pwm_motor_1);
 										SetPWM_1_Motor(2,pwm_motor_2);
@@ -396,6 +401,16 @@ void SetInitDataQuadrotor(void)
 		kalmanY.P_01     =  0;
 		kalmanY.P_10     =  0; 
 		kalmanY.P_11     =  0;
+	
+		kalmanZ.Q_angle  =  0.001;  //0.001    //0.005
+		kalmanZ.Q_gyro   =  0.003;  //0.003    //0.0003
+		kalmanZ.R_angle  =  0.03;  //0.03     //0.008
+		kalmanZ.bias     =  0;
+		kalmanZ.P_00     =  0;
+		kalmanZ.P_01     =  0;
+		kalmanZ.P_10     =  0; 
+		kalmanZ.P_11     =  0;
+		
 		
 		//set input capture
 		IC_Throttle1 = 0;		
@@ -412,13 +427,12 @@ void SetInitDataQuadrotor(void)
 		
 		IC_Rudder_Xoay1 = 0;		
 		IC_Rudder_Xoay2 = 0;		
-		IC_Rudder_Xoay_pusle_width = 0;		
-		
-		FlyState = STATE_FLY_OFF;
+		IC_Rudder_Xoay_pusle_width = 0;	
 		
 		gyro_x_zero_offset = 0;
 		gyro_y_zero_offset = 0;
 		gyro_z_zero_offset = 0;
+		FlyState = STATE_FLY_OFF;
 }
 void Turn_On_Quadrotor(void)
 {
@@ -428,9 +442,9 @@ void Turn_On_Quadrotor(void)
 						(IC_Elevator_TienLui_pusle_width >= RC_ON_OFF_MIN && IC_Elevator_TienLui_pusle_width <= RC_ON_OFF_MAX) && 
 						(FlyState == 0	))
 				{	
-						SANG_4_LED_LAN_LUOT(5,70); //sang 4 led lan luot. loop 5 lan. delay 50ms						
+						SANG_4_LED_LAN_LUOT(5,50);						
 						SANG_4_LED(); 							
-						delay_ms(1000);  						
+						delay_ms(2000);  						
 						SANG_4_LED_OFF();						
 						if( (IC_Throttle_pusle_width         >= RC_ON_OFF_MIN && IC_Throttle_pusle_width         <= RC_ON_OFF_MAX) && 
 								(IC_Aileron_TraiPhai_pusle_width >= RC_ON_OFF_MIN && IC_Aileron_TraiPhai_pusle_width <= RC_ON_OFF_MAX) && 
@@ -805,20 +819,20 @@ void Check_EveryThing_OK(void)
 
 void Init_LEDSANG_AND_BUTTON_USER_PORT_A0(void)
 {
-		GPIO_InitTypeDef PIN_LED_SANG_PORTD;
-		GPIO_InitTypeDef BUTTON_USER_PORTA_0;	
+		GPIO_InitTypeDef PIN_LED_SANG_PD;
+		GPIO_InitTypeDef BUTTON_USER_PA_0;	
 	
-		PIN_LED_SANG_PORTD.Pin = GPIO_PIN_12 | GPIO_PIN_13 | GPIO_PIN_14 | GPIO_PIN_15;
-		PIN_LED_SANG_PORTD.Mode = GPIO_MODE_OUTPUT_PP;
-		PIN_LED_SANG_PORTD.Pull = GPIO_NOPULL;
-		PIN_LED_SANG_PORTD.Speed = GPIO_SPEED_HIGH;
-		HAL_GPIO_Init(GPIOD, &PIN_LED_SANG_PORTD);	
+		PIN_LED_SANG_PD.Pin = GPIO_PIN_12 | GPIO_PIN_13 | GPIO_PIN_14 | GPIO_PIN_15;
+		PIN_LED_SANG_PD.Mode = GPIO_MODE_OUTPUT_PP;
+		PIN_LED_SANG_PD.Pull = GPIO_NOPULL;
+		PIN_LED_SANG_PD.Speed = GPIO_SPEED_HIGH;
+		HAL_GPIO_Init(GPIOD, &PIN_LED_SANG_PD);	
 		
-		BUTTON_USER_PORTA_0.Pin = GPIO_PIN_0;
-		BUTTON_USER_PORTA_0.Mode = GPIO_MODE_INPUT;
-		BUTTON_USER_PORTA_0.Pull = GPIO_NOPULL;
-		BUTTON_USER_PORTA_0.Speed = GPIO_SPEED_HIGH;
-		HAL_GPIO_Init(GPIOA, &BUTTON_USER_PORTA_0);
+		BUTTON_USER_PA_0.Pin = GPIO_PIN_0;
+		BUTTON_USER_PA_0.Mode = GPIO_MODE_INPUT;
+		BUTTON_USER_PA_0.Pull = GPIO_NOPULL;
+		BUTTON_USER_PA_0.Speed = GPIO_SPEED_HIGH;
+		HAL_GPIO_Init(GPIOA, &BUTTON_USER_PA_0);
 }
 //
 //
@@ -1059,7 +1073,10 @@ void HMC5883L_set_config(void)
 		GY86_I2C_WRITE( HMC5883L_Device_Address, HMC5883L_Register_A, 0x18);//set rate = 75Hz
 		GY86_I2C_WRITE( HMC5883L_Device_Address, HMC5883L_Register_B, 0x60);//full scale = +/- 2.5 Gauss
 		GY86_I2C_WRITE( HMC5883L_Device_Address, HMC5883L_Measurement_Mode_Register, Mode_Measurement_Continuous);
-		while(HAL_I2C_GetState(&I2C_Handle_10truc)!=HAL_I2C_STATE_READY){}
+		if(HAL_I2C_GetState(&I2C_Handle_10truc)!=HAL_I2C_STATE_READY)
+		{
+			while(1){SANG_4_LED();}
+		}
 }
 
 void HMC5883L_read_compass_data(Compass_HMC5883L* compass)
@@ -1093,9 +1110,9 @@ void Sang_Led_By_MPU6050_Values(float kalman_angel_x, float kalman_angel_y, floa
 		{
 			LED_D_12_HIGH;	//SANG_1_LED(LED_ORANGE);  
 		}
-		delay_ms(1);
+		delay_ms(10);
 		SANG_4_LED_OFF();
-		delay_ms(1);
+		delay_ms(10);
 }
 //end Accelerametor 10truc
 //
