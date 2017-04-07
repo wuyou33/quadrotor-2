@@ -73,8 +73,10 @@ float 										accX_angle, accY_angle, accZ_angle;
 float 										gyroX_rate, gyroY_rate, gyroZ_rate;
 float 										gyroX_angle, gyroY_angle, gyroZ_angle;
 float 										Kalman_roll, Kalman_pitch, Kalman_yaw;
+float 										smooth_accX, smooth_accY, smooth_accZ, smooth_gyroX, smooth_gyroY, smooth_gyroZ;
 
 Kalman_Setting 						kalmanX,	kalmanY,   kalmanZ;
+
 TM_MPU6050_t 							mpu6050;
 Compass_HMC5883L					compassHMC5883L;
 
@@ -100,7 +102,8 @@ FuzzyController						rollFuzzyControl, pitchFuzzyControl, yawFuzzyControl;
 																
 //-----------Khai bao HAM-------------------------------------------------------
 				//Kalman filter
-float 						kalmanCalculate(Kalman_Setting *kalman, float newAngle, float newRate, float DT_);															
+float 						kalmanCalculate(Kalman_Setting *kalman, float newAngle, float newRate, float DT_);
+void 							lowPassFilterCalculate(TM_MPU6050_t* output);	
 																
 				//ham handle error						
 static void 			SystemClock_Config(void);
@@ -280,13 +283,14 @@ int main(void)
 								if(IC_Throttle_pusle_width >= ENTER_BALANCE_STATE)
 								{	
 										//BALANCE MODE-------------TRANG THAI CAN BANG
-										//Quadrotor can FLY ----- khi can` dieu khien Throttle value >= 1200
-										//-----------Caculate Roll/Pitch/Yaw Angel------------------------------------------------------------------------		
+										//Quadrotor can FLY ----- khi can` dieu khien Throttle value >= 1200	
 										GY86_MPU6050_ReadAll( MPU6050_I2C_ADDR, &mpu6050);  //---Read value from MPU6050
+										lowPassFilterCalculate(&mpu6050); /* Apply low pass filter to smooth*/
 										HMC5883L_read_compass_data(&compassHMC5883L);
-										gyroX_rate = ((float)((float)mpu6050.Gyro_X - (float)gyro_x_zero_offset))/131;
-										gyroY_rate = ((float)((float)mpu6050.Gyro_Y - (float)gyro_y_zero_offset))/131;	
-										gyroZ_rate = ((float)((float)mpu6050.Gyro_Z - (float)gyro_z_zero_offset))/131;	
+
+										gyroX_rate = ((float)((float)mpu6050.Gyro_X - (float)gyro_x_zero_offset))/(float)131.0;
+										gyroY_rate = ((float)((float)mpu6050.Gyro_Y - (float)gyro_y_zero_offset))/(float)131.0;	
+										gyroZ_rate = ((float)((float)mpu6050.Gyro_Z - (float)gyro_z_zero_offset))/(float)131.0;	
 									
 										accX_angle =  	atan2(mpu6050.Acc_Y, mpu6050.Acc_Z)*RAD_TO_DEG; //roll equation provides [-180, 180] range
 										accY_angle =   	atan2(-mpu6050.Acc_X, sqrt(mpu6050.Acc_Y*mpu6050.Acc_Y + mpu6050.Acc_Z*mpu6050.Acc_Z) )*RAD_TO_DEG; //[-90, 90] range, which is exactly what is expected for the pitch angle										
@@ -301,34 +305,19 @@ int main(void)
 									  }
 										/*heading = atan2(com_y,com_x);
 											heading-=declination_angle;
-
 											//heading+=declination_angle; 
-
-											if(heading < 0.0) 
-											{ 
-											heading += (2.0 * 3.141592654); 
-											} 
-
-											if(heading > (2.0 * 3.141592654)) 
-											{ 
-											heading -= (2.0 * 3.141592654); 
-											} 
-
+											if(heading < 0.0) heading += (2.0 * 3.141592654); 
+											if(heading > (2.0 * 3.141592654)) heading -= (2.0 * 3.141592654); 
 											zDegrees=heading*rad_to_degree;
-											if(zDegrees >= 1 && zDegrees < 240)
-											{com_z_angle = (zDegrees*179/239);}
-											else{
-											if(zDegrees >= 240)
-											{com_z_angle = (zDegrees*180/120);}
-											}*/
-									
+											if(zDegrees >= 1 && zDegrees < 240) com_z_angle = (zDegrees*179/239);
+											else if(zDegrees >= 240) com_z_angle = (zDegrees*180/120);
+										*/
 										//gyroX_angle = gyroX_angle + gyroXrate * DT; // Calculate gyro angle without any filter	
 									
 										Kalman_roll  = kalmanCalculate(&kalmanX, accX_angle, gyroX_rate, DT);
 										Kalman_pitch = kalmanCalculate(&kalmanY, accY_angle, gyroY_rate, DT);
 										Kalman_yaw   = kalmanCalculate(&kalmanZ, accZ_angle, gyroZ_rate, DT);
-									
-										//compAngleX = 0.93 * (compAngleX + gyroXrate * dt) + 0.07 * accX_angle; // Calculate the angle using a Complimentary filter
+										
 										Sang_Led_By_MPU6050_Values(Kalman_roll, Kalman_pitch, Kalman_yaw);			
 										//-----------------------------------------------------------------------------------
 															
@@ -1609,6 +1598,28 @@ float kalmanCalculate(Kalman_Setting *kalman, float newAngle, float newRate, flo
 			kalman->P_11 -= kalman->K_1 * kalman->P_01;
 			
 			return kalman->angle;
+}
+
+
+void lowPassFilterCalculate(TM_MPU6050_t* mpu6050)
+{
+	 float alpha = 0.05;
+	 float oneMinusAlpha = 0.95; //(1-alpha);
+	 /* Apply low pass filter to smooth accelerometer values. */
+		smooth_accX = (float)( oneMinusAlpha * smooth_accX + alpha * mpu6050->Acc_X );
+		smooth_accY = (float)( oneMinusAlpha * smooth_accY + alpha * mpu6050->Acc_Y );
+		smooth_accZ = (float)( oneMinusAlpha * smooth_accZ + alpha * mpu6050->Acc_Z );
+	
+		smooth_gyroX = (float)( oneMinusAlpha * smooth_gyroX + alpha * mpu6050->Gyro_X );
+		smooth_gyroY = (float)( oneMinusAlpha * smooth_gyroY + alpha * mpu6050->Gyro_Y );
+		smooth_gyroZ = (float)( oneMinusAlpha * smooth_gyroZ + alpha * mpu6050->Gyro_Z );
+	
+		mpu6050->Acc_X = smooth_accX;
+		mpu6050->Acc_Y = smooth_accY;
+		mpu6050->Acc_Z = smooth_accZ;
+		mpu6050->Gyro_X = smooth_gyroX;
+		mpu6050->Gyro_Y = smooth_gyroY;
+		mpu6050->Gyro_Z = smooth_gyroZ;
 }
 
 

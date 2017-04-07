@@ -44,17 +44,17 @@ Step 5: Defuzzification: caculate output via Loop all rule list
 
 
 //-------MEMBERSHIP FUNCTION--------------------------------
-//data struct cua MembershipFunction (FuzzySet or Tap Mo`)
+//data struct cua MembershipFunction (FuzzySet)
 typedef struct _MF{
 	//char  name[30];       			  name of system input/output       */
-	int 			type;									/*  loai gi input hay output       */
+	int 			type;									/*  input MF or output MF       */
 	float 		h;										/*  degree cua MF       */
 	float 		minXacDinh;
 	float 		maxXacDinh;
-	float 		a;										/*  gia tri diem A trong hinh thang/tam giac */
-	float 		b;										/*  gia tri diem B trong hinh thang/tam giac */
-	float 		c;										/*  gia tri diem C trong hinh thang/tam giac */
-	float 		d;										/*  gia tri diem D trong hinh thang/tam giac */
+	float 		a;										/*  A position of MF */
+	float 		b;										/*  B position of MF */
+	float 		c;										/*  C position of MF */
+	float 		d;										/*  D position of MF */
 } MF;
 
 //--------Fuzzy Rule----------------------------------
@@ -97,47 +97,35 @@ void setABCD_MF(MF *mf, float a, float b, float c, float d, int type, float minX
 }
 
 /*--------MO HOA - FUZZIFY-------------------------------
-Mo` hoa' 1 Membership function. tu` gia tri ro~ x, ta tinh ra strength(degree or h) cua Membership Function [0...1]
+Mo` hoa' 1 Membership function. tu` gia tri ro~ x, ta tinh ra strength(degree or h) cua MF [0...1]
 Tong quat cho hinh tam giac' va hinh` thang
 |			B.................C
 |		 /                   \
 |		/                     \
 |	 /                       \
-..*.........................D................-> x 
+..*.........................D.....-> x 
 */
 void fuzzification(float x, MF *mf )
 {
 	float value = 0;
 	if(x <= mf->a)
 	{
-			if(mf->a == mf->b) value = 1;
-			else value = 0;
+			if(mf->a == mf->b) value = 1; else value = 0;
 	}
-	
 	else if(x >= mf->d )
 	{
-			if(mf->d == mf->c) value = 1;
-			else value = 0;
+			if(mf->d == mf->c) value = 1; else value = 0;
 	}
-	
 	else if(x > mf->a && x < mf->b)
 		value = ((float)(x - mf->a))/(mf->b - mf->a);
-	
 	else if(x >= mf->b && x <= mf->c )
 		value = 1;
-	
 	else if( x > mf->c && x < mf->d)
 		value= ((float)(mf->d - x))/(mf->d - mf->c);
-	
-	else 
-		value = 0;	
-	
-	if(value <= 0) 
-		mf->h = 0;
-	else if(value >= 1) 
-		mf->h = 1;
-	else 
-		mf->h = value;
+	else value = 0;	
+	if(value <= 0) mf->h = 0;
+	else if(value >= 1) mf->h = 1;
+	else mf->h = value;
 }
 
 
