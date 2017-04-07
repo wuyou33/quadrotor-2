@@ -1575,12 +1575,10 @@ float kalmanCalculate(Kalman_Setting *kalman, float newAngle, float newRate, flo
 
 		//!    P_00 +=  - dt * (P_10 + P_01) + Q_angle * dt;
 			kalman->P_00 += dt * (dt*kalman->P_11 - kalman->P_01 - kalman->P_10 + kalman->Q_angle);
-		//!    P_01 +=  - dt * P_11;
-			kalman->P_01 -= dt * kalman->P_11;    
-		//!    P_10 +=  - dt * P_11;
-			kalman->P_10 -= dt * kalman->P_11;
-		//!    P_11 +=  + Q_gyro * dt;
-			kalman->P_11 += kalman->Q_gyro * dt;
+		
+			kalman->P_01 += - dt * kalman->P_11;  //!     P_01 +=  - dt * P_11;  
+			kalman->P_10 += - dt * kalman->P_11; //!      P_10 +=  - dt * P_11;
+			kalman->P_11 += + kalman->Q_gyro * dt; //!    P_11 +=  + Q_gyro * dt;
 
 			kalman->S = kalman->P_00 + kalman->R_angle;
 			
@@ -1599,6 +1597,61 @@ float kalmanCalculate(Kalman_Setting *kalman, float newAngle, float newRate, flo
 			
 			return kalman->angle;
 }
+/*
+http://nvtienanh.com/bai-viet/code-ccs-c-loc-kalman-cho-cam-bien-mpu6050-01-05-2014/
+float32 dt = 0.01; // T Sampling
+float32 Q_angle = 0.005;
+float32 Q_bias = 0.003;
+float32 R_measure = 0.03;
+float32 bias = 0; // Reset bias
+float32 rate;
+float32 angle;
+float32 S; // estimate error
+float32 y; // different angle
+float32 P_00 = 0 , P_01 = 0 , P_10 =0 ,P_11 =0;
+float32 K_0 =0,K_1=0; // Kalman gain
+ 
+float32 Kalman(float32 newAngle, float32 newRate){      
+ 
+        // Discrete Kalman filter time update equations - Time Update ("Predict")
+        // Update xhat - Project the state ahead
+        // Step 1 
+        //angle = X_Raw_Gyro_Angle;
+        rate = newRate - bias;
+        angle += dt * rate;
+ 
+        // Update estimation error covariance - Project the error covariance ahead
+        // Step 2 
+        P_00 += dt * ( dt*P_11 - P_10 - P_01 + Q_angle);
+        P_01 -= dt * P_11;
+        P_10 -= dt * P_11;
+        P_11 += Q_bias * dt;
+ 
+        // Discrete Kalman filter measurement update equations - Measurement Update ("Correct")
+        // Calculate Kalman gain - Compute the Kalman gain
+        // Step 4 
+        S = P_00 + R_measure;
+        // Step 5 
+        K_0 = P_00 / S;
+        K_1 = P_10 / S;
+ 
+        // Calculate angle and bias - Update estimate with measurement zk (newAngle)
+        // Step 3 
+        y = newAngle - angle;
+        // Step 6 
+        angle += K_0 * y;
+        bias += K_1 * y;
+ 
+        // Calculate estimation error covariance - Update the error covariance
+        // Step 7
+        P_00 -= K_0 * P_00;
+        P_01 -= K_0 * P_01;
+        P_10 -= K_1 * P_00;
+        P_11 -= K_1 * P_01;
+ 
+        return angle;
+    }
+*/
 
 
 void lowPassFilterCalculate(TM_MPU6050_t* mpu6050)
@@ -1610,16 +1663,16 @@ void lowPassFilterCalculate(TM_MPU6050_t* mpu6050)
 		smooth_accY = (float)( oneMinusAlpha * smooth_accY + alpha * mpu6050->Acc_Y );
 		smooth_accZ = (float)( oneMinusAlpha * smooth_accZ + alpha * mpu6050->Acc_Z );
 	
-		smooth_gyroX = (float)( oneMinusAlpha * smooth_gyroX + alpha * mpu6050->Gyro_X );
-		smooth_gyroY = (float)( oneMinusAlpha * smooth_gyroY + alpha * mpu6050->Gyro_Y );
-		smooth_gyroZ = (float)( oneMinusAlpha * smooth_gyroZ + alpha * mpu6050->Gyro_Z );
+		//smooth_gyroX = (float)( oneMinusAlpha * smooth_gyroX + alpha * mpu6050->Gyro_X );
+		//smooth_gyroY = (float)( oneMinusAlpha * smooth_gyroY + alpha * mpu6050->Gyro_Y );
+		//smooth_gyroZ = (float)( oneMinusAlpha * smooth_gyroZ + alpha * mpu6050->Gyro_Z );
 	
 		mpu6050->Acc_X = smooth_accX;
 		mpu6050->Acc_Y = smooth_accY;
 		mpu6050->Acc_Z = smooth_accZ;
-		mpu6050->Gyro_X = smooth_gyroX;
-		mpu6050->Gyro_Y = smooth_gyroY;
-		mpu6050->Gyro_Z = smooth_gyroZ;
+		//mpu6050->Gyro_X = smooth_gyroX;
+		//mpu6050->Gyro_Y = smooth_gyroY;
+		//mpu6050->Gyro_Z = smooth_gyroZ;
 }
 
 
