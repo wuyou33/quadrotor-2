@@ -285,7 +285,7 @@ int main(void)
 										//BALANCE MODE-------------TRANG THAI CAN BANG
 										//Quadrotor can FLY ----- khi can` dieu khien Throttle value >= 1200	
 										GY86_MPU6050_ReadAll( MPU6050_I2C_ADDR, &mpu6050);  //---Read value from MPU6050
-										lowPassFilterCalculate(&mpu6050); /* Apply low pass filter to smooth*/
+										//lowPassFilterCalculate(&mpu6050); /* Apply low pass filter to smooth*/
 										HMC5883L_read_compass_data(&compassHMC5883L);
 
 										gyroX_rate = ((float)((float)mpu6050.Gyro_X - (float)gyro_x_zero_offset))/(float)131.0;
@@ -1086,18 +1086,18 @@ void Sang_Led_By_MPU6050_Values(float kalman_angel_x, float kalman_angel_y, floa
 {
 		if(kalman_angel_x > 10)
 		{
-			LED_D_15_HIGH;		 //SANG_1_LED(LED_YELLOW);
+			LED_D_14_HIGH;		 //SANG_1_LED(LED_YELLOW);
 		}else if(kalman_angel_x < -10)
 		{
-			LED_D_13_HIGH;			//SANG_1_LED(LED_RED);
+			LED_D_12_HIGH;			//SANG_1_LED(LED_RED);
 		}
 		
 		if(kalman_angel_y > 10)
 		{
-			LED_D_14_HIGH;	//SANG_1_LED(LED_BLUE);  
+			LED_D_13_HIGH;	//LED_ORANGE 
 		}else if(kalman_angel_y < -10)
 		{
-			LED_D_12_HIGH;	//SANG_1_LED(LED_ORANGE);  
+			LED_D_15_HIGH;	//XANH
 		}
 		delay_ms(10);
 		SANG_4_LED_OFF();
