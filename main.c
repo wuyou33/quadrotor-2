@@ -1261,8 +1261,10 @@ void SetPWM_Motor_Giam(int16_t numberMotor, int16_t changeValue)
 
 int16_t limitOutputPWMFuzzy(int16_t value)
 {
-	if(value >= 100)	return 100;
-	if(value <= -100) return -100;
+	int16_t value_compare;
+	value_compare = 70;
+	if(value >= value_compare)	return value_compare;
+	if(value <= -value_compare) return -value_compare;
 	return value;
 }
 
