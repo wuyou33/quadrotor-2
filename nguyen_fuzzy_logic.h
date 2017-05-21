@@ -33,14 +33,17 @@ Step 5: Defuzzification: caculate output via Loop all rule list
 	
 
 
-#define GocLech_maxXD 							 (float)30
-#define GocLech_minXD 							(float)-30
+#define GocLech_maxXD 							 (float)45.0
+#define GocLech_minXD 							(float)-45.0
 
-#define GocLech_dot_maxXD 					 (float)18
-#define GocLech_dot_minXD 					(float)-18
+#define GocLech_dot_maxXD 					 (float)20.0
+#define GocLech_dot_minXD 					(float)-20.0
 
-#define ValuePWMControl_maxXD 			 (float)100
-#define ValuePWMControl_minXD 			(float)-100
+#define ValuePWMControl_maxXD 			 (float)120.0
+#define ValuePWMControl_minXD 			(float)-120.0
+	
+#define LIMIT_OUTPUT_FUZZY					(float)100.0
+#define VALUE_SANG_LED_BY_MPU6050		(float)10.0
 
 
 //-------MEMBERSHIP FUNCTION--------------------------------
@@ -110,11 +113,17 @@ void fuzzification(float x, MF *mf )
 	float value = 0;
 	if(x <= mf->a)
 	{
-			if(mf->a == mf->b) value = 1; else value = 0;
+			if(mf->a == mf->b) 
+				value = 1; 
+			else 
+				value = 0;
 	}
 	else if(x >= mf->d )
 	{
-			if(mf->d == mf->c) value = 1; else value = 0;
+			if(mf->d == mf->c) 
+				value = 1; 
+			else 
+				value = 0;
 	}
 	else if(x > mf->a && x < mf->b)
 		value = ((float)(x - mf->a))/(mf->b - mf->a);
@@ -122,10 +131,15 @@ void fuzzification(float x, MF *mf )
 		value = 1;
 	else if( x > mf->c && x < mf->d)
 		value= ((float)(mf->d - x))/(mf->d - mf->c);
-	else value = 0;	
-	if(value <= 0) mf->h = 0;
-	else if(value >= 1) mf->h = 1;
-	else mf->h = value;
+	else 
+		value = 0;
+	
+	if(value <= 0) 
+		mf->h = 0;
+	else if(value >= 1) 
+		mf->h = 1;
+	else 
+		mf->h = (float)value;
 }
 
 
@@ -145,11 +159,13 @@ void setOneRule(MF_rule* rule, MF * inGocLech, MF * inGocLech_dot, MF * outValue
 
 //tinh output cua moi~ Rule (tinh h va tinh avg_x)
 //	dung vong for loop het NUMBER_RULE,//	voi moi Rule, dung MAX or MIN => h,//	tinh avg_x = (left+right)/2
-void calcule_H_and_Y_PerRule(MF_rule   * rule )
+void calcule_H_and_Y_PerRule(float x, MF_rule   * rule )
 {
 		float temp=0;
 		if(!rule) return;
-		rule->h = (float) MAXIMUM(  MINIMUM(rule->inGocLech->h, rule->inGocLech_dot->h ) , 0);
+		//rule->h = (float) MAXIMUM(  MINIMUM(rule->inGocLech->h, rule->inGocLech_dot->h ) , 0);
+	//loai bo inGoclech_dot	
+	rule->h = (float) MAXIMUM(  MINIMUM(rule->inGocLech->h, 1 ) , 0);
 	
 		if(rule->outValuePWMControl->a == rule->outValuePWMControl->b)
 		{
@@ -163,6 +179,19 @@ void calcule_H_and_Y_PerRule(MF_rule   * rule )
 		}
 		else
 			rule->y = (float)( (float)(rule->outValuePWMControl->a + rule->outValuePWMControl->d)/2) ;
+		
+		if(rule->y == 0)
+		{
+			if(x < 0)
+			{
+				rule->y = (float)(rule->outValuePWMControl->a/2);
+			}
+			else if(x>0)
+			{
+				rule->y = (float)(rule->outValuePWMControl->d/2);
+			}
+				
+		}
 }
 
 

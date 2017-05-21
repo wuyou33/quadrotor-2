@@ -7,6 +7,8 @@
 //	Yellow 				Red					//
 //				  BLUE	 			//
 //----------------------//
+#define DT 																(float)0.01 //10ms
+	
 #define LED_YELLOW												12
 #define LED_ORANGE												13
 #define LED_RED														14
@@ -22,16 +24,19 @@
 #define LED_D_15_LOW 											HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, GPIO_PIN_RESET)
 
 
-#define Motor_Range_Min										1150
+
+
+
+#define Motor_Range_Min										1100
 #define Motor_Range_Max										1900
-#define Motor_Range_Min_NOT_BALANCE_STATE	1180
-#define DO_VOT_LO													50
+#define Motor_Range_Min_NOT_BALANCE_STATE	1150
+#define DO_VOT_LO													70
 
 #define RC_Throtte_Min										1100
 #define RC_Throtte_Max										1900
+#define RC_Effect_Min											1465 //1465 < 1500 < 1535
 #define RC_Medium													1500
-#define RC_Effect_Min											1470
-#define RC_Effect_Max											1530
+#define RC_Effect_Max											1535
 
 
 #define CONFIG_PWM_MAX										2000
@@ -40,8 +45,8 @@
 
 
 //dung de khoi dong/tat quadrotor
-#define RC_ON_OFF_MIN											1070
-#define RC_ON_OFF_MAX											1130
+#define RC_ON_OFF_MIN											1060    // 1060 < 1100 < 1140
+#define RC_ON_OFF_MAX											1140
 
 #define ABS(x)         										((x < 0) ? (-x) : x)
 #define M_PI 															(float)3.1415926535
