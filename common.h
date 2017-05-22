@@ -8,6 +8,7 @@
 //				  BLUE	 			//
 //----------------------//
 #define DT 																(float)0.01 //10ms
+#define SAMPLE_TIME 											(float)0.01 //10ms
 	
 #define LED_YELLOW												12
 #define LED_ORANGE												13

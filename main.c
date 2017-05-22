@@ -85,8 +85,11 @@ TM_MPU6050_t 							mpu6050;
 Compass_HMC5883L					compassHMC5883L;
 
 
-				//--------Fuzzy System--------------
+				//--------------------Fuzzy System--------------
 FuzzyController						rollFuzzyControl, pitchFuzzyControl, yawFuzzyControl;
+
+				//-------------------PID controller-------------------
+PID												PID_roll, PID_pitch, PID_yaw;
 //--END Khai bao BIEN-------------------------------------------------------------------------
 
 
@@ -181,13 +184,13 @@ int main(void)
 																	#ifdef RTE_CMSIS_RTOS                   
 																		osKernelInitialize(); /*..................code default cua ARM co san						*/                 
 																	#endif			
-																	HAL_Init();		
-																	SystemClock_Config();	
-		initFuzzySystem(); 					//init fuzzy system
+																	HAL_Init();		SystemClock_Config();	
+		//initFuzzySystem(); 					//init fuzzy system
 		SetInitDataQuadrotor(); 		// set kalman filter, input cature	
 		__GPIOA_CLK_ENABLE();	__GPIOB_CLK_ENABLE();	__GPIOC_CLK_ENABLE(); __GPIOD_CLK_ENABLE();	__GPIOE_CLK_ENABLE();		
 		__TIM1_CLK_ENABLE();  __TIM2_CLK_ENABLE(); 	__TIM3_CLK_ENABLE(); 	__TIM4_CLK_ENABLE(); 	__TIM5_CLK_ENABLE();  	 
-		__I2C1_CLK_ENABLE();						
+		__I2C1_CLK_ENABLE();
+	
 		Init_LEDSANG_AND_BUTTON_USER_PORT_A0(); //---GPIO 4 led & GPIO button user---------------						
 
 		PWM_Input_Capture_TIM1(); //---Config DEVO 7 RF module - INPUT CAPTURE MODE------------
@@ -260,7 +263,12 @@ int main(void)
 		
 		gyro_total_x = roll;
 		gyro_total_y = pitch;
-		Check_EveryThing_OK();			//ERROR => 4 led sang tat lien tuc 20ms
+		
+		pid_init(&PID_roll, PID_KP, PID_KI, PID_KD, PID_MIN_VALUE, PID_MAX_VALUE);
+		pid_init(&PID_pitch,PID_KP, PID_KI, PID_KD, PID_MIN_VALUE, PID_MAX_VALUE);
+		pid_init(&PID_yaw,  PID_KP, PID_KI, PID_KD, PID_MIN_VALUE, PID_MAX_VALUE);
+		
+		Check_EveryThing_OK();//ERROR => 4 led sang tat lien tuc 20ms
 		while(1)
 		{		
 						if(FlyState == STATE_FLY_OFF)
@@ -333,16 +341,21 @@ int main(void)
 													{	
 															//BALANCE MODE-------------TRANG THAI CAN BANG; Quadrotor can FLY ----- khi can` dieu khien Throttle value >= 1200			
 															//FUZZY SYSTEM--------------------------------------------------------------------
-															Fuzzification_All_MF( (float) roll, 	&rollFuzzyControl);
+														/*	
+														Fuzzification_All_MF( (float) roll, 	&rollFuzzyControl);
 															Fuzzification_All_MF( (float) pitch, &pitchFuzzyControl);
 															Apply_All_Rule( 				  &rollFuzzyControl  );
 															Apply_All_Rule( 				  &pitchFuzzyControl );	
 															Defuzzification( 				  &rollFuzzyControl  );				
 															Defuzzification( 				  &pitchFuzzyControl );	
-															pwm_motor_1 = IC_Throttle_pusle_width + limitOutputPWMFuzzy( rollFuzzyControl.output   - pitchFuzzyControl.output)  ; //+ yawFuzzyControl.output);
-															pwm_motor_2 = IC_Throttle_pusle_width + limitOutputPWMFuzzy(- rollFuzzyControl.output   - pitchFuzzyControl.output)  ;//- yawFuzzyControl.output);				
-															pwm_motor_3 = IC_Throttle_pusle_width + limitOutputPWMFuzzy(- rollFuzzyControl.output   + pitchFuzzyControl.output)  ;//+ yawFuzzyControl.output);
-															pwm_motor_4 = IC_Throttle_pusle_width + limitOutputPWMFuzzy(  rollFuzzyControl.output   + pitchFuzzyControl.output)  ; //limitOutputPWMFuzzy() - yawFuzzyControl.output);			
+														*/
+														pid_compute(&PID_roll,   roll, SAMPLE_TIME );
+														pid_compute(&PID_pitch,  pitch, SAMPLE_TIME );
+														
+															pwm_motor_1 = IC_Throttle_pusle_width + PID_roll.output     - PID_pitch.output  ; //+ yawFuzzyControl.output);
+															pwm_motor_2 = IC_Throttle_pusle_width - PID_roll.output     - PID_pitch.output  ;//- yawFuzzyControl.output);				
+															pwm_motor_3 = IC_Throttle_pusle_width - PID_roll.output     + PID_pitch.output  ;//+ yawFuzzyControl.output);
+															pwm_motor_4 = IC_Throttle_pusle_width + PID_roll.output     + PID_pitch.output  ; //limitOutputPWMFuzzy() - yawFuzzyControl.output);			
 															SetPWM_1_Motor(1,pwm_motor_1);
 															SetPWM_1_Motor(2,pwm_motor_2);
 															SetPWM_1_Motor(3,pwm_motor_3);
@@ -372,27 +385,27 @@ void SetInitDataQuadrotor(void)
 		// KasBot V1 - Kalman filter module
 			//http://robottini.altervista.org/kalman-filter-vs-complementary-filter
 		//set kalman filter	
-		kalmanX.Q_angle  =  0.01; //0.001
-		kalmanX.Q_gyro   =  0.0003;  //0.003
-		kalmanX.R_angle  =  0.01;  //0.03
+		kalmanX.Q_angle  =  0.01; 
+		kalmanX.Q_gyro   =  0.0003;  
+		kalmanX.R_angle  =  0.01;  
 		kalmanX.x_bias     =  0;
 		kalmanX.P_00     =  0;
 		kalmanX.P_01     =  0;
 		kalmanX.P_10     =  0; 
 		kalmanX.P_11     =  0;
 	
-		kalmanY.Q_angle  =  0.01; //0.001
-		kalmanY.Q_gyro   =  0.0003;  //0.003
-		kalmanY.R_angle  =  0.01;  //0.03
+		kalmanY.Q_angle  =  0.01; 
+		kalmanY.Q_gyro   =  0.0003;  
+		kalmanY.R_angle  =  0.01;  
 		kalmanY.x_bias     =  0;
 		kalmanY.P_00     =  0;
 		kalmanY.P_01     =  0;
 		kalmanY.P_10     =  0; 
 		kalmanY.P_11     =  0;
 	
-		kalmanZ.Q_angle  =  0.01; //0.001
-		kalmanZ.Q_gyro   =  0.0003;  //0.003
-		kalmanZ.R_angle  =  0.01;  //0.03
+		kalmanZ.Q_angle  =  0.01; 
+		kalmanZ.Q_gyro   =  0.0003; 
+		kalmanZ.R_angle  =  0.01;  
 		kalmanZ.x_bias   =  0;
 		kalmanZ.P_00     =  0;
 		kalmanZ.P_01     =  0;
@@ -451,23 +464,23 @@ void Turn_On_Quadrotor(void)
 				gyro_total_x = gyro_total_x + gyro_delta_x;
 				gyro_total_y = gyro_total_y + gyro_delta_y;
 			
-						acc_angle_x = atan2( acc_scale_y, acc_scale_z )*RAD_TO_DEG; 
-						acc_angle_y = atan2(-acc_scale_x, acc_scale_z )*RAD_TO_DEG;  
+				acc_angle_x = atan2( acc_scale_y, acc_scale_z )*RAD_TO_DEG; 
+				acc_angle_y = atan2(-acc_scale_x, acc_scale_z )*RAD_TO_DEG;  
 
-						roll  = (float)0.96 *(roll +  gyro_delta_x) +   (float)0.04 * acc_angle_x;
-						pitch = (float)0.96 *(pitch + gyro_delta_y) +   (float)0.04 * acc_angle_y;
-						
-						roll = (float)(roll_5 + roll_4 + roll_3 + roll_2 + roll )/5;
-						roll_5 = roll_4; 
-						roll_4 = roll_3; 
-						roll_3 = roll_2; 
-						roll_2 = roll;
-						
-						pitch = (float)(pitch_5 + pitch_4 + pitch_3 + pitch_2 + pitch )/5;
-						pitch_5 = pitch_4; 
-						pitch_4 = pitch_3; 
-						pitch_3 = pitch_2; 
-						pitch_2 = pitch;
+				roll  = (float)0.96 *(roll +  gyro_delta_x) +   (float)0.04 * acc_angle_x;
+				pitch = (float)0.96 *(pitch + gyro_delta_y) +   (float)0.04 * acc_angle_y;
+				
+				roll = (float)(roll_5 + roll_4 + roll_3 + roll_2 + roll )/5;
+				roll_5 = roll_4; 
+				roll_4 = roll_3; 
+				roll_3 = roll_2; 
+				roll_2 = roll;
+				
+				pitch = (float)(pitch_5 + pitch_4 + pitch_3 + pitch_2 + pitch )/5;
+				pitch_5 = pitch_4; 
+				pitch_4 = pitch_3; 
+				pitch_3 = pitch_2; 
+				pitch_2 = pitch;
 
 				Sang_Led_By_MPU6050_Values(roll, pitch, yaw);
 		}
