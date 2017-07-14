@@ -10,6 +10,18 @@
 #define TM_MPU6050_DataRate_250Hz      31  /*!< Sample rate set to 250 Hz */
 #define TM_MPU6050_DataRate_125Hz      63  /*!< Sample rate set to 125 Hz */
 #define TM_MPU6050_DataRate_100Hz      79  /*!< Sample rate set to 100 Hz */
+/**
+ * @brief  Parameters for accelerometer range
+ */
+#define TM_MPU6050_Accelerometer_2G   0x00 /*!< Range is +- 2G */
+#define	TM_MPU6050_Accelerometer_4G   0x01 /*!< Range is +- 4G */
+#define	TM_MPU6050_Accelerometer_8G   0x02 /*!< Range is +- 8G */
+#define	TM_MPU6050_Accelerometer_16G  0x03 /*!< Range is +- 16G */
+
+#define TM_MPU6050_Gyroscope_250s  0x00  /*!< Range is +- 250 degrees/s */
+#define	TM_MPU6050_Gyroscope_500s  0x01  /*!< Range is +- 500 degrees/s */
+#define	TM_MPU6050_Gyroscope_1000s  0x02 /*!< Range is +- 1000 degrees/s */
+#define	TM_MPU6050_Gyroscope_2000s  0x03  /*!< Range is +- 2000 degrees/s */
 
 /* Default I2C address */
 #define MPU6050_I2C_ADDR							0xD0
@@ -77,19 +89,7 @@
 #define	TM_MPU6050_Device_1  0x02  /*!< AD0 pin is set to high */
 
 
-/**
- * @brief  Parameters for accelerometer range
- */
-#define TM_MPU6050_Accelerometer_2G   0x00 /*!< Range is +- 2G */
-#define	TM_MPU6050_Accelerometer_4G   0x01 /*!< Range is +- 4G */
-#define	TM_MPU6050_Accelerometer_8G   0x02 /*!< Range is +- 8G */
-#define	TM_MPU6050_Accelerometer_16G  0x03 /*!< Range is +- 16G */
 
-
-#define TM_MPU6050_Gyroscope_250s  0x00  /*!< Range is +- 250 degrees/s */
-#define	TM_MPU6050_Gyroscope_500s  0x01  /*!< Range is +- 500 degrees/s */
-#define	TM_MPU6050_Gyroscope_1000s  0x02 /*!< Range is +- 1000 degrees/s */
-#define	TM_MPU6050_Gyroscope_2000s  0x03  /*!< Range is +- 2000 degrees/s */
 
 
 typedef struct _TM_MPU6050_t {

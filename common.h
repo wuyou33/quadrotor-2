@@ -7,8 +7,7 @@
 //	Yellow 				Red					//
 //				  BLUE	 			//
 //----------------------//
-#define DT 																(float)0.01 //10ms
-#define SAMPLE_TIME 											(float)0.01 //10ms
+
 	
 #define LED_YELLOW												12
 #define LED_ORANGE												13
@@ -31,7 +30,7 @@
 #define Motor_Range_Min										1100
 #define Motor_Range_Max										1900
 #define Motor_Range_Min_NOT_BALANCE_STATE	1150
-#define DO_VOT_LO													70
+#define DO_VOT_LO													50
 
 #define RC_Throtte_Min										1100
 #define RC_Throtte_Max										1900
@@ -50,9 +49,10 @@
 #define RC_ON_OFF_MAX											1140
 
 #define ABS(x)         										((x < 0) ? (-x) : x)
+#define BINH_PHUONG(x)         						(float)(x*x)
 #define M_PI 															(float)3.1415926535
 #define PI																(float)3.1415926535
-#define RAD_TO_DEG 												(float)(180/PI)
+#define RAD_TO_DEG 												(float)57.296
 	
 #define ZERO_									  				0
 #define ONE_									  				1
