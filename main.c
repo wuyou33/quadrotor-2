@@ -50,7 +50,7 @@ PB1 pwm 4
 #include "nguyen_HMC5883L.h"
 
 //----------Khai bao BIEN-------------------------------------------------------------------------
-I2C_HandleTypeDef 				I2C_Handle_10truc;  //I2C handle, dung de doc value cua cam bien MPU6050
+I2C_HandleTypeDef 				I2C_Handle_GY86_10truc;  //I2C handle, dung de doc value cua cam bien MPU6050
 TIM_HandleTypeDef 				Tim3_Handle_PWM;		//timer 3 dung de output PWM ra 4 channel
 TIM_HandleTypeDef 				htim1 , htim2 , htim4 , htim5; //  4 timer de capture Devo 7
 
@@ -62,34 +62,21 @@ float 									IC_Aileron_TraiPhai1, IC_Aileron_TraiPhai2, IC_Aileron_TraiPhai_p
 
 				//---------PWM 4 motor
 int16_t 									pwm_motor_1, pwm_motor_2, pwm_motor_3, pwm_motor_4;
-int16_t										pwm_test;
 int16_t 									FlyState; // 0: May bay ngung hoat dong, 1:may bay dang bay
 
 				//---------sensor
-uint8_t 									who_i_am_reg_value_MPU6050, i;
-int32_t 									timer;
+int 										who_i_am_reg_value_MPU6050;
+int											loop_time_cal_gyro; //1000
+int											set_gyro_angles_first_time=0;    // 0 or 1
+long										gyro_x_cal, gyro_y_cal, gyro_z_cal; 
+long 										angle_pitch_acc, 				angle_roll_acc, 				angle_yaw_acc;
+long 										angle_pitch, 						angle_roll, 						angle_yaw;
+long 										angle_pitch_output, 	angle_roll_output, 	angle_yaw_output;
+long 										angle_pitch_input_pid, 	angle_roll_input_pid, 	angle_yaw_input_pid;
 
-float  										acc_scale_x, acc_scale_y, acc_scale_z;
-float											acc_angle_x, acc_angle_y, acc_angle_z;
-float  										gyro_scale_x, gyro_scale_y, gyro_scale_z;
-float  										gyro_offset_x, gyro_offset_y, gyro_offset_z;
-float  										gyro_delta_x, gyro_delta_y, gyro_delta_z;
-float  										gyro_total_x, gyro_total_y, gyro_total_z;
-float											roll, pitch, yaw;
-float											roll_2, roll_3, roll_4, roll_5;
-float											pitch_2, pitch_3, pitch_4, pitch_5;
-float											yaw_2, yaw_3, yaw_4, yaw_5;
-Kalman_Setting 						kalmanX,	kalmanY,   kalmanZ;
-
-TM_MPU6050_t 							mpu6050;
-Compass_HMC5883L					compassHMC5883L;
-
-
-				//--------------------Fuzzy System--------------
-FuzzyController						rollFuzzyControl, pitchFuzzyControl, yawFuzzyControl;
-
-				//-------------------PID controller-------------------
+TM_MPU6050_t 							mpu6050_Object;
 PID												PID_roll, PID_pitch, PID_yaw;
+FuzzyController						rollFuzzyControl, pitchFuzzyControl, yawFuzzyControl;
 //--END Khai bao BIEN-------------------------------------------------------------------------
 
 
@@ -162,9 +149,9 @@ void 							GY86_I2C_WRITE( uint8_t device_address, uint8_t register_address, ui
 void 							GY86_I2C_READ_MULTI( uint8_t device_address, uint8_t register_address, uint8_t* data, uint16_t count);
 void 							GY86_I2C_READ(  uint8_t device_address, uint8_t register_address, uint8_t* data);
 void 							GY86_MPU6050_ReadAll( uint8_t device_address, TM_MPU6050_t* output );
-void							GY86_Sensity_Data_Acc_Gyro(TM_MPU6050_t* output);
-void 							TinhRollPitchAngle(void);
-void 							MPU6050_gyro_zero_offset(void);
+void 							GY86_Cal_Angle_By_Gyro(TM_MPU6050_t* output);
+void 							GY86_Cal_Angle_By_Acc(TM_MPU6050_t* output);
+void 							GY86_Cal_Gyro_Offset(void);
 void 							HMC5883L_set_config(void);
 void 							HMC5883L_read_compass_data(Compass_HMC5883L* compass);
 void 							Sang_Led_By_MPU6050_Values(float roll, float pitch, float yaw );
@@ -182,100 +169,72 @@ void 							Defuzzification( FuzzyController * fuzzyController );
 
 int main(void)
 {		
-																	#ifdef RTE_CMSIS_RTOS                   
-																		osKernelInitialize(); /*..................code default cua ARM co san						*/                 
-																	#endif			
-																	HAL_Init();		SystemClock_Config();	
+						#ifdef RTE_CMSIS_RTOS                   
+								osKernelInitialize(); /*..................code default cua ARM co san						*/                 
+						#endif			
+						HAL_Init();		SystemClock_Config();	
 		//initFuzzySystem(); 					//init fuzzy system
 		SetInitDataQuadrotor(); 		// set kalman filter, input cature	
 		__GPIOA_CLK_ENABLE();	__GPIOB_CLK_ENABLE();	__GPIOC_CLK_ENABLE(); __GPIOD_CLK_ENABLE();	__GPIOE_CLK_ENABLE();		
 		__TIM1_CLK_ENABLE();  __TIM2_CLK_ENABLE(); 	__TIM3_CLK_ENABLE(); 	__TIM4_CLK_ENABLE(); 	__TIM5_CLK_ENABLE();  	 
 		__I2C1_CLK_ENABLE();
 	
-		Init_LEDSANG_AND_BUTTON_USER_PORT_A0(); //---GPIO 4 led & GPIO button user---------------							
-		delay_ms(50);
-	
-		PWM_Input_Capture_TIM1(); //---Config DEVO 7 RF module - INPUT CAPTURE MODE------------
-		delay_ms(50);	
-		PWM_Input_Capture_TIM2(); 
-		delay_ms(50);
-		PWM_Input_Capture_TIM4(); 
-		delay_ms(50);
-		PWM_Input_Capture_TIM5();
-		delay_ms(50);
+		Init_LEDSANG_AND_BUTTON_USER_PORT_A0(); delay_ms(50); //---GPIO 4 led & GPIO button user---------------							
 		
-		GY86_I2C_Handle_GY86();			//---MPU6050 cau hinh PB6, PB7 doc cam bien
-		delay_ms(50);
-		GY86_I2C_WRITE( MPU6050_I2C_ADDR, MPU6050_PWR_MGMT_1, 0); // 0x6B PWR_MGMT_1 register; set to zero (wakes up the MPU-6050)
-		delay_ms(50);
-		GY86_MPU6050_SetDataRate( MPU6050_I2C_ADDR, MPU6050_SMPLRT_DIV, TM_MPU6050_DataRate_1KHz); 
-		delay_ms(50);
-		GY86_MPU6050_SetAccelerometer( MPU6050_I2C_ADDR, MPU6050_ACCEL_CONFIG, TM_MPU6050_Accelerometer_2G); 
-		delay_ms(50);
-		GY86_MPU6050_SetGyroscope( MPU6050_I2C_ADDR, MPU6050_GYRO_CONFIG, TM_MPU6050_Gyroscope_250s); 
-		delay_ms(50);
-	
-		//-----------------------------------------------------------------------
-		SANG_4_LED_LAN_LUOT(10,30);
-		SANG_4_LED(); 
-		delay_ms(1000); 
+		PWM_Input_Capture_TIM1();  delay_ms(50);	 
+		PWM_Input_Capture_TIM2();  delay_ms(50); 
+		PWM_Input_Capture_TIM4();  delay_ms(50); 
+		PWM_Input_Capture_TIM5();  delay_ms(50);
 		
+		GY86_I2C_Handle_GY86();	 delay_ms(50);						//---MPU6050 cau hinh PB6, PB7 doc cam bien
+		GY86_I2C_WRITE( 								0xD0, 0x6B, 0x00); delay_ms(50); 		// 0x6B PWR_MGMT_1 register; set to zero (wakes up the MPU-6050)
+		GY86_MPU6050_SetAccelerometer( 	0xD0, 0x1C, 0x10); delay_ms(50);
+		GY86_MPU6050_SetGyroscope( 			0xD0, 0x1B, 0x08); delay_ms(50);
+		GY86_MPU6050_SetDataRate( 			0xD0, 0x1A, 0x03); delay_ms(50);
+		SANG_4_LED_LAN_LUOT(10,50);     SANG_4_LED();      delay_ms(1000); 
+		//-----------------------------------------------------------------------	
 		Init_TIM3_OUTPUT_PWM();//---Timer 3 4 channel PWM
-		SANG_4_LED_OFF(); 
-		delay_ms(1000); 
+		SANG_4_LED_OFF();  												delay_ms(1000); 
 		setPWM_4_Motor_Cung_Value(CONFIG_PWM_MAX);
-		SANG_4_LED(); 
-		delay_ms(2000); 
+		SANG_4_LED();      												delay_ms(2000); 
 		setPWM_4_Motor_Cung_Value(CONFIG_PWM_MIN);
-		SANG_4_LED_OFF();
-		delay_ms(1000);
+		SANG_4_LED_OFF(); 												delay_ms(1000);
 		SANG_4_LED_LAN_LUOT(10,30);
 		SANG_4_LED_OFF();
 		setPWM_4_Motor_Cung_Value(ZERO_);		
-		
-		GY86_I2C_IS_DEVICE_CONNECTED();	//ERROR khong connect dc GY-86 => LED VANG sang lien tuc	
-		delay_ms(50);
-		who_i_am_reg_value_MPU6050 = GY86_I2C_WHO_I_AM( MPU6050_I2C_ADDR, MPU6050_WHO_AM_I_REGISTER);
-		delay_ms(50);
-		if( who_i_am_reg_value_MPU6050 != MPU6050_I_AM_VALUES )	 //---Doc gia tri cua WHO I AM register, if error => LED RED(14) sang nhap nhay
-		{ 
-				Error_Handler_Custom(	ERROR_MPU6050_NOT_I_AM_VALUES ); 
+		//-----------------------------------------------------------------------
+		GY86_I2C_IS_DEVICE_CONNECTED();	 delay_ms(50);
+		who_i_am_reg_value_MPU6050 = GY86_I2C_WHO_I_AM( 0xD0, 0x75); delay_ms(50); //MPU6050_WHO_AM_I_REGISTER
+					#ifdef RTE_CMSIS_RTOS 
+						osKernelStart(); //.........code dafault cua ARM		// when using CMSIS RTOS	// start thread execution 
+					#endif
+		GY86_Cal_Gyro_Offset(); delay_ms(50); //cal gyro 1000 time		
+
+		GY86_MPU6050_ReadAll( MPU6050_I2C_ADDR, &mpu6050_Object); delay_ms(50);  //---Read value from MPU6050	
+		GY86_Cal_Angle_By_Gyro(&mpu6050_Object); delay_ms(50);
+		GY86_Cal_Angle_By_Acc(&mpu6050_Object); delay_ms(50);
+		if(set_gyro_angles_first_time==0)
+		{
+			angle_pitch = angle_pitch_acc;
+			angle_roll = angle_roll_acc;
+			set_gyro_angles_first_time = 1;
 		}
-													#ifdef RTE_CMSIS_RTOS 
-														osKernelStart(); //.........code dafault cua ARM		// when using CMSIS RTOS	// start thread execution 
-													#endif
-		MPU6050_gyro_zero_offset(); //tinh offset 50 samples
-		delay_ms(50);
-		GY86_MPU6050_ReadAll( MPU6050_I2C_ADDR, &mpu6050);  //---Read value from MPU6050
-		GY86_Sensity_Data_Acc_Gyro( &mpu6050);
-		delay_ms(50);
-		roll =  atan2(acc_scale_y, acc_scale_z  )*RAD_TO_DEG; 		
-		pitch = atan2(-acc_scale_x, acc_scale_z )*RAD_TO_DEG;		
-		gyro_total_x = roll;
-		gyro_total_y = pitch;		
-		pid_init(&PID_roll, PID_KP, PID_KI, PID_KD, PID_MIN_VALUE, PID_MAX_VALUE);
-		pid_init(&PID_pitch,PID_KP, PID_KI, PID_KD, PID_MIN_VALUE, PID_MAX_VALUE);
-		pid_init(&PID_yaw,  PID_KP, PID_KI, PID_KD, PID_MIN_VALUE, PID_MAX_VALUE);		
 		Check_EveryThing_OK();//ERROR => 4 led sang tat lien tuc 20ms
-		while(1)
+		
+		while(1) //main loop
 		{		
-						if(FlyState == STATE_FLY_OFF)
+			//debug
+			while(1) {SANG_4_LED_LAN_LUOT(10,30);}
+			//end debug
+						while(FlyState == STATE_FLY_OFF)
 						{
-								SANG_4_LED_LAN_LUOT(10,30);
-								SANG_4_LED(); 
-								delay_ms(2000); 
-								SANG_4_LED_OFF(); 
-								delay_ms(1000); 
+								SANG_4_LED_LAN_LUOT(10,30); SANG_4_LED();  delay_ms(2000); 
+								SANG_4_LED_OFF();  delay_ms(1000); 
 								setPWM_4_Motor_Cung_Value(1000);
-								while(FlyState == STATE_FLY_OFF) //---------Quadrotor state OFF, //check sign to start
-								{	 
-										Turn_On_Quadrotor();  
-								}		
+								while(FlyState == STATE_FLY_OFF)  {	  Turn_On_Quadrotor();  }		
 						}
-						
-						
 						//---Quadrotor Fly------------------------------------------------------------------
-						if(FlyState == STATE_FLY_ON) //quadrotor State Fly
+						while(FlyState == STATE_FLY_ON) //quadrotor State Fly
 						{ 
 									//Check sign to TURN OFF quadrotor
 									if( (IC_Throttle_pusle_width         >= RC_ON_OFF_MIN && IC_Throttle_pusle_width         <= RC_ON_OFF_MAX) && 
@@ -299,15 +258,19 @@ int main(void)
 													else
 													{	
 															//BALANCE MODE-------------TRANG THAI CAN BANG; Quadrotor can FLY ----- khi can` dieu khien Throttle value >= 1200			
-															TinhRollPitchAngle();
-															if(ABS(roll) < 10){ pid_reset_PID_value(&PID_roll, PID_KP_2, PID_KI_2, PID_KD_2);
-															}else{ pid_reset_PID_value(&PID_roll, PID_KP, PID_KI, PID_KD);}
-															
-															if(ABS(pitch) < 10){ pid_reset_PID_value(&PID_pitch,PID_KP_2, PID_KI_2, PID_KD_2);
-															}else{ pid_reset_PID_value(&PID_pitch,PID_KP, PID_KI, PID_KD);}
-															
-															pid_compute(&PID_roll,   roll, 	SAMPLE_TIME );
-															pid_compute(&PID_pitch,  pitch, SAMPLE_TIME );
+															GY86_MPU6050_ReadAll( MPU6050_I2C_ADDR, &mpu6050_Object);   //---Read value from MPU6050	
+															GY86_Cal_Angle_By_Gyro(&mpu6050_Object); 
+															GY86_Cal_Angle_By_Acc(&mpu6050_Object); 
+															if(set_gyro_angles_first_time == 1)
+															{
+																angle_pitch = angle_pitch * 0.9996 + angle_pitch_acc * 0.0004;
+																angle_roll =  angle_roll  * 0.9996 + angle_roll * 0.0004;
+															}
+														
+															/*
+															pid_compute(&PID_roll,   angle_roll, 	1 );
+															pid_compute(&PID_pitch,  angle_pitch, 1 );
+															pid_compute(&PID_yaw,    angle_yaw,   1 );
 														
 															pwm_motor_1 = IC_Throttle_pusle_width - PID_roll.output  - PID_pitch.output  ; //+ yawFuzzyControl.output);
 															pwm_motor_2 = IC_Throttle_pusle_width + PID_roll.output  - PID_pitch.output  ;//- yawFuzzyControl.output);				
@@ -319,10 +282,9 @@ int main(void)
 															SetPWM_1_Motor(3,pwm_motor_3);
 															SetPWM_1_Motor(4,pwm_motor_4);
 															
-															Sang_Led_By_MPU6050_Values(roll, pitch, yaw);
-															TinhRollPitchAngle();
-															//TinhRollPitchAngle();
-															//delay_ms(5);
+															Sang_Led_By_MPU6050_Values(angle_roll, angle_pitch, angle_yaw);
+															*/
+															
 													}								
 									}
 									else 
@@ -340,60 +302,11 @@ int main(void)
 		}//End while(1)
 }
 
-void TinhRollPitchAngle(void)
-{
-	GY86_MPU6050_ReadAll( MPU6050_I2C_ADDR, &mpu6050);  //---Read value from MPU6050
-	GY86_Sensity_Data_Acc_Gyro( &mpu6050);
-
-	gyro_delta_x = gyro_scale_x * DTime;
-	gyro_delta_y = gyro_scale_y * DTime;
-	gyro_total_x = gyro_total_x + gyro_delta_x;
-	gyro_total_y = gyro_total_y + gyro_delta_y;
-	
-	//acc_angle_x = atan2( acc_scale_y, acc_scale_z )*RAD_TO_DEG; 
-	acc_angle_x = atan2(-acc_scale_y, sqrt( BINH_PHUONG(acc_scale_x)  + BINH_PHUONG(acc_scale_z) ) )  *RAD_TO_DEG; 
-	acc_angle_y = atan2(-acc_scale_x, sqrt( BINH_PHUONG(acc_scale_y) + BINH_PHUONG(acc_scale_z) ) )  *RAD_TO_DEG;
-		acc_angle_z = atan2( sqrt( BINH_PHUONG(acc_scale_x) + BINH_PHUONG(acc_scale_y) ), acc_scale_z )*RAD_TO_DEG;
-	
-	roll  = ( (float)0.97 *(roll +  gyro_delta_x) +   (float)0.03 * acc_angle_x );
-	pitch = ( (float)0.97 *(pitch + gyro_delta_y) +   (float)0.03 * acc_angle_y );
-}
-
 //-----------------------------------------------------------------------------------
 void SetInitDataQuadrotor(void)
 {
 		who_i_am_reg_value_MPU6050 = ZERO_;
-	
-		// KasBot V1 - Kalman filter module
-			//http://robottini.altervista.org/kalman-filter-vs-complementary-filter
-		//set kalman filter	
-		kalmanX.Q_angle  =  0.01; 
-		kalmanX.Q_gyro   =  0.0003;  
-		kalmanX.R_angle  =  0.01;  
-		kalmanX.x_bias     =  0;
-		kalmanX.P_00     =  0;
-		kalmanX.P_01     =  0;
-		kalmanX.P_10     =  0; 
-		kalmanX.P_11     =  0;
-	
-		kalmanY.Q_angle  =  0.01; 
-		kalmanY.Q_gyro   =  0.0003;  
-		kalmanY.R_angle  =  0.01;  
-		kalmanY.x_bias     =  0;
-		kalmanY.P_00     =  0;
-		kalmanY.P_01     =  0;
-		kalmanY.P_10     =  0; 
-		kalmanY.P_11     =  0;
-	
-		kalmanZ.Q_angle  =  0.01; 
-		kalmanZ.Q_gyro   =  0.0003; 
-		kalmanZ.R_angle  =  0.01;  
-		kalmanZ.x_bias   =  0;
-		kalmanZ.P_00     =  0;
-		kalmanZ.P_01     =  0;
-		kalmanZ.P_10     =  0; 
-		kalmanZ.P_11     =  0;
-		
+		FlyState = STATE_FLY_OFF;
 		
 		//set input capture
 		IC_Throttle1 = 0;		
@@ -411,8 +324,34 @@ void SetInitDataQuadrotor(void)
 		IC_Rudder_Xoay1 = 0;		
 		IC_Rudder_Xoay2 = 0;			
 		IC_Rudder_Xoay_pusle_width = 0;	
+	
+		PID_roll.derivative_error = 0;
+		PID_roll.integral_error = 0;
+		PID_roll.pre_error = 0;
+		PID_roll.setpoint = 0;
+		PID_roll.kP = PID_KP;
+		PID_roll.kI = PID_KI;
+		PID_roll.kD = PID_KD;
+		PID_roll.output_max = PID_MAX_VALUE_ROLL;
 		
-		FlyState = STATE_FLY_OFF;
+		PID_pitch.derivative_error = 0;
+		PID_pitch.integral_error = 0;
+		PID_pitch.pre_error = 0;
+		PID_pitch.setpoint = 0;
+		PID_pitch.kP = PID_KP;
+		PID_pitch.kI = PID_KI;
+		PID_pitch.kD = PID_KD;
+		PID_pitch.output_max = PID_MAX_VALUE_ROLL;
+		
+		
+		PID_yaw.derivative_error = 0;
+		PID_yaw.integral_error = 0;
+		PID_yaw.pre_error = 0;
+		PID_yaw.setpoint = 0;
+		PID_yaw.kP = 4.0;
+		PID_yaw.kI = 0.02;
+		PID_yaw.kD = 0.0;
+		PID_yaw.output_max = 400;
 }
 void Turn_On_Quadrotor(void)
 {
@@ -440,20 +379,16 @@ void Turn_On_Quadrotor(void)
 				}
 		else
 		{
-				// Turn_On_Quadrotor(void)
-				TinhRollPitchAngle();
-				TinhRollPitchAngle();
-				pid_compute(&PID_roll,   roll, 	SAMPLE_TIME );
-				pid_compute(&PID_pitch,  pitch, SAMPLE_TIME );
-			
-				pwm_motor_1 = IC_Throttle_pusle_width + PID_roll.output     - PID_pitch.output  ; //+ yawFuzzyControl.output);
-				pwm_motor_2 = IC_Throttle_pusle_width - PID_roll.output     - PID_pitch.output  ;//- yawFuzzyControl.output);				
-				pwm_motor_3 = IC_Throttle_pusle_width - PID_roll.output     + PID_pitch.output  ;//+ yawFuzzyControl.output);
-				pwm_motor_4 = IC_Throttle_pusle_width + PID_roll.output     + PID_pitch.output  ; //limitOutputPWMFuzzy() - yawFuzzyControl.output);			
-															
-				Sang_Led_By_MPU6050_Values(roll, pitch, yaw);
-				TinhRollPitchAngle();
-				TinhRollPitchAngle();	
+				GY86_MPU6050_ReadAll( MPU6050_I2C_ADDR, &mpu6050_Object); delay_ms(50);  //---Read value from MPU6050	
+				GY86_Cal_Angle_By_Gyro(&mpu6050_Object); delay_ms(50);
+				GY86_Cal_Angle_By_Acc(&mpu6050_Object); delay_ms(50);
+				if(set_gyro_angles_first_time == 1)
+				{
+					angle_pitch = angle_pitch * 0.9996 + angle_pitch_acc * 0.0004;
+					angle_roll =  angle_roll  * 0.9996 + angle_roll * 0.0004;
+				}
+				angle_pitch_output = angle_pitch_output * 0.9 + angle_pitch * 0.1;
+				angle_roll_output =  angle_roll_output * 0.9 + 	angle_roll * 0.1;
 		}
 }
 
@@ -819,33 +754,27 @@ void TIM5_IRQHandler(void) //PA3 - TIM5_CH4 ////Aileron_TraiPhai (trai - phai) -
 //
 //-----------------------------------------------------------------------------------
 void Check_EveryThing_OK(void)
-{
-		//SANG_4_LED_LAN_LUOT(5,100); //sang 4 led lan luot. loop 5 lan, delay 50ms
-		//SANG_4_LED();			
-		//delay_ms(1000);		
+{	
 		SANG_4_LED_OFF();
-		delay_ms(100);		
+		if(who_i_am_reg_value_MPU6050 != MPU6050_I_AM_VALUES)  //---Doc gia tri cua WHO I AM register, if error => LED RED(14) sang nhap nhay
+		{
+				while(1) {			 SANG_4_LED(); delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
+		}	
+		if(loop_time_cal_gyro != 1000)
+		{
+				while(1) {			 SANG_4_LED(); delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
+		}	
+		if(set_gyro_angles_first_time == 0 )
+		{
+				while(1) {			 SANG_4_LED(); delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
+		}
 		if(IC_Throttle_pusle_width == 0 || IC_Aileron_TraiPhai_pusle_width == 0 || IC_Elevator_TienLui_pusle_width == 0 || IC_Rudder_Xoay_pusle_width == 0)
 		{
-			//Error_Handler();
-					while(1)
-					{			
-						SANG_4_LED();
-						delay_ms(50);
-						SANG_4_LED_OFF();
-						delay_ms(50);
-					}
+				while(1) {			   SANG_4_LED(); delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
 		}
 		if(IC_Throttle_pusle_width > 2000 || IC_Aileron_TraiPhai_pusle_width > 2000 || IC_Elevator_TienLui_pusle_width > 2000 || IC_Rudder_Xoay_pusle_width > 2000)
 		{
-					//Error_Handler();
-					while(1)
-					{			
-						SANG_4_LED();
-						delay_ms(50);
-						SANG_4_LED_OFF();
-						delay_ms(50);
-					}
+				while(1) {			 SANG_4_LED(); delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
 		}		
 }
 
@@ -921,6 +850,10 @@ void Init_TIM3_OUTPUT_PWM(void)
 		HAL_TIM_PWM_Start(&Tim3_Handle_PWM,TIM_CHANNEL_3);	
 		HAL_TIM_PWM_Start(&Tim3_Handle_PWM,TIM_CHANNEL_4);
 }
+
+
+
+
 //
 //
 //
@@ -942,50 +875,42 @@ void GY86_I2C_Handle_GY86(void)
 		GPIO_InitStruct.Alternate = GPIO_AF4_I2C1;
 		HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);	
 	
-		I2C_Handle_10truc.Instance = I2C1;
-		I2C_Handle_10truc.Init.ClockSpeed = 100000;
-		I2C_Handle_10truc.Init.DutyCycle = I2C_DUTYCYCLE_2;
-		I2C_Handle_10truc.Init.OwnAddress1 = 0;
-		I2C_Handle_10truc.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
-		I2C_Handle_10truc.Init.DualAddressMode = I2C_DUALADDRESS_DISABLED;
-		I2C_Handle_10truc.Init.OwnAddress2 = 0;
-		I2C_Handle_10truc.Init.GeneralCallMode = I2C_GENERALCALL_DISABLED;
-		I2C_Handle_10truc.Init.NoStretchMode = I2C_NOSTRETCH_DISABLED;
-		if (HAL_I2C_Init(&I2C_Handle_10truc) != HAL_OK)
+		I2C_Handle_GY86_10truc.Instance = I2C1;
+		I2C_Handle_GY86_10truc.Init.ClockSpeed = 100000;
+		I2C_Handle_GY86_10truc.Init.DutyCycle = I2C_DUTYCYCLE_2;
+		I2C_Handle_GY86_10truc.Init.OwnAddress1 = 0;
+		I2C_Handle_GY86_10truc.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+		I2C_Handle_GY86_10truc.Init.DualAddressMode = I2C_DUALADDRESS_DISABLED;
+		I2C_Handle_GY86_10truc.Init.OwnAddress2 = 0;
+		I2C_Handle_GY86_10truc.Init.GeneralCallMode = I2C_GENERALCALL_DISABLED;
+		I2C_Handle_GY86_10truc.Init.NoStretchMode = I2C_NOSTRETCH_DISABLED;
+		if (HAL_I2C_Init(&I2C_Handle_GY86_10truc) != HAL_OK)
 	  {
-        while(1)
-				{
-						SANG_4_LED();
-				}
+        while(1) { SANG_4_LED(); }
 	  }
-		//HAL_I2C_Init(&I2C_Handle_10truc);	
-		__HAL_I2C_ENABLE(&I2C_Handle_10truc);
+		HAL_I2C_Init(&I2C_Handle_GY86_10truc);	
+		__HAL_I2C_ENABLE(&I2C_Handle_GY86_10truc);
 }
+
+
+
 void GY86_I2C_IS_DEVICE_CONNECTED(void)
 {
-	//trail 10 lan
-	//timeout 100
-	while(HAL_I2C_IsDeviceReady(&I2C_Handle_10truc, MPU6050_I2C_ADDR, 10, 100) != HAL_OK) 
+	while(HAL_I2C_IsDeviceReady(&I2C_Handle_GY86_10truc, 0xD0, 10, 100) != HAL_OK) 
 	{
 		//k ket noi dc mpu6050; LED VANG sang 
-			SANG_1_LED(12); 			delay_ms(50);			SANG_4_LED_OFF();			delay_ms(50);
+		SANG_1_LED(12); 			delay_ms(50);			SANG_4_LED_OFF();			delay_ms(50);
 	}
-	/*while( HAL_I2C_GetState(&I2C_Handle_10truc) != HAL_I2C_STATE_READY )
-	{
-		Error_Handler_Custom(ERROR_MPU6050_STATE_READY_NOT_OK);
-	}*/
 }
 
 uint8_t GY86_I2C_WHO_I_AM(uint8_t device_address, uint8_t register_address)
 {	
 	uint8_t data;
-	while (HAL_I2C_Master_Transmit(&I2C_Handle_10truc, (uint16_t)device_address, &register_address, 1, 10) != HAL_OK) 
-	{}
-	//while(HAL_I2C_GetState(&I2C_Handle_10truc) != HAL_I2C_STATE_READY) {}		
+	while (HAL_I2C_Master_Transmit(&I2C_Handle_GY86_10truc, (uint16_t)device_address, &register_address, 1, 10) != HAL_OK) 
+	{}	
 	
-	while (HAL_I2C_Master_Receive(&I2C_Handle_10truc, device_address, &data, 1, 10) != HAL_OK) 
+	while (HAL_I2C_Master_Receive(&I2C_Handle_GY86_10truc, device_address, &data, 1, 10) != HAL_OK) 
 	{}
-	//while(HAL_I2C_GetState(&I2C_Handle_10truc) != HAL_I2C_STATE_READY) {}
 	return data;
 }
 
@@ -995,24 +920,18 @@ void GY86_I2C_WRITE( uint8_t device_address, uint8_t register_address, uint8_t d
 	uint8_t d[2];		
 	d[0] = register_address;
 	d[1] = data;	
-	//HAL_I2C_Mem_Write(&I2C_Handle_10truc, (uint16_t)device_address, (uint16_t)register_address, 1,(uint8_t *)d, 1, 10);
-	while(HAL_I2C_Master_Transmit(&I2C_Handle_10truc, (uint16_t)device_address, (uint8_t *)d, 2, 10) != HAL_OK) 
-	{
-	}
-	/*while(HAL_I2C_GetState(&I2C_Handle_10truc) != HAL_I2C_STATE_READY) 
-	{
-		//SANG_4_LED();
-	}*/
+	while(HAL_I2C_Master_Transmit(&I2C_Handle_GY86_10truc, (uint16_t)device_address, (uint8_t *)d, 2, 10) != HAL_OK) 
+	{}
 }
 	
 	
 void GY86_I2C_READ(  uint8_t device_address, uint8_t register_address, uint8_t* data)
 {
-	while (HAL_I2C_Master_Transmit(&I2C_Handle_10truc, (uint16_t)device_address, &register_address, 1, 100) != HAL_OK) 
+	while (HAL_I2C_Master_Transmit(&I2C_Handle_GY86_10truc, (uint16_t)device_address, &register_address, 1, 100) != HAL_OK) 
 	{}
 	//while(HAL_I2C_GetState(&I2C_Handle_10truc) != HAL_I2C_STATE_READY) {}
 	
-	while (HAL_I2C_Master_Receive(&I2C_Handle_10truc, device_address, data, 1, 100) != HAL_OK) 
+	while (HAL_I2C_Master_Receive(&I2C_Handle_GY86_10truc, device_address, data, 1, 100) != HAL_OK) 
 	{}
 	//while(HAL_I2C_GetState(&I2C_Handle_10truc) != HAL_I2C_STATE_READY) {}
 }
@@ -1020,10 +939,10 @@ void GY86_I2C_READ(  uint8_t device_address, uint8_t register_address, uint8_t* 
 
 void GY86_I2C_READ_MULTI( uint8_t device_address, uint8_t register_address, uint8_t* data, uint16_t count)  
 {
-	while (HAL_I2C_Master_Transmit(&I2C_Handle_10truc, (uint16_t)device_address, &register_address, 1, 100) != HAL_OK) 
+	while (HAL_I2C_Master_Transmit(&I2C_Handle_GY86_10truc, (uint16_t)device_address, &register_address, 1, 100) != HAL_OK) 
 	{}
 	//while(HAL_I2C_GetState(&I2C_Handle_10truc) != HAL_I2C_STATE_READY) {}
-	while (HAL_I2C_Master_Receive(&I2C_Handle_10truc, device_address, data, count, 100) != HAL_OK) 
+	while (HAL_I2C_Master_Receive(&I2C_Handle_GY86_10truc, device_address, data, count, 100) != HAL_OK) 
 	{}
 	//while(HAL_I2C_GetState(&I2C_Handle_10truc) != HAL_I2C_STATE_READY) {}	
 }
@@ -1032,18 +951,18 @@ void GY86_I2C_READ_MULTI( uint8_t device_address, uint8_t register_address, uint
 void GY86_MPU6050_SetDataRate(uint8_t device_address, uint8_t register_address, uint8_t rate) 
 {
 	GY86_I2C_WRITE( device_address, register_address, rate);
-	while(HAL_I2C_GetState(&I2C_Handle_10truc)!=HAL_I2C_STATE_READY){}
+	while(HAL_I2C_GetState(&I2C_Handle_GY86_10truc)!=HAL_I2C_STATE_READY){}
 }
 
 void GY86_MPU6050_SetAccelerometer(uint8_t device_address, uint8_t register_address, uint8_t Acc_8G_Value) 
 {
 	uint8_t temp;		
 	GY86_I2C_READ( device_address, register_address, &temp);
-	while(HAL_I2C_GetState(&I2C_Handle_10truc)!=HAL_I2C_STATE_READY)
+	while(HAL_I2C_GetState(&I2C_Handle_GY86_10truc)!=HAL_I2C_STATE_READY)
 	{}
 	temp = (temp & 0xE7) | (uint8_t)Acc_8G_Value << 3;
 	GY86_I2C_WRITE( device_address, register_address, temp);
-	while(HAL_I2C_GetState(&I2C_Handle_10truc)!=HAL_I2C_STATE_READY)
+	while(HAL_I2C_GetState(&I2C_Handle_GY86_10truc)!=HAL_I2C_STATE_READY)
 	{}
 }
 
@@ -1051,11 +970,11 @@ void GY86_MPU6050_SetGyroscope( uint8_t device_address, uint8_t register_address
 {
 	uint8_t temp;		
 	GY86_I2C_READ( device_address, register_address, &temp);
-	while(HAL_I2C_GetState(&I2C_Handle_10truc)!=HAL_I2C_STATE_READY)
+	while(HAL_I2C_GetState(&I2C_Handle_GY86_10truc)!=HAL_I2C_STATE_READY)
 	{}
 	temp = (temp & 0xE7) | (uint8_t)Gyro_250s_Value << 3;
 	GY86_I2C_WRITE( device_address, register_address, temp);
-	while(HAL_I2C_GetState(&I2C_Handle_10truc)!=HAL_I2C_STATE_READY)
+	while(HAL_I2C_GetState(&I2C_Handle_GY86_10truc)!=HAL_I2C_STATE_READY)
 	{}
 }
 
@@ -1063,7 +982,7 @@ void GY86_MPU6050_ReadAccelerometer( uint8_t device_address, TM_MPU6050_t* outpu
 {
 	uint8_t data[6];
 	GY86_I2C_READ_MULTI( device_address, MPU6050_ACCEL_XOUT_H, data, 6);
-	while(HAL_I2C_GetState(&I2C_Handle_10truc)!=HAL_I2C_STATE_READY)
+	while(HAL_I2C_GetState(&I2C_Handle_GY86_10truc)!=HAL_I2C_STATE_READY)
 	{}
 		
 	output->Acc_X = (int16_t)(data[0] << 8 | data[1]);
@@ -1075,7 +994,7 @@ void GY86_MPU6050_ReadGyroscope( uint8_t device_address, TM_MPU6050_t* output )
 {
 	uint8_t data[6];
 	GY86_I2C_READ_MULTI( device_address, MPU6050_GYRO_XOUT_H, data, 6);
-	while(HAL_I2C_GetState(&I2C_Handle_10truc)!=HAL_I2C_STATE_READY)
+	while(HAL_I2C_GetState(&I2C_Handle_GY86_10truc)!=HAL_I2C_STATE_READY)
 	{}
 		
 	output->Gyro_X = (int16_t)(data[0] << 8 | data[1]);
@@ -1083,16 +1002,7 @@ void GY86_MPU6050_ReadGyroscope( uint8_t device_address, TM_MPU6050_t* output )
 	output->Gyro_Z = (int16_t)(data[4] << 8 | data[5]);
 }	
 
-void GY86_Sensity_Data_Acc_Gyro(TM_MPU6050_t* output)
-{
-	acc_scale_x = (float)output->Acc_X/MPU6050_ACCE_SENS_2;
-	acc_scale_y = (float)output->Acc_Y/MPU6050_ACCE_SENS_2;
-	acc_scale_z = (float)output->Acc_Z/MPU6050_ACCE_SENS_2;
-	
-	gyro_scale_x = (float)(output->Gyro_X - gyro_offset_x)/MPU6050_GYRO_SENS_250;
-	gyro_scale_y = (float)(output->Gyro_Y - gyro_offset_y)/MPU6050_GYRO_SENS_250;
-	gyro_scale_z = (float)(output->Gyro_Z - gyro_offset_z)/MPU6050_GYRO_SENS_250;
-}
+
 
 void GY86_MPU6050_ReadAll( uint8_t device_address, TM_MPU6050_t* output )
 {
@@ -1112,24 +1022,59 @@ void GY86_MPU6050_ReadAll( uint8_t device_address, TM_MPU6050_t* output )
 	output->Gyro_Z = (int16_t)(data[12] << 8 | data[13]);
 }
 
-void MPU6050_gyro_zero_offset(void)//tinh gyro offset 3 truc
+void GY86_Cal_Angle_By_Gyro(TM_MPU6050_t* output)//tinh gyro offset 3 truc
 {
-		int16_t i;
-		float total_x, total_y, total_z;
+	output->Gyro_X = output->Gyro_X - gyro_x_cal;
+	output->Gyro_Y = output->Gyro_Y - gyro_y_cal;
+	output->Gyro_Z = output->Gyro_Z - gyro_z_cal;
+	//0.0000611 = 1/ (250Hz /65.5)
+	angle_pitch = angle_pitch + output->Gyro_X * 0.0000611; 
+	angle_roll =  angle_roll  + output->Gyro_Y * 0.0000611; 
+	// 0.000001066 = 0.0000611 * (3.142/180) 
+	angle_pitch = angle_pitch + angle_roll   * sin(output->Gyro_Z * 0.000001066);
+	angle_roll =  angle_roll  - angle_pitch  * sin(output->Gyro_Z * 0.000001066);
+}	
+
+
+void GY86_Cal_Angle_By_Acc(TM_MPU6050_t* output)//tinh gyro offset 3 truc
+{
+	output->Acc_Total_Vector = sqrt( BINH_PHUONG(output->Acc_X) + BINH_PHUONG(output->Acc_Y) + BINH_PHUONG(output->Acc_Z) );
+	if(ABS(output->Acc_Y) < output->Acc_Total_Vector )
+	{
+		angle_pitch_acc = asin( (float)output->Acc_Y/output->Acc_Total_Vector ) * 57.296;
+	}
+	
+	if(ABS(output->Acc_X) < output->Acc_Total_Vector )
+	{
+		angle_roll_acc = asin( (float)output->Acc_X/output->Acc_Total_Vector ) * (-57.296);
+	}
+	angle_pitch_acc -= 0.0;
+	angle_roll_acc -= 0.0;
+}	
+
+void GY86_Cal_Gyro_Offset(void)//tinh gyro offset 3 truc
+{
+		long total_x, total_y, total_z;
 		total_x=0; 
 		total_y=0; 
-		total_z = 0;
-		for(i=0; i < 200; i++)
+		total_z=0;
+		for(loop_time_cal_gyro=0; loop_time_cal_gyro < 1000; loop_time_cal_gyro++)
 		{
-			GY86_MPU6050_ReadAll( MPU6050_I2C_ADDR, &mpu6050); 
-			total_x = total_x + gyro_scale_x;
-			total_y = total_y + gyro_scale_y;
-			total_z = total_z + gyro_scale_z;
-			delay_ms(5);
+			GY86_MPU6050_ReadAll( 0xD0, &mpu6050_Object); 
+			SANG_4_LED();
+			delay_ms(20);
+			total_x = total_x + mpu6050_Object.Gyro_X;
+			total_y = total_y + mpu6050_Object.Gyro_Y;
+			total_z = total_z + mpu6050_Object.Gyro_Z;
+			SANG_4_LED_OFF();
+			delay_ms(20);
 		}
-		gyro_offset_x = (float)total_x/200;
-		gyro_offset_y = (float)total_y/200;
-		gyro_offset_z = (float)total_z/200;
+		if(loop_time_cal_gyro==1000 && total_x != 0 && total_y != 0 && total_z != 0)
+		{
+			gyro_x_cal = total_x/1000;
+			gyro_y_cal = total_y/1000;
+			gyro_z_cal = total_z/1000;
+		}
 }
 
 
@@ -1138,7 +1083,7 @@ void HMC5883L_set_config(void)
 		GY86_I2C_WRITE( HMC5883L_Device_Address, HMC5883L_Register_A, 0x18);//set rate = 75Hz
 		GY86_I2C_WRITE( HMC5883L_Device_Address, HMC5883L_Register_B, 0x60);//full scale = +/- 2.5 Gauss
 		GY86_I2C_WRITE( HMC5883L_Device_Address, HMC5883L_Measurement_Mode_Register, Mode_Measurement_Continuous);
-		while(HAL_I2C_GetState(&I2C_Handle_10truc)!=HAL_I2C_STATE_READY)
+		while(HAL_I2C_GetState(&I2C_Handle_GY86_10truc)!=HAL_I2C_STATE_READY)
 		{
 			//while(1){SANG_4_LED();}
 		}
@@ -1148,7 +1093,7 @@ void HMC5883L_read_compass_data(Compass_HMC5883L* compass)
 {
 		uint8_t data[6];
 		GY86_I2C_READ_MULTI( HMC5883L_Device_Address, HMC5883L_Data_Register_Begin, data, 6); //select register 3
-		while(HAL_I2C_GetState(&I2C_Handle_10truc)!=HAL_I2C_STATE_READY){}
+		while(HAL_I2C_GetState(&I2C_Handle_GY86_10truc)!=HAL_I2C_STATE_READY){}
 			
 		compass->Compass_X = (int16_t)(data[0] << 8 | data[1]);
 		compass->Compass_Y = (int16_t)(data[2] << 8 | data[3]);
@@ -1635,74 +1580,8 @@ void SANG_4_LED_LAN_LUOT(int16_t n, int16_t delaytime)
 	}	
 }
 
-
-float Complementary(void){
-		/*
-		//http://robottini.altervista.org/kalman-filter-vs-complementary-filter
-		// a=tau / (tau + loop time)
-		// newAngle = angle measured with atan2 using the accelerometer
-		// newRate = angle measured using the gyro
-		// looptime = loop time in millis()
-
-		float tau=0.075;
-		float a=0.0;
-
-		float Complementary(float newAngle, float newRate,int looptime) 
-		{
-					float dtC = float(looptime)/1000.0;
-					a=tau/(tau+dtC);
-					x_angleC= a* (x_angleC + newRate * dtC) + (1-a) * (newAngle);
-					return x_angleC;
-		}
-		*/
-	return 0;
-}
-
-
 float kalmanCalculate(Kalman_Setting *kalman, float newAngle, float newRate, float DT_)
 {
-				/*
-				// KasBot V1 - Kalman filter module
-				//http://robottini.altervista.org/kalman-filter-vs-complementary-filter
-				float Q_angle  =  0.01; //0.001
-				float Q_gyro   =  0.0003;  //0.003
-				float R_angle  =  0.01;  //0.03
-
-				float x_bias = 0;
-				float P_00 = 0, P_01 = 0, P_10 = 0, P_11 = 0;
-				float  y, S;
-				float K_0, K_1;
-
-				// newAngle = angle measured with atan2 using the accelerometer
-				// newRate = angle measured using the gyro
-				// looptime = loop time in millis()
-
-				float kalmanCalculate(float newAngle, float newRate,int looptime)
-				{
-							float dt = float(looptime)/1000;
-							x_angle += dt * (newRate - x_bias);
-							P_00 +=  - dt * (P_10 + P_01) + Q_angle * dt;
-							P_01 +=  - dt * P_11;
-							P_10 +=  - dt * P_11;
-							P_11 +=  + Q_gyro * dt;
-
-							y = newAngle - x_angle;
-							S = P_00 + R_angle;
-							K_0 = P_00 / S;
-							K_1 = P_10 / S;
-
-							x_angle +=  K_0 * y;
-							x_bias  +=  K_1 * y;
-							P_00 -= K_0 * P_00;
-							P_01 -= K_0 * P_01;
-							P_10 -= K_1 * P_00;
-							P_11 -= K_1 * P_01;
-
-							return x_angle;
-				}
-				*/
-
-	
 			float dt = (float)DT_;	// dt=10/1000;
 			kalman->angle += dt * (newRate - kalman->x_bias);
 			kalman->P_00 += - dt * (kalman->P_10 + kalman->P_01) + kalman->Q_angle * dt;
@@ -1729,42 +1608,6 @@ float kalmanCalculate(Kalman_Setting *kalman, float newAngle, float newRate, flo
 
 
 
-void lowPassFilterCalculate(TM_MPU6050_t* mpu6050)
-{
-	/*
-	 float alpha = 0.05;
-	 float oneMinusAlpha = 0.95; //(1-alpha);
-	  Apply low pass filter to smooth accelerometer values.
-		smooth_accX = (float)( oneMinusAlpha * smooth_accX + alpha * mpu6050->Acc_X );
-		smooth_accY = (float)( oneMinusAlpha * smooth_accY + alpha * mpu6050->Acc_Y );
-		smooth_accZ = (float)( oneMinusAlpha * smooth_accZ + alpha * mpu6050->Acc_Z );
-	
-		//smooth_gyroX = (float)( oneMinusAlpha * smooth_gyroX + alpha * mpu6050->Gyro_X );
-		//smooth_gyroY = (float)( oneMinusAlpha * smooth_gyroY + alpha * mpu6050->Gyro_Y );
-		//smooth_gyroZ = (float)( oneMinusAlpha * smooth_gyroZ + alpha * mpu6050->Gyro_Z );
-	
-		mpu6050->Acc_X = smooth_accX;
-		mpu6050->Acc_Y = smooth_accY;
-		mpu6050->Acc_Z = smooth_accZ;
-		//mpu6050->Gyro_X = smooth_gyroX;
-		//mpu6050->Gyro_Y = smooth_gyroY;
-		//mpu6050->Gyro_Z = smooth_gyroZ;
-	 */
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -1777,12 +1620,12 @@ void lowPassFilterCalculate(TM_MPU6050_t* mpu6050)
 //
 void initFuzzySystem(void)
 {
-	rollFuzzyControl.pre_GocLech = 0;
-	pitchFuzzyControl.pre_GocLech = 0;
+	//rollFuzzyControl.pre_GocLech = 0;
+	//pitchFuzzyControl.pre_GocLech = 0;
 	//yawFuzzyControl.pre_GocLech = 0;
 	
-	rollFuzzyControl.output = 0;
-	pitchFuzzyControl.output = 0;
+	//rollFuzzyControl.output = 0;
+	//pitchFuzzyControl.output = 0;
 	//yawFuzzyControl.output = 0;
 	
 	//Buoc 1: Khai bao MF:

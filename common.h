@@ -48,10 +48,10 @@
 #define RC_ON_OFF_MIN											1060    // 1060 < 1100 < 1140
 #define RC_ON_OFF_MAX											1140
 
-#define ABS(x)         										((x < 0) ? (-x) : x)
-#define BINH_PHUONG(x)         						(float)(x*x)
-#define M_PI 															(float)3.1415926535
-#define PI																(float)3.1415926535
+#define ABS(x)         										(long)((x < 0) ? (-x) : x)
+#define BINH_PHUONG(x)         						(long)(x*x)
+#define M_PI 															(float)3.142
+#define PI																(float)3.142
 #define RAD_TO_DEG 												(float)57.296
 	
 #define ZERO_									  				0
