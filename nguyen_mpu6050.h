@@ -93,14 +93,14 @@
 
 
 typedef struct _TM_MPU6050_t {
-	long 											Acc_X; /*!< Accelerometer value X axis */
-	long 											Acc_Y; /*!< Accelerometer value Y axis */
-	long 											Acc_Z; /*!< Accelerometer value Z axis */
-	long 											Acc_Total_Vector;
-	long 											Gyro_X;     /*!< Gyroscope value X axis */
-	long 											Gyro_Y;     /*!< Gyroscope value Y axis */
-	long 											Gyro_Z;     /*!< Gyroscope value Z axis */
-	int Temperature;       /*!< Temperature in degrees */
+	float 											Acc_X; /*!< Accelerometer value X axis */
+	float 											Acc_Y; /*!< Accelerometer value Y axis */
+	float 											Acc_Z; /*!< Accelerometer value Z axis */
+	float 											Acc_Total_Vector;
+	float 											Gyro_X;     /*!< Gyroscope value X axis */
+	float 											Gyro_Y;     /*!< Gyroscope value Y axis */
+	float 											Gyro_Z;     /*!< Gyroscope value Z axis */
+	float 											Temperature;       /*!< Temperature in degrees */
 } TM_MPU6050_t;
 
 
