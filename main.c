@@ -1,9 +1,9 @@
 /*
-	  (1)\   /(2)  ^^Head
-        \ /			 ||       y
+	  (4)\   /(1)  ^^Head
+        \ /			 ||       x
          X			 ||       |
-        / \          x____|
-    (4)/   \(3)				
+        / \          y____|O (mpu6050)
+    (3)/   \(2)				
 
 TONG HOP CAC PIN SU DUNG
 PORT A: 
@@ -59,20 +59,21 @@ int16_t 									IC_Throttle1, IC_Throttle2, 								IC_Throttle_pusle_width; //
 int16_t 									IC_Rudder_Xoay1, IC_Rudder_Xoay2, 					IC_Rudder_Xoay_pusle_width; //Rudder (xoay theo truc z) - goc Yaw
 int16_t 									IC_Elevator_TienLui1, IC_Elevator_TienLui2, IC_Elevator_TienLui_pusle_width; //Elevator (tien - lui) - goc Pitch
 int16_t 									IC_Aileron_TraiPhai1, IC_Aileron_TraiPhai2, IC_Aileron_TraiPhai_pusle_width;//Aileron_TraiPhai (trai - phai) - goc Roll
-
-				//---------PWM 4 motor
+int16_t                   IC_Throttle_last_change, IC_Rudder_Xoay_last_change, IC_Elevator_TienLui_last_change, IC_Aileron_TraiPhai_last_change;
+			
+			//---------PWM 4 motor
 int16_t 									pwm_motor_1, pwm_motor_2, pwm_motor_3, pwm_motor_4;
 uint8_t 									FlyState; // 0: May bay ngung hoat dong, 1:may bay dang bay
 
 				//---------sensor
-int16_t 									who_i_am_reg_value_MPU6050; 
-int16_t										loop_time_cal_gyro; //1000
-uint8_t										set_gyro_angles_first_time=0;    // 0 or 1
-int16_t										gyro_x_cal, gyro_y_cal, gyro_z_cal; 
-float 										angle_roll_acc, angle_pitch_acc, 				 				angle_yaw_acc;
-float 										angle_roll, angle_pitch, 						 						angle_yaw;
-float 										angle_pitch_output, 	  angle_roll_output, 	    angle_yaw_output;
-float 										pitch_level_adjust, 	  roll_level_adjust;
+unsigned long 						loop_timer;
+int16_t 									who_i_am_reg_value_MPU6050, loop_time_cal_gyro, set_gyro_angles_first_time=0;  
+int16_t										acc_x, 						acc_y, 							acc_z; 
+int16_t										gyro_x, 					gyro_y, 						gyro_z; 
+int16_t										gyro_x_cal, 			gyro_y_cal, 				gyro_z_cal; 
+float 										angle_roll_acc, 	angle_pitch_acc, 		angle_yaw_acc;
+float 										angle_roll, 			angle_pitch, 				angle_yaw;
+float 										roll_level_adjust, pitch_level_adjust 	  ;
 float											gyro_roll_input_pid, gyro_pitch_input_pid, gyro_yaw_input_pid; 
 
 TM_MPU6050_t 							mpu6050_Object;
@@ -96,9 +97,6 @@ FuzzyController						rollFuzzyControl, pitchFuzzyControl, yawFuzzyControl;
 
 																
 //-----------Khai bao HAM-------------------------------------------------------
-				//Kalman filter
-float 						kalmanCalculate(Kalman_Setting *kalman, float newAngle, float newRate, float DT_);
-void 							lowPassFilterCalculate(TM_MPU6050_t* output);	
 																
 				//ham handle error						
 static void 			SystemClock_Config(void);
@@ -145,30 +143,32 @@ void 							Direct_Quadrotor_By_Receiver(void);
 void 							GY86_I2C_Handle_GY86(void);
 void 							GY86_I2C_IS_DEVICE_CONNECTED(void);
 uint8_t 					GY86_I2C_WHO_I_AM( uint8_t device_address, uint8_t register_address);
-void 							GY86_MPU6050_SetDataRate(uint8_t device_address, uint8_t register_address, uint8_t rate);
+void 							GY86_MPU6050_Set_Sample_Rate(uint8_t device_address, uint8_t register_address, uint8_t rate);
 void 							GY86_MPU6050_SetAccelerometer(uint8_t device_address, uint8_t register_address, uint8_t Acc_8G_Value);
 void 							GY86_MPU6050_SetGyroscope(uint8_t device_address, uint8_t register_address, uint8_t Gyro_250s_Value); 
 void 							GY86_I2C_WRITE( uint8_t device_address, uint8_t register_address, uint8_t data);
 void 							GY86_I2C_READ_MULTI( uint8_t device_address, uint8_t register_address, uint8_t* data, uint16_t count);
 void 							GY86_I2C_READ(  uint8_t device_address, uint8_t register_address, uint8_t* data);
 void 							GY86_MPU6050_ReadAll( uint8_t device_address, TM_MPU6050_t* output );
-void 							GY86_Cal_Angle_By_Gyro(TM_MPU6050_t* output);
-void 							GY86_Cal_Angle_By_Acc(TM_MPU6050_t* output);
+void 							GY86_Cal_Angle_By_Gyro_And_Acc(TM_MPU6050_t* output);
 void 							GY86_Cal_Gyro_Offset(void);
 void 							HMC5883L_set_config(void);
 void 							HMC5883L_read_compass_data(Compass_HMC5883L* compass);
 void 							Sang_Led_By_MPU6050_Values(float roll, float pitch, float yaw );
 				//ham delay default
 volatile 					uint32_t g_iSysTicks = 0;
-void 							SysTick_Handler(){	g_iSysTicks++;}
-void 							delay_ms(uint32_t piMillis){	uint32_t iStartTime = g_iSysTicks;	while( (g_iSysTicks - iStartTime ) < piMillis)	{}}			
-void 							Delay_milisecond(__IO uint32_t nCount){  while(nCount--)  {  } }
+void 							SysTick_Handler(){	g_iSysTicks++; }
+uint32_t 					get_current_time_us(){ return g_iSysTicks; }
+uint32_t 					get_current_time_ms(){ return g_iSysTicks/1000; }
+void 							delay_us(uint32_t usParam){   uint32_t iStartTime = g_iSysTicks;  while( (g_iSysTicks - iStartTime) < usParam) {} }
+void 							delay_ms(uint32_t piMillis){	uint32_t iStartTime = g_iSysTicks;	while( (g_iSysTicks - iStartTime ) < piMillis*1000 )	{}}			
+
 				//Fuzzy system
 void 							initFuzzySystem(void);
 void 							Fuzzification_All_MF(float x, FuzzyController * fuzzyController);
 void 							Apply_All_Rule( FuzzyController * fuzzyController );
 void 							Defuzzification( FuzzyController * fuzzyController );
-
+				//pid
 void 							calculate_pid(void);
 //-----------END Khai bao HAM-------------------------------------------------------
 
@@ -178,6 +178,7 @@ int main(void)
 								osKernelInitialize(); /*..................code default cua ARM co san						*/                 
 						#endif			
 						HAL_Init();		SystemClock_Config();	
+		SysTick_Config(SystemCoreClock/1000000);
 		//initFuzzySystem(); 					
 		SetInitDataQuadrotor(); 																		delay_ms(50); 	
 		__GPIOA_CLK_ENABLE();	__GPIOB_CLK_ENABLE();	__GPIOC_CLK_ENABLE(); __GPIOD_CLK_ENABLE();	__GPIOE_CLK_ENABLE();		
@@ -192,11 +193,12 @@ int main(void)
 		PWM_Input_Capture_TIM5();  																	delay_ms(50);
 	
 		//-----------------------------------------------------------------------	
-		GY86_I2C_Handle_GY86();	 																		delay_ms(50);		//---MPU6050 cau hinh PB6, PB7 doc cam bien
-		GY86_I2C_WRITE( 								0xD0, 0x6B, 0x00);					delay_ms(50);  // 0x6B PWR_MGMT_1 register; set to zero (wakes up the MPU-6050)
-		GY86_MPU6050_SetAccelerometer( 	0xD0, 0x1C, 0x02);					delay_ms(50);  //Range is +- 8G
-		GY86_MPU6050_SetGyroscope( 			0xD0, 0x1B, 0x01);					delay_ms(50);  //Gyroscope Range is +- 500 degrees/s
-		SANG_4_LED_LAN_LUOT(10,30);     SANG_4_LED();     					delay_ms(1000); 
+		GY86_I2C_Handle_GY86();	 																		delay_ms(100);	 //---MPU6050 cau hinh PB6, PB7 doc cam bien
+		GY86_I2C_WRITE( 								0xD0, 0x6B, 0x00);					delay_ms(100);  // 0x6B PWR_MGMT_1 register; set to zero (wakes up the MPU-6050)
+		GY86_MPU6050_Set_Sample_Rate(		0xD0, 0x1A, 0x00);					delay_ms(100);  //set sample rate 8kHz
+		GY86_MPU6050_SetAccelerometer( 	0xD0, 0x1C, 0x02);					delay_ms(100);  //Range is +- 8G
+		GY86_MPU6050_SetGyroscope( 			0xD0, 0x1B, 0x01);					delay_ms(100);  //Gyroscope Range is +- 500 degrees/s
+		SANG_4_LED();     																					delay_ms(3000); 
 		
 		//-----------------------------------------------------------------------	
 		Init_TIM3_OUTPUT_PWM();//---Timer 3 4 channel PWM
@@ -217,27 +219,30 @@ int main(void)
 					#endif
 		GY86_Cal_Gyro_Offset(); 																			delay_ms(50);  //cal gyro 1000 time		 
 		GY86_MPU6050_ReadAll( 0xD0, &mpu6050_Object); 								delay_ms(50); 
-		GY86_Cal_Angle_By_Gyro(&mpu6050_Object); 											delay_ms(50); 
-		GY86_Cal_Angle_By_Acc(&mpu6050_Object); 											delay_ms(50); 
+		GY86_Cal_Angle_By_Gyro_And_Acc(&mpu6050_Object); 											delay_ms(50);  
 		if(set_gyro_angles_first_time == 0 && loop_time_cal_gyro == 1000)
 		{
-			angle_roll = angle_roll_acc;   angle_roll_output = angle_roll_acc;
-			angle_pitch = angle_pitch_acc; angle_pitch_output = angle_pitch_acc;
+			angle_roll = angle_roll_acc;   
+			angle_pitch = angle_pitch_acc; 
 			set_gyro_angles_first_time = 1;															delay_ms(50); 
 		} 
-		Check_EveryThing_OK();																				delay_ms(50); 
+		//Check_EveryThing_OK();																				delay_ms(50); 
+		loop_timer = get_current_time_us();
 		//-----------------------------------------------------------------------
 		while(1) //main loop
 		{		 
 				while(FlyState == STATE_FLY_OFF)
 				{
 						SANG_4_LED_LAN_LUOT(10,30); SANG_4_LED();  delay_ms(2000);  SANG_4_LED_OFF();  delay_ms(1000); 
-						setPWM_4_Motor_Cung_Value(1000);
-						while(FlyState == STATE_FLY_OFF){  
+						setPWM_4_Motor_Cung_Value(1000);  
+						loop_timer = get_current_time_us(); //truoc khi vao while, ta set lai loop_timer de do thoigian xu ly < 4000us
+						while(FlyState == STATE_FLY_OFF){  //Check sign to TURN ON quadrotor 
 								Turn_On_Quadrotor();  	
 						}
 				}
+				
 				//---Quadrotor Fly------------------------------------------------------------------
+				loop_timer = get_current_time_us(); // truoc khi vao while, ta set lai loop_timer de check < 4000us
 				while(FlyState == STATE_FLY_ON) //quadrotor State Fly
 				{ 
 							//Check sign to TURN OFF quadrotor
@@ -246,19 +251,20 @@ int main(void)
 								(IC_Elevator_TienLui_pusle_width   >= 1060 && IC_Elevator_TienLui_pusle_width <= 1140) &&
 								(IC_Rudder_Xoay_pusle_width        >= 1060 && IC_Rudder_Xoay_pusle_width      <= 1140) )  
 							{  
-									Turn_Off_Quadrotor();  
+										Turn_Off_Quadrotor();  
 							} 
 							else
-							{
-									if(IC_Throttle_pusle_width > 1170)
-									{ 
-													Update_PWM_MOTOR_1_4_CheckMinMax();
-													Apply_PWM_MOTOR_1_4_TO_ESC();			
-													Sang_Led_By_MPU6050_Values(angle_roll_output, angle_pitch_output, angle_yaw_output);
-									}else{
-										pwm_motor_1 = 1100; pwm_motor_2 = 1100; pwm_motor_3 = 1100; pwm_motor_4 = 1100; 
-										Apply_PWM_MOTOR_1_4_TO_ESC();
-									}
+							{  		
+										GY86_MPU6050_ReadAll( 0xD0, &mpu6050_Object);  
+										GY86_Cal_Angle_By_Gyro_And_Acc(&mpu6050_Object); 
+										
+										Update_PWM_MOTOR_1_4_CheckMinMax();
+										Apply_PWM_MOTOR_1_4_TO_ESC();		
+										//Sang_Led_By_MPU6050_Values(angle_roll, angle_pitch, angle_yaw);
+										if((get_current_time_us() - loop_timer) > 4000) SANG_4_LED();
+										else SANG_4_LED_OFF();
+										while( (get_current_time_us() - loop_timer) < 4000){}; //4000 us = 4ms = 1/250Hz
+										loop_timer = get_current_time_us();  
 							} 									
 				}
 				//end while(FlyState == 1) ---Quadrotor Fly
@@ -335,64 +341,52 @@ void Turn_On_Quadrotor(void)
 								SetPWM_4_Motor(1100); 
 								SANG_4_LED_LOOP(5,30); SANG_4_LED_OFF();
 						}
-		} else {
+		} else { 
 				GY86_MPU6050_ReadAll( 0xD0, &mpu6050_Object);  
-				GY86_Cal_Angle_By_Gyro(&mpu6050_Object); 
-				GY86_Cal_Angle_By_Acc(&mpu6050_Object);  
-			
-				angle_roll =  angle_roll  * 0.9996 + angle_roll_acc * 0.0004;
-				angle_pitch = angle_pitch * 0.9996 + angle_pitch_acc * 0.0004; 
+				GY86_Cal_Angle_By_Gyro_And_Acc(&mpu6050_Object); 
 			 
-				//angle_roll_output =  angle_roll_output  * 0.9 + 	angle_roll * 0.1;
-				//angle_pitch_output = angle_pitch_output * 0.9 +   angle_pitch * 0.1; 
-			
-				gyro_roll_input_pid  =   gyro_roll_input_pid *0.7 + (mpu6050_Object.Gyro_X/65.5)*0.3; //gyro pid input is deg/second
-				gyro_pitch_input_pid =  gyro_pitch_input_pid *0.7 + (mpu6050_Object.Gyro_Y/65.5)*0.3; 
-				gyro_yaw_input_pid  =  gyro_yaw_input_pid    *0.7 + (mpu6050_Object.Gyro_Z/65.5)*0.3; 
-			
-				roll_level_adjust =  angle_roll  * 15;
-				pitch_level_adjust = angle_pitch * 15;
-			
-				Sang_Led_By_MPU6050_Values((int)angle_roll, (int)angle_pitch, (int)angle_yaw);
-				 
-				//ROLL
+				//ROLL PID
 				PID_roll.setpoint = 0;
 				if(IC_Aileron_TraiPhai_pusle_width > 1508 && IC_Aileron_TraiPhai_pusle_width < 2000)
 				  PID_roll.setpoint = IC_Aileron_TraiPhai_pusle_width - 1508; 
 				else if(IC_Aileron_TraiPhai_pusle_width < 1492 && IC_Aileron_TraiPhai_pusle_width > 1000) 
 					PID_roll.setpoint = 1492 - IC_Aileron_TraiPhai_pusle_width; 
 				PID_roll.setpoint -= roll_level_adjust;
-				PID_roll.setpoint = (PID_roll.setpoint/ 3.0);  
+				PID_roll.setpoint = (PID_roll.setpoint/ (float)3.0);  
 				
-				//PITCH
+				//PITCH PID
 				PID_pitch.setpoint = 0;
 				if(IC_Elevator_TienLui_pusle_width > 1508 && IC_Elevator_TienLui_pusle_width < 2000)
 					PID_pitch.setpoint = IC_Elevator_TienLui_pusle_width - 1508;
 				else if(IC_Elevator_TienLui_pusle_width < 1492 && IC_Elevator_TienLui_pusle_width > 1000)
 					PID_pitch.setpoint = 1492 - IC_Elevator_TienLui_pusle_width; 
 				PID_pitch.setpoint -= pitch_level_adjust;
-				PID_pitch.setpoint = PID_pitch.setpoint/3.0;  
+				PID_pitch.setpoint = PID_pitch.setpoint/(float)3.0;  
 				
-				//YAW
+				//YAW PID
 				PID_yaw.setpoint = 0;
-				if(IC_Throttle_pusle_width > 1180)
+				if(IC_Throttle_pusle_width > 1150)
 				{
 					if(IC_Rudder_Xoay_pusle_width > 1508 && IC_Rudder_Xoay_pusle_width < 2000)
-						PID_yaw.setpoint = (IC_Rudder_Xoay_pusle_width - 1508)/3.0;
+						PID_yaw.setpoint = (IC_Rudder_Xoay_pusle_width - 1508)/(float)3.0;
 					else if(IC_Rudder_Xoay_pusle_width < 1492 && IC_Rudder_Xoay_pusle_width > 1000 )
-						PID_yaw.setpoint = (1492 - IC_Rudder_Xoay_pusle_width )/3.0; 
+						PID_yaw.setpoint = (1492 - IC_Rudder_Xoay_pusle_width )/(float)3.0; 
 				}
 				calculate_pid(); 
 				
-				pwm_motor_1 = (int) IC_Throttle_pusle_width - (int)PID_roll.output;// + (int)PID_pitch.output  - (int)PID_yaw.output;
-				pwm_motor_2 = (int) IC_Throttle_pusle_width + (int)PID_roll.output;// + (int)PID_pitch.output  + (int)PID_yaw.output;
-				pwm_motor_3 = (int) IC_Throttle_pusle_width + (int)PID_roll.output;// - (int)PID_pitch.output  - (int)PID_yaw.output;
-				pwm_motor_4 = (int) IC_Throttle_pusle_width - (int)PID_roll.output;// - (int)PID_pitch.output  + (int)PID_yaw.output;
+				pwm_motor_1 = (int) IC_Throttle_pusle_width + (int)PID_roll.output - (int)PID_pitch.output  - (int)PID_yaw.output;
+				pwm_motor_2 = (int) IC_Throttle_pusle_width + (int)PID_roll.output + (int)PID_pitch.output  + (int)PID_yaw.output;
+				pwm_motor_3 = (int) IC_Throttle_pusle_width - (int)PID_roll.output + (int)PID_pitch.output  - (int)PID_yaw.output;
+				pwm_motor_4 = (int) IC_Throttle_pusle_width - (int)PID_roll.output - (int)PID_pitch.output  + (int)PID_yaw.output;
 				
 				Update_PWM_MOTOR_1_4_CheckMinMax(); 
-				TIM3->CCR1 = 	1000; TIM3->CCR2 = 	1000; TIM3->CCR3 = 	1000; TIM3->CCR4 = 	1000;				
+				TIM3->CCR1 = 	1000; TIM3->CCR2 = 	1000; TIM3->CCR3 = 	1000; TIM3->CCR4 = 	1000;
 				
-				delay_ms(3);
+				//Sang_Led_By_MPU6050_Values(angle_roll, angle_pitch, angle_yaw);
+				if((get_current_time_us() - loop_timer) > 4000) SANG_4_LED();
+				else SANG_4_LED_OFF();
+				while( (get_current_time_us() - loop_timer) < 4000){}; //4000 us = 4ms = 1/250Hz
+				loop_timer = get_current_time_us(); 
 		}
 }
 
@@ -688,141 +682,109 @@ void PWM_Input_Capture_TIM5(void) //PA1 - TIM5_CH2 timer 5 input capture
 
 void TIM1_CC_IRQHandler(void) //PE9 ->TIM1_CH1  IC_Throttle_pusle_width
 {
-	if (__HAL_TIM_GET_FLAG(&htim1, TIM_IT_CC1) == SET)      //In case other interrupts are also running
+	if (__HAL_TIM_GET_FLAG(&htim1, TIM_IT_CC1) == SET && __HAL_TIM_GET_ITSTATUS(&htim1, TIM_IT_CC1) == SET )      //In case other interrupts are also running
     {
-        if (__HAL_TIM_GET_ITSTATUS(&htim1, TIM_IT_CC1) == SET)
-        {
-            __HAL_TIM_CLEAR_FLAG(&htim1, TIM_IT_CC1);
-					  __HAL_TIM_CLEAR_IT(&htim1, TIM_IT_CC1);
-						if( HAL_GPIO_ReadPin(GPIOE, GPIO_PIN_9)== SET)
-						{ //ngat canh len
-							__HAL_TIM_CLEAR_FLAG(&htim1, TIM_IT_CC1);
-							__HAL_TIM_CLEAR_IT(&htim1, TIM_IT_CC1);
-							IC_Throttle1 = HAL_TIM_ReadCapturedValue(&htim1, TIM_CHANNEL_1);
-							IC_Throttle1 = HAL_TIM_ReadCapturedValue(&htim1, TIM_CHANNEL_1);
+						if( HAL_GPIO_ReadPin(GPIOE, GPIO_PIN_9) == SET)  //ngat canh len
+						{
+							if(IC_Throttle_last_change == 0)
+							{
+								IC_Throttle_last_change=1;
+								//__HAL_TIM_CLEAR_FLAG(&htim1, TIM_IT_CC1); __HAL_TIM_CLEAR_IT(&htim1, TIM_IT_CC1);
+								IC_Throttle1 = HAL_TIM_ReadCapturedValue(&htim1, TIM_CHANNEL_1);
+							}
 						}
-						else
-						if( HAL_GPIO_ReadPin(GPIOE, GPIO_PIN_9)== RESET)
-						{	//ngat canh xuong
-							__HAL_TIM_CLEAR_FLAG(&htim1, TIM_IT_CC1);
-							__HAL_TIM_CLEAR_IT(&htim1, TIM_IT_CC1);
-							IC_Throttle2 = HAL_TIM_ReadCapturedValue(&htim1, TIM_CHANNEL_1);
-							IC_Throttle2 = HAL_TIM_ReadCapturedValue(&htim1, TIM_CHANNEL_1);
+						else if(IC_Throttle_last_change == 1) //ngat canh xuong
+						{	
+							IC_Throttle_last_change = 0; 
+							IC_Throttle2 = HAL_TIM_ReadCapturedValue(&htim1, TIM_CHANNEL_1); 
 							if(IC_Throttle2 > IC_Throttle1 && (IC_Throttle2 - IC_Throttle1) > 1000 && (IC_Throttle2 - IC_Throttle1) <= 2000)
 							{
-								IC_Throttle_pusle_width		= (IC_Throttle2 - IC_Throttle1);
-								IC_Throttle_pusle_width		= (IC_Throttle2 - IC_Throttle1);
-							} 	
-							__HAL_TIM_SetCounter (&htim1, 0);
-							__HAL_TIM_SetCounter (&htim1, 0);
-							TIM1->CNT = 0;
-							TIM1->CNT = 0;
-						}	
-        }
+								IC_Throttle_pusle_width		= (IC_Throttle2 - IC_Throttle1); 
+							} 	 
+							__HAL_TIM_SetCounter (&htim1, 0);  TIM1->CNT = 0; 
+							//__HAL_TIM_CLEAR_FLAG(&htim1, TIM_IT_CC1); __HAL_TIM_CLEAR_IT(&htim1, TIM_IT_CC1);
+						}	 
     }
 }
 
 
 void TIM2_IRQHandler(void) //PA5 ->TIM2_CH1  //Rudder (xoay theo truc z) - goc Yaw
 {
-	if (__HAL_TIM_GET_FLAG(&htim2, TIM_IT_CC1) == SET)      //In case other interrupts are also running
+	if (__HAL_TIM_GET_FLAG(&htim2, TIM_IT_CC1) == SET && __HAL_TIM_GET_ITSTATUS(&htim1, TIM_IT_CC1) == SET )      //In case other interrupts are also running
   {
-        if (__HAL_TIM_GET_ITSTATUS(&htim1, TIM_IT_CC1) == SET)
-        {
-					__HAL_TIM_CLEAR_IT(&htim2, TIM_IT_CC1);
-					__HAL_TIM_CLEAR_FLAG(&htim2, TIM_IT_CC1);
-					if( HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_5)== SET)
-					{ //ngat canh len
-						__HAL_TIM_CLEAR_IT(&htim2, TIM_IT_CC1);
-						__HAL_TIM_CLEAR_FLAG(&htim2, TIM_IT_CC1);
-						IC_Rudder_Xoay1 = HAL_TIM_ReadCapturedValue(&htim2, TIM_CHANNEL_1);
-						IC_Rudder_Xoay1 = HAL_TIM_ReadCapturedValue(&htim2, TIM_CHANNEL_1);
-						
-					}else if( HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_5)== RESET)
-					{//ngat canh xuong
-						__HAL_TIM_CLEAR_IT(&htim2, TIM_IT_CC1);
-						__HAL_TIM_CLEAR_FLAG(&htim2, TIM_IT_CC1);
-								
-						IC_Rudder_Xoay2 = HAL_TIM_ReadCapturedValue(&htim2, TIM_CHANNEL_1);
-						IC_Rudder_Xoay2 = HAL_TIM_ReadCapturedValue(&htim2, TIM_CHANNEL_1);
+					if( HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_5)== SET) //ngat canh len
+					{ 
+						if(IC_Rudder_Xoay_last_change == 0)
+						{
+							IC_Rudder_Xoay_last_change = 1;
+							//__HAL_TIM_CLEAR_IT(&htim2, TIM_IT_CC1); __HAL_TIM_CLEAR_FLAG(&htim2, TIM_IT_CC1);
+							IC_Rudder_Xoay1 = HAL_TIM_ReadCapturedValue(&htim2, TIM_CHANNEL_1); 
+						} 
+					}else if( IC_Rudder_Xoay_last_change == 1) //ngat canh xuong
+					{
+						IC_Rudder_Xoay_last_change = 0; 
+						IC_Rudder_Xoay2 = HAL_TIM_ReadCapturedValue(&htim2, TIM_CHANNEL_1); 
 						if(IC_Rudder_Xoay2>IC_Rudder_Xoay1 && (IC_Rudder_Xoay2 - IC_Rudder_Xoay1) > 1000 && (IC_Rudder_Xoay2 - IC_Rudder_Xoay1) <= 2000)
 						{
-							IC_Rudder_Xoay_pusle_width		= (IC_Rudder_Xoay2 - IC_Rudder_Xoay1);
-							IC_Rudder_Xoay_pusle_width		= (IC_Rudder_Xoay2 - IC_Rudder_Xoay1);
+							IC_Rudder_Xoay_pusle_width		= (IC_Rudder_Xoay2 - IC_Rudder_Xoay1); 
 						} 
-						__HAL_TIM_SetCounter (&htim2, 0); __HAL_TIM_SetCounter (&htim2, 0);
-						TIM2->CNT = 0;TIM2->CNT = 0;
-					}		
-				}
+						__HAL_TIM_SetCounter (&htim2, 0);  TIM2->CNT = 0;
+						//__HAL_TIM_CLEAR_IT(&htim2, TIM_IT_CC1); __HAL_TIM_CLEAR_FLAG(&htim2, TIM_IT_CC1);
+					}		 
 	}
 }
+
+
 void TIM4_IRQHandler(void) //PB8 ->TIM4_CH3  //Elevator (tien - lui) - goc Pitch
 { 	
 	
-	if (__HAL_TIM_GET_FLAG(&htim4, TIM_IT_CC3) ==SET)      //In case other interrupts are also running
-  {
-        if (__HAL_TIM_GET_ITSTATUS(&htim4, TIM_IT_CC3) ==SET)
-        {
-								__HAL_TIM_CLEAR_IT(&htim4, TIM_IT_CC3);
-								__HAL_TIM_CLEAR_FLAG(&htim4, TIM_IT_CC3);	
-							if( HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_8)== SET)
-							{ //ngat canh len
-								__HAL_TIM_CLEAR_IT(&htim4, TIM_IT_CC3);
-								__HAL_TIM_CLEAR_FLAG(&htim4, TIM_IT_CC3);	
-								IC_Elevator_TienLui1 = HAL_TIM_ReadCapturedValue(&htim4, TIM_CHANNEL_3);
-								IC_Elevator_TienLui1 = HAL_TIM_ReadCapturedValue(&htim4, TIM_CHANNEL_3);
-								
-							}else if( HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_8)== RESET)
-							{//ngat canh xuong
-								__HAL_TIM_CLEAR_IT(&htim4, TIM_IT_CC3);
-								__HAL_TIM_CLEAR_FLAG(&htim4, TIM_IT_CC3);	
-								IC_Elevator_TienLui2 = HAL_TIM_ReadCapturedValue(&htim4, TIM_CHANNEL_3);
-								IC_Elevator_TienLui2 = HAL_TIM_ReadCapturedValue(&htim4, TIM_CHANNEL_3);
+	if (__HAL_TIM_GET_FLAG(&htim4, TIM_IT_CC3) == SET && __HAL_TIM_GET_ITSTATUS(&htim4, TIM_IT_CC3) == SET)      //In case other interrupts are also running
+  { 
+							if( HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_8)== SET) //ngat canh len
+							{ 
+								if(IC_Elevator_TienLui_last_change == 0)
+								{
+									IC_Elevator_TienLui_last_change = 1;
+									IC_Elevator_TienLui1 = HAL_TIM_ReadCapturedValue(&htim4, TIM_CHANNEL_3);  
+									//__HAL_TIM_CLEAR_IT(&htim4, TIM_IT_CC3); __HAL_TIM_CLEAR_FLAG(&htim4, TIM_IT_CC3);	 
+								} 
+							}else if( IC_Elevator_TienLui_last_change == 1)//ngat canh xuong
+							{ 
+								IC_Elevator_TienLui_last_change = 0; 
+								IC_Elevator_TienLui2 = HAL_TIM_ReadCapturedValue(&htim4, TIM_CHANNEL_3);  
 								if(IC_Elevator_TienLui2 >  IC_Elevator_TienLui1 && (IC_Elevator_TienLui2 - IC_Elevator_TienLui1) > 1000 && (IC_Elevator_TienLui2 - IC_Elevator_TienLui1) <= 2000 )
 								{
-									IC_Elevator_TienLui_pusle_width = (IC_Elevator_TienLui2 - IC_Elevator_TienLui1);
-									IC_Elevator_TienLui_pusle_width = (IC_Elevator_TienLui2 - IC_Elevator_TienLui1);
-								}
-									
-								__HAL_TIM_SetCounter (&htim4, 0);
-								TIM4->CNT = 0;
-								
-							}
-				}
+									IC_Elevator_TienLui_pusle_width = (IC_Elevator_TienLui2 - IC_Elevator_TienLui1); 
+								}  
+								__HAL_TIM_SetCounter (&htim4, 0); TIM4->CNT = 0; 
+								//__HAL_TIM_CLEAR_IT(&htim4, TIM_IT_CC3); __HAL_TIM_CLEAR_FLAG(&htim4, TIM_IT_CC3);	
+							} 
 	}
 }
 void TIM5_IRQHandler(void) //PA3 - TIM5_CH4 ////Aileron_TraiPhai (trai - phai) - goc Roll
 {
 	
-		if (__HAL_TIM_GET_FLAG(&htim5, TIM_IT_CC4) == SET)      //In case other interrupts are also running
-		{
-        if (__HAL_TIM_GET_ITSTATUS(&htim5, TIM_IT_CC4) == SET)
-        {
-							__HAL_TIM_CLEAR_IT(&htim5, TIM_IT_CC4);
-							__HAL_TIM_CLEAR_FLAG(&htim5, TIM_IT_CC4);
-							if( HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_3)== SET)
+		if (__HAL_TIM_GET_FLAG(&htim5, TIM_IT_CC4) == SET && __HAL_TIM_GET_ITSTATUS(&htim5, TIM_IT_CC4) == SET)      //In case other interrupts are also running
+		{ 
+							if( HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_3)== SET) //ngat canh len
 							{ 
-								//ngat canh len
-								__HAL_TIM_CLEAR_IT(&htim5, TIM_IT_CC4);
-								__HAL_TIM_CLEAR_FLAG(&htim5, TIM_IT_CC4);
-								IC_Aileron_TraiPhai1 = HAL_TIM_ReadCapturedValue(&htim5, TIM_CHANNEL_4);
-								IC_Aileron_TraiPhai1 = HAL_TIM_ReadCapturedValue(&htim5, TIM_CHANNEL_4);
-								
-							}else if( HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_3)== RESET)
-							{//ngat canh xuong
-								__HAL_TIM_CLEAR_IT(&htim5, TIM_IT_CC4);
-								__HAL_TIM_CLEAR_FLAG(&htim5, TIM_IT_CC4);
-								IC_Aileron_TraiPhai2 = HAL_TIM_ReadCapturedValue(&htim5, TIM_CHANNEL_4);
-								IC_Aileron_TraiPhai2 = HAL_TIM_ReadCapturedValue(&htim5, TIM_CHANNEL_4);
+								if(IC_Aileron_TraiPhai_last_change == 0)
+								{
+									IC_Aileron_TraiPhai_last_change = 1;
+									//__HAL_TIM_CLEAR_IT(&htim5, TIM_IT_CC4); __HAL_TIM_CLEAR_FLAG(&htim5, TIM_IT_CC4);
+									IC_Aileron_TraiPhai1 = HAL_TIM_ReadCapturedValue(&htim5, TIM_CHANNEL_4);  
+								} 
+							}else if( IC_Aileron_TraiPhai_last_change == 1) //ngat canh xuong
+							{
+								IC_Aileron_TraiPhai_last_change = 0; 
+								IC_Aileron_TraiPhai2 = HAL_TIM_ReadCapturedValue(&htim5, TIM_CHANNEL_4);  
 								if(IC_Aileron_TraiPhai2>IC_Aileron_TraiPhai1 && (IC_Aileron_TraiPhai2 - IC_Aileron_TraiPhai1) > 1000 && (IC_Aileron_TraiPhai2 - IC_Aileron_TraiPhai1) <= 2000)
 								{
-									IC_Aileron_TraiPhai_pusle_width		= (IC_Aileron_TraiPhai2 - IC_Aileron_TraiPhai1);
-									IC_Aileron_TraiPhai_pusle_width		= IC_Aileron_TraiPhai2 - IC_Aileron_TraiPhai1;
+									IC_Aileron_TraiPhai_pusle_width		= (IC_Aileron_TraiPhai2 - IC_Aileron_TraiPhai1); 
 								} 
-								__HAL_TIM_SetCounter (&htim5, 0);
-								TIM5->CNT = 0;
-							}
-				}
+								__HAL_TIM_SetCounter (&htim5, 0); TIM5->CNT = 0; 
+								
+							} 
 		}
 }
 //
@@ -836,18 +798,22 @@ void Check_EveryThing_OK(void)
 		{
 				while(1) {			 SANG_4_LED(); delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
 		}	
-		if(loop_time_cal_gyro != 1000)
+		if(loop_time_cal_gyro != 1000) //kiem tra da cal gyro 1000 lan chua
 		{
 				while(1) {			 SANG_4_LED(); delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
 		}	
-		if(set_gyro_angles_first_time == 0 )
+		if(set_gyro_angles_first_time == 0 ) //kiem tra da set gia tri angle roll, pitch lan dau chua
 		{
 				while(1) {			 SANG_4_LED(); delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
 		}
+		
+		//kiem tra doc gia tri RX ok chua
 		if(IC_Throttle_pusle_width == 0 || IC_Aileron_TraiPhai_pusle_width == 0 || IC_Elevator_TienLui_pusle_width == 0 || IC_Rudder_Xoay_pusle_width == 0)
 		{
 				while(1) {			   SANG_4_LED(); delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
 		}
+		
+		//kiem tra doc RX OK chua
 		if(IC_Throttle_pusle_width > 2000 || IC_Aileron_TraiPhai_pusle_width > 2000 || IC_Elevator_TienLui_pusle_width > 2000 || IC_Rudder_Xoay_pusle_width > 2000)
 		{
 				while(1) {			 SANG_4_LED(); delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
@@ -952,7 +918,7 @@ void GY86_I2C_Handle_GY86(void)
 		HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);	
 	
 		I2C_Handle_GY86_10truc.Instance = I2C1;
-		I2C_Handle_GY86_10truc.Init.ClockSpeed = 100000;
+		I2C_Handle_GY86_10truc.Init.ClockSpeed = 400000; // 400kHz
 		I2C_Handle_GY86_10truc.Init.DutyCycle = I2C_DUTYCYCLE_2;
 		I2C_Handle_GY86_10truc.Init.OwnAddress1 = 0;
 		I2C_Handle_GY86_10truc.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
@@ -997,7 +963,7 @@ void GY86_I2C_WRITE( uint8_t device_address, uint8_t register_address, uint8_t d
 	uint8_t d[2];		
 	d[0] = register_address;
 	d[1] = data;	
-	while(HAL_I2C_Master_Transmit(&I2C_Handle_GY86_10truc, (uint16_t)device_address, (uint8_t *)d, 2, 100) != HAL_OK) 
+	while(HAL_I2C_Master_Transmit(&I2C_Handle_GY86_10truc, (uint16_t)device_address, (uint8_t *)d, 2, 50) != HAL_OK) 
 	{}
 	while(HAL_I2C_GetState(&I2C_Handle_GY86_10truc)!=HAL_I2C_STATE_READY){}
 }
@@ -1005,11 +971,11 @@ void GY86_I2C_WRITE( uint8_t device_address, uint8_t register_address, uint8_t d
 	
 void GY86_I2C_READ(  uint8_t device_address, uint8_t register_address, uint8_t* data)
 {
-	while (HAL_I2C_Master_Transmit(&I2C_Handle_GY86_10truc, (uint16_t)device_address, &register_address, 1, 100) != HAL_OK) 
+	while (HAL_I2C_Master_Transmit(&I2C_Handle_GY86_10truc, (uint16_t)device_address, &register_address, 1, 50) != HAL_OK) 
 	{}
 	while(HAL_I2C_GetState(&I2C_Handle_GY86_10truc)!=HAL_I2C_STATE_READY){}
 		
-	while (HAL_I2C_Master_Receive(&I2C_Handle_GY86_10truc, device_address, data, 1, 100) != HAL_OK) 
+	while (HAL_I2C_Master_Receive(&I2C_Handle_GY86_10truc, device_address, data, 1, 50) != HAL_OK) 
 	{}
 	while(HAL_I2C_GetState(&I2C_Handle_GY86_10truc)!=HAL_I2C_STATE_READY){}
 }
@@ -1017,17 +983,17 @@ void GY86_I2C_READ(  uint8_t device_address, uint8_t register_address, uint8_t* 
 
 void GY86_I2C_READ_MULTI( uint8_t device_address, uint8_t register_address, uint8_t* data, uint16_t count)  
 {
-	while (HAL_I2C_Master_Transmit(&I2C_Handle_GY86_10truc, (uint16_t)device_address, &register_address, 1, 100) != HAL_OK) 
+	while (HAL_I2C_Master_Transmit(&I2C_Handle_GY86_10truc, (uint16_t)device_address, &register_address, 1, 50) != HAL_OK) 
 	{}
 	while(HAL_I2C_GetState(&I2C_Handle_GY86_10truc)!=HAL_I2C_STATE_READY){}
 		
-	while (HAL_I2C_Master_Receive(&I2C_Handle_GY86_10truc, device_address, data, count, 100) != HAL_OK) 
+	while (HAL_I2C_Master_Receive(&I2C_Handle_GY86_10truc, device_address, data, count, 50) != HAL_OK) 
 	{}
 	while(HAL_I2C_GetState(&I2C_Handle_GY86_10truc)!=HAL_I2C_STATE_READY){}
 }
 
 
-void GY86_MPU6050_SetDataRate(uint8_t device_address, uint8_t register_address, uint8_t rate) 
+void GY86_MPU6050_Set_Sample_Rate(uint8_t device_address, uint8_t register_address, uint8_t rate) 
 {
 	GY86_I2C_WRITE( device_address, register_address, rate);
 	while(HAL_I2C_GetState(&I2C_Handle_GY86_10truc)!=HAL_I2C_STATE_READY){}
@@ -1089,14 +1055,20 @@ void GY86_MPU6050_ReadAll( uint8_t device_address, TM_MPU6050_t* output )
 	output->Acc_X = (int16_t)(data[0] << 8 | data[1]);	/* Format accelerometer data */
 	output->Acc_Y = (int16_t)(data[2] << 8 | data[3]);
 	output->Acc_Z = (int16_t)(data[4] << 8 | data[5]);
-	
+ 
 	temp = (data[6] << 8 | data[7]); /* Format temperature */
 	output->Temperature = (float)((float)((int16_t)temp) / (float)340.0 + (float)36.53);
 	
 	output->Gyro_X = (int16_t)(data[8] << 8 | data[9]); /* Format gyroscope data */
 	output->Gyro_Y = (int16_t)(data[10] << 8 | data[11]);
 	output->Gyro_Z = (int16_t)(data[12] << 8 | data[13]);
-	
+		
+	acc_x = output->Acc_X;
+	acc_y = output->Acc_Y;
+	acc_z = output->Acc_Z;
+	gyro_x = output->Gyro_X;
+	gyro_y = output->Gyro_Y;
+	gyro_z = output->Gyro_Z;
 }
 
 void GY86_Cal_Gyro_Offset(void)//tinh gyro offset 3 truc
@@ -1123,36 +1095,45 @@ void GY86_Cal_Gyro_Offset(void)//tinh gyro offset 3 truc
 		}
 }
 
-void GY86_Cal_Angle_By_Gyro(TM_MPU6050_t* mpu6050_Object)
+void GY86_Cal_Angle_By_Gyro_And_Acc(TM_MPU6050_t* mpu6050_Object)
 {
-	mpu6050_Object->Gyro_X -= gyro_x_cal;
-	mpu6050_Object->Gyro_Y -= gyro_y_cal;
-	mpu6050_Object->Gyro_Z -= gyro_z_cal;
+	int sign; float miu = 0.001; 
+	gyro_x = gyro_x - gyro_x_cal;
+	gyro_y = gyro_y - gyro_y_cal;
+	gyro_z = gyro_z - gyro_z_cal;
+	gyro_y = gyro_y*-1; // vi theo chieu + 
+	gyro_z = gyro_z*-1; // vi theo chieu + 
 	
-	angle_roll  += mpu6050_Object->Gyro_X * 0.0000611; 
-	angle_pitch += mpu6050_Object->Gyro_Y * 0.0000611;  //0.0000611 = 1/ (250Hz /65.5)
+	//Calculate angle by gyro data
+	angle_roll  += gyro_x * (float)0.0000611; 
+	angle_pitch += gyro_y * (float)0.0000611;  //0.0000611 = 1/ (250Hz /65.5)
 	
-	//angle_roll  -= angle_pitch  * sin(mpu6050_Object->Gyro_Z * 0.000001066);
-	//angle_pitch += angle_roll   * sin(mpu6050_Object->Gyro_Z * 0.000001066); // 0.000001066 = 0.0000611 * (3.142/180) 
+	 //0.000001066 = 0.0000611 * (3.142(PI) / 180degr) The Arduino sin function is in radians
+  angle_pitch -= angle_roll * sin( gyro_z * (float)0.000001066);                  //If the IMU has yawed transfer the roll angle to the pitch angel.
+  angle_roll += angle_pitch * sin( gyro_z * (float)0.000001066);                  //If the IMU has yawed transfer the pitch angle to the roll angel.
+	
+	//Calculate angle by accelerate data
+	if(acc_z > 0) sign =1;
+	else if(acc_z <= 0) sign = -1;
+	angle_roll_acc =  atan2(acc_y, sign*sqrt(acc_z*acc_z + miu*acc_x*acc_x))  * (float)57.296;
+	angle_pitch_acc = atan2(-acc_x, sqrt(acc_y*acc_y + acc_z*acc_z))           * (float)57.296 *-1;  // *-1 vi theo chieu +
+	
+	//Calculate angle by gyro & accelerate data
+	angle_roll =  angle_roll  * (float)0.98 + angle_roll_acc  * (float)0.02;
+	angle_pitch = angle_pitch * (float)0.98 + angle_pitch_acc * (float)0.02;  
+	
+	//Calculate setpoint PID
+	roll_level_adjust =  angle_roll  * 15;
+	pitch_level_adjust = angle_pitch * 15;
+	
+	//Calculate input (error) PID
+	gyro_roll_input_pid  =   gyro_roll_input_pid *(float)0.7 + (gyro_x/(float)65.5)*(float)0.3; //gyro pid input is deg/second
+	gyro_pitch_input_pid =  gyro_pitch_input_pid *(float)0.7 + (gyro_y/(float)65.5)*(float)0.3; 
+	gyro_yaw_input_pid  =   gyro_yaw_input_pid   *(float)0.7 + (gyro_z/(float)65.5)*(float)0.3; 
 }	
 
 
-void GY86_Cal_Angle_By_Acc(TM_MPU6050_t* mpu6050_Object)//tinh gyro offset 3 truc
-{
-	mpu6050_Object->Acc_Total_Vector = sqrt( mpu6050_Object->Acc_X*mpu6050_Object->Acc_X  + mpu6050_Object->Acc_Y*mpu6050_Object->Acc_Y + mpu6050_Object->Acc_Z*mpu6050_Object->Acc_Z );
-	//57.296 = 1/(3.142*180)
-	
-	angle_roll_acc = atan2( mpu6050_Object->Acc_Y, mpu6050_Object->Acc_Z ) * 57.296;
-	angle_pitch_acc  = atan2(mpu6050_Object->Acc_X, sqrt(mpu6050_Object->Acc_Y*mpu6050_Object->Acc_Y + mpu6050_Object->Acc_Z*mpu6050_Object->Acc_Z) ) * 57.296;
-	
-	//if(ABS(mpu6050_Object->Acc_Y) < mpu6050_Object->Acc_Total_Vector )
-	//	angle_pitch_acc = asin( (float)mpu6050_Object->Acc_Y/mpu6050_Object->Acc_Total_Vector ) * 57.296;
 
-	//if(ABS(mpu6050_Object->Acc_X) < mpu6050_Object->Acc_Total_Vector )
-	//	angle_roll_acc = asin( (float)mpu6050_Object->Acc_X/mpu6050_Object->Acc_Total_Vector ) * -57.296;
-	angle_roll_acc  -= 0.0;
-	angle_pitch_acc -= 0.0; 
-}	
 
 
 
@@ -1686,6 +1667,7 @@ void SANG_4_LED_LAN_LUOT(int16_t n, int16_t delaytime)
 	}	
 }
 
+/*
 float kalmanCalculate(Kalman_Setting *kalman, float newAngle, float newRate, float DT_)
 {
 			float dt = (float)DT_;	// dt=10/1000;
@@ -1710,7 +1692,7 @@ float kalmanCalculate(Kalman_Setting *kalman, float newAngle, float newRate, flo
 			kalman->P_11    -= kalman->K_1 * kalman->P_01;
 			return kalman->angle;
 }
-
+*/
 
 
 

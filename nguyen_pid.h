@@ -1,16 +1,16 @@
 
 
 #define PID_KP  								    (float)1.3		
-#define PID_KI  								    (float)0.04				
+#define PID_KI  								    (float)0.02 //0.04				
 #define PID_KD  								    (float)18.0		
 	
 #define PID_KP_YAW  								(float)4.0		
 #define PID_KI_YAW  								(float)0.02
 #define PID_KD_YAW 								  (float)0.0	
 	
-#define PID_MAX_VALUE_ROLL  				(int) 400
-#define PID_MAX_VALUE_PITCH  				(int) 400
-#define PID_MAX_VALUE_YAW  					(int) 400
+#define PID_MAX_VALUE_ROLL  				(float) 300
+#define PID_MAX_VALUE_PITCH  				(float) 300
+#define PID_MAX_VALUE_YAW  					(float) 300
 
 typedef struct 
 {
