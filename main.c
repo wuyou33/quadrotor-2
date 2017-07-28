@@ -220,12 +220,10 @@ int main(void)
 					#endif
 		GY86_Cal_Gyro_Offset(); 																			delay_ms(50);  //cal gyro 1000 time		 
 		GY86_MPU6050_ReadAll( 0xD0, &mpu6050_Object); 								delay_ms(50); 
-		GY86_Cal_Angle_By_Gyro_And_Acc(&mpu6050_Object); 											delay_ms(50);  
+		GY86_Cal_Angle_By_Gyro_And_Acc(&mpu6050_Object); 							delay_ms(50);  
 		if(set_gyro_angles_first_time == 0 && loop_time_cal_gyro == 1000)
 		{
-			angle_roll = angle_roll_acc;   
-			angle_pitch = angle_pitch_acc; 
-			set_gyro_angles_first_time = 1;															delay_ms(50); 
+			angle_roll = angle_roll_acc;  angle_pitch = angle_pitch_acc;  set_gyro_angles_first_time = 1;	delay_ms(50); 
 		} 
 		//Check_EveryThing_OK();																				delay_ms(50); 
 		loop_timer = get_current_time_us();
@@ -326,6 +324,7 @@ void Turn_On_Quadrotor(void)
 						{			
 								SANG_4_LED_OFF();  delay_ms(500);  
 								FlyState = STATE_FLY_ON; 
+								pwm_motor_1 = 1100; pwm_motor_2 = 1100; pwm_motor_3 = 1100; pwm_motor_4 = 1100;
 								TIM3->CCR1 = 	1100; TIM3->CCR2 = 	1100; TIM3->CCR3 = 1100; TIM3->CCR4 = 1100;
 								SANG_4_LED_LOOP(5,30); SANG_4_LED_OFF();
 								loop_timer = get_current_time_us(); 
@@ -1186,10 +1185,8 @@ void GY86_Cal_Angle_By_Gyro_And_Acc(TM_MPU6050_t* mpu6050_Object)
 {
 	int sign; float miu = 0.001; 
 	gyro_x = gyro_x - gyro_x_cal;
-	gyro_y = gyro_y - gyro_y_cal;
-	gyro_z = gyro_z - gyro_z_cal;
-	gyro_y = gyro_y*-1; // vi theo chieu + 
-	gyro_z = gyro_z*-1; // vi theo chieu + 
+	gyro_y = (gyro_y - gyro_y_cal) * -1; // vi theo chieu + 
+	gyro_z = (gyro_z - gyro_z_cal) * -1; // vi theo chieu +  
 	
 	//Calculate angle by gyro data
 	angle_roll  += gyro_x * (float)0.0000611; 
@@ -1206,8 +1203,8 @@ void GY86_Cal_Angle_By_Gyro_And_Acc(TM_MPU6050_t* mpu6050_Object)
 	angle_pitch_acc = atan2(-acc_x, sqrt(acc_y*acc_y + acc_z*acc_z))           * (float)57.296 *-1;  // *-1 vi theo chieu +
 	
 	//Calculate angle by gyro & accelerate data
-	angle_roll =  angle_roll  * (float)0.98 + angle_roll_acc  * (float)0.02;
-	angle_pitch = angle_pitch * (float)0.98 + angle_pitch_acc * (float)0.02;  
+	angle_roll =  angle_roll  * (float)0.996 + angle_roll_acc  * (float)0.004;
+	angle_pitch = angle_pitch * (float)0.996 + angle_pitch_acc * (float)0.004;  
 	
 	//Calculate setpoint PID
 	roll_level_adjust =  angle_roll  * 15;
