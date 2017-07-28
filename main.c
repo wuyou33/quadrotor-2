@@ -170,6 +170,7 @@ void 							Apply_All_Rule( FuzzyController * fuzzyController );
 void 							Defuzzification( FuzzyController * fuzzyController );
 				//pid
 void 							calculate_pid(void);
+void 							reset_PID(void);
 //-----------END Khai bao HAM-------------------------------------------------------
 
 int main(void)
@@ -236,7 +237,7 @@ int main(void)
 						SANG_4_LED_LAN_LUOT(10,30); SANG_4_LED();  delay_ms(2000);  SANG_4_LED_OFF();  delay_ms(1000); 
 						setPWM_4_Motor_Cung_Value(1000);  
 						loop_timer = get_current_time_us(); //truoc khi vao while, ta set lai loop_timer de do thoigian xu ly < 4000us
-						while(FlyState == STATE_FLY_OFF){  //Check sign to TURN ON quadrotor 
+						while(FlyState == STATE_FLY_OFF) {  //Check sign to TURN ON quadrotor 
 								Turn_On_Quadrotor();  	
 						}
 				}
@@ -245,30 +246,141 @@ int main(void)
 				loop_timer = get_current_time_us(); // truoc khi vao while, ta set lai loop_timer de check < 4000us
 				while(FlyState == STATE_FLY_ON) //quadrotor State Fly
 				{ 
-							//Check sign to TURN OFF quadrotor
-							if( (IC_Throttle_pusle_width         >= 1060 && IC_Throttle_pusle_width         <= 1140) && 
-								(IC_Aileron_TraiPhai_pusle_width   >= 1060 && IC_Aileron_TraiPhai_pusle_width <= 1140) && 
-								(IC_Elevator_TienLui_pusle_width   >= 1060 && IC_Elevator_TienLui_pusle_width <= 1140) &&
-								(IC_Rudder_Xoay_pusle_width        >= 1060 && IC_Rudder_Xoay_pusle_width      <= 1140) )  
-							{  
-										Turn_Off_Quadrotor();  
-							} 
-							else
-							{  		
-										GY86_MPU6050_ReadAll( 0xD0, &mpu6050_Object);  
-										GY86_Cal_Angle_By_Gyro_And_Acc(&mpu6050_Object); 
+							GY86_MPU6050_ReadAll( 0xD0, &mpu6050_Object);  
+							GY86_Cal_Angle_By_Gyro_And_Acc(&mpu6050_Object);  
+							if(IC_Throttle_pusle_width > 1150 && IC_Throttle_pusle_width <  2000)
+							{
+									 	//-----------------------------------------------------
+										//ROLL PID
+										PID_roll.setpoint = 0;
+										if(IC_Aileron_TraiPhai_pusle_width > 1508 && IC_Aileron_TraiPhai_pusle_width < 2000)
+										  PID_roll.setpoint = IC_Aileron_TraiPhai_pusle_width - 1508; 
+										else if(IC_Aileron_TraiPhai_pusle_width < 1492 && IC_Aileron_TraiPhai_pusle_width > 1000) 
+											PID_roll.setpoint = 1492 - IC_Aileron_TraiPhai_pusle_width; 
+										PID_roll.setpoint -= roll_level_adjust;
+										PID_roll.setpoint /= (float)3.0;  
 										
-										Update_PWM_MOTOR_1_4_CheckMinMax();
+										//PITCH PID
+										PID_pitch.setpoint = 0;
+										if(IC_Elevator_TienLui_pusle_width > 1508 && IC_Elevator_TienLui_pusle_width < 2000)
+											PID_pitch.setpoint = IC_Elevator_TienLui_pusle_width - 1508;
+										else if(IC_Elevator_TienLui_pusle_width < 1492 && IC_Elevator_TienLui_pusle_width > 1000)
+											PID_pitch.setpoint = 1492 - IC_Elevator_TienLui_pusle_width; 
+										PID_pitch.setpoint -= pitch_level_adjust;
+										PID_pitch.setpoint /= (float)3.0;  
+										
+										//YAW PID
+										PID_yaw.setpoint = 0;
+										if(IC_Throttle_pusle_width > 1150)
+										{
+											if(IC_Rudder_Xoay_pusle_width > 1508 && IC_Rudder_Xoay_pusle_width < 2000)
+												PID_yaw.setpoint = (IC_Rudder_Xoay_pusle_width - 1508)/(float)3.0;
+											else if(IC_Rudder_Xoay_pusle_width < 1492 && IC_Rudder_Xoay_pusle_width > 1000 )
+												PID_yaw.setpoint = (1492 - IC_Rudder_Xoay_pusle_width )/(float)3.0; 
+										}
+										calculate_pid(); 
+										
+										pwm_motor_1 = (int)IC_Throttle_pusle_width + (int)PID_roll.output - (int)PID_pitch.output  - (int)PID_yaw.output;
+										pwm_motor_2 = (int)IC_Throttle_pusle_width + (int)PID_roll.output + (int)PID_pitch.output  + (int)PID_yaw.output;
+										pwm_motor_3 = (int)IC_Throttle_pusle_width - (int)PID_roll.output + (int)PID_pitch.output  - (int)PID_yaw.output;
+										pwm_motor_4 = (int)IC_Throttle_pusle_width - (int)PID_roll.output - (int)PID_pitch.output  + (int)PID_yaw.output;
+										
+										Update_PWM_MOTOR_1_4_CheckMinMax(); 
 										Apply_PWM_MOTOR_1_4_TO_ESC();		
 										//Sang_Led_By_MPU6050_Values(angle_roll, angle_pitch, angle_yaw);
-										if((get_current_time_us() - loop_timer) > 4000) SANG_4_LED();
-										else SANG_4_LED_OFF();
-										while( (get_current_time_us() - loop_timer) < 4000){}; //4000 us = 4ms = 1/250Hz
-										loop_timer = get_current_time_us();  
-							} 									
+										//-----------------------------------------------------
+							}
+							else
+							{ 
+								reset_PID();
+								pwm_motor_1 = 1000; pwm_motor_2 = 1000; pwm_motor_3 = 1000; pwm_motor_4 = 1000;
+								TIM3->CCR1 = 	1000; TIM3->CCR2 = 	1000; TIM3->CCR3 = 1000; TIM3->CCR4 = 1000;
+								Turn_Off_Quadrotor(); 
+							}	
+
+							if((get_current_time_us() - loop_timer) > 4000) 
+							{
+								SANG_4_LED(); delay_ms(10); SANG_4_LED_OFF(); delay_ms(10);
+							} else SANG_4_LED_OFF();
+							while( (get_current_time_us() - loop_timer) < 4000){}; //4000 us = 4ms = 1/250Hz
+							loop_timer = get_current_time_us();  
 				}
 				//end while(FlyState == 1) ---Quadrotor Fly
 		}//End while(1)
+}
+
+
+void Turn_On_Quadrotor(void)
+{
+		//khoi dong quadrotor bang Receiver, ta gat 2 tick den vi tri thap nhat
+		if( (IC_Throttle_pusle_width       >= 1070 && IC_Throttle_pusle_width         <= 1130) && 
+			(IC_Aileron_TraiPhai_pusle_width >= 1070 && IC_Aileron_TraiPhai_pusle_width <= 1130) && 
+			(IC_Elevator_TienLui_pusle_width >= 1070 && IC_Elevator_TienLui_pusle_width <= 1130) && 
+			(FlyState == 0	)) 
+		{	
+						SANG_4_LED_LAN_LUOT(10,30);	 SANG_4_LED(); 	 delay_ms(1000); 					
+						if( (IC_Throttle_pusle_width         >= 1070 && IC_Throttle_pusle_width         <= 1130) && 
+								(IC_Aileron_TraiPhai_pusle_width >= 1070 && IC_Aileron_TraiPhai_pusle_width <= 1130) && 
+								(IC_Elevator_TienLui_pusle_width >= 1070 && IC_Elevator_TienLui_pusle_width <= 1130) &&
+								(FlyState == 0	)		)
+						{			
+								SANG_4_LED_OFF();  delay_ms(500);  
+								FlyState = STATE_FLY_ON; 
+								TIM3->CCR1 = 	1100; TIM3->CCR2 = 	1100; TIM3->CCR3 = 1100; TIM3->CCR4 = 1100;
+								SANG_4_LED_LOOP(5,30); SANG_4_LED_OFF();
+								loop_timer = get_current_time_us(); 
+						}
+		} else 
+		{ 
+				GY86_MPU6050_ReadAll( 0xD0, &mpu6050_Object);  
+				GY86_Cal_Angle_By_Gyro_And_Acc(&mpu6050_Object); 
+			 	//-----------------------------------------------------
+				//ROLL PID
+				PID_roll.setpoint = 0;
+				if(IC_Aileron_TraiPhai_pusle_width > 1508 && IC_Aileron_TraiPhai_pusle_width < 2000)
+				  PID_roll.setpoint = IC_Aileron_TraiPhai_pusle_width - 1508; 
+				else if(IC_Aileron_TraiPhai_pusle_width < 1492 && IC_Aileron_TraiPhai_pusle_width > 1000) 
+					PID_roll.setpoint = 1492 - IC_Aileron_TraiPhai_pusle_width; 
+				PID_roll.setpoint -= roll_level_adjust;
+				PID_roll.setpoint /= (float)3.0;  
+				
+				//PITCH PID
+				PID_pitch.setpoint = 0;
+				if(IC_Elevator_TienLui_pusle_width > 1508 && IC_Elevator_TienLui_pusle_width < 2000)
+					PID_pitch.setpoint = IC_Elevator_TienLui_pusle_width - 1508;
+				else if(IC_Elevator_TienLui_pusle_width < 1492 && IC_Elevator_TienLui_pusle_width > 1000)
+					PID_pitch.setpoint = 1492 - IC_Elevator_TienLui_pusle_width; 
+				PID_pitch.setpoint -= pitch_level_adjust;
+				PID_pitch.setpoint /= (float)3.0;  
+				
+				//YAW PID
+				PID_yaw.setpoint = 0;
+				if(IC_Throttle_pusle_width > 1150)
+				{
+					if(IC_Rudder_Xoay_pusle_width > 1508 && IC_Rudder_Xoay_pusle_width < 2000)
+						PID_yaw.setpoint = (IC_Rudder_Xoay_pusle_width - 1508)/(float)3.0;
+					else if(IC_Rudder_Xoay_pusle_width < 1492 && IC_Rudder_Xoay_pusle_width > 1000 )
+						PID_yaw.setpoint = (1492 - IC_Rudder_Xoay_pusle_width )/(float)3.0; 
+				}
+				calculate_pid(); 
+				
+				pwm_motor_1 = (int)IC_Throttle_pusle_width + (int)PID_roll.output - (int)PID_pitch.output  - (int)PID_yaw.output;
+				pwm_motor_2 = (int)IC_Throttle_pusle_width + (int)PID_roll.output + (int)PID_pitch.output  + (int)PID_yaw.output;
+				pwm_motor_3 = (int)IC_Throttle_pusle_width - (int)PID_roll.output + (int)PID_pitch.output  - (int)PID_yaw.output;
+				pwm_motor_4 = (int)IC_Throttle_pusle_width - (int)PID_roll.output - (int)PID_pitch.output  + (int)PID_yaw.output;
+				
+				Update_PWM_MOTOR_1_4_CheckMinMax(); 
+				//-----------------------------------------------------
+
+				TIM3->CCR1 = 	1000; TIM3->CCR2 = 	1000; TIM3->CCR3 = 	1000; TIM3->CCR4 = 	1000;
+				//Sang_Led_By_MPU6050_Values(angle_roll, angle_pitch, angle_yaw);
+				if((get_current_time_us() - loop_timer) > 4000) 
+				{
+					SANG_4_LED(); delay_ms(10); SANG_4_LED_OFF(); delay_ms(10);
+				} else SANG_4_LED_OFF();
+				while( (get_current_time_us() - loop_timer) < 4000){}; //4000 us = 4ms = 1/250Hz
+				loop_timer = get_current_time_us(); 
+		}
 }
 
 //-----------------------------------------------------------------------------------
@@ -324,76 +436,39 @@ void SetInitDataQuadrotor(void)
 		PID_yaw.kD = PID_KD_YAW;
 		PID_yaw.output_max = PID_MAX_VALUE_YAW;
 }
-void Turn_On_Quadrotor(void)
+
+void reset_PID(void)
 {
-	//khoi dong quadrotor bang Receiver, ta gat 2 tick den vi tri thap nhat
-		if( (IC_Throttle_pusle_width             >= 1060 && IC_Throttle_pusle_width         <= 1140) && 
-			(IC_Aileron_TraiPhai_pusle_width >= 1060 && IC_Aileron_TraiPhai_pusle_width <= 1140) && 
-			(IC_Elevator_TienLui_pusle_width >= 1060 && IC_Elevator_TienLui_pusle_width <= 1140) && 
-			(FlyState == 0	)) {	
-						SANG_4_LED_LAN_LUOT(10,30);	 SANG_4_LED(); 	 delay_ms(1000); 					
-						if( (IC_Throttle_pusle_width         >= 1060 && IC_Throttle_pusle_width         <= 1140) && 
-								(IC_Aileron_TraiPhai_pusle_width >= 1060 && IC_Aileron_TraiPhai_pusle_width <= 1140) && 
-								(IC_Elevator_TienLui_pusle_width >= 1060 && IC_Elevator_TienLui_pusle_width <= 1140) &&
-								(FlyState == 0	)		)
-						{			
-								SANG_4_LED_OFF();  delay_ms(500);  FlyState = STATE_FLY_ON; 
-								SetPWM_4_Motor(1100); 
-								SANG_4_LED_LOOP(5,30); SANG_4_LED_OFF();
-						}
-		} else { 
-				GY86_MPU6050_ReadAll( 0xD0, &mpu6050_Object);  
-				GY86_Cal_Angle_By_Gyro_And_Acc(&mpu6050_Object); 
-			 
-				//ROLL PID
-				PID_roll.setpoint = 0;
-				if(IC_Aileron_TraiPhai_pusle_width > 1508 && IC_Aileron_TraiPhai_pusle_width < 2000)
-				  PID_roll.setpoint = IC_Aileron_TraiPhai_pusle_width - 1508; 
-				else if(IC_Aileron_TraiPhai_pusle_width < 1492 && IC_Aileron_TraiPhai_pusle_width > 1000) 
-					PID_roll.setpoint = 1492 - IC_Aileron_TraiPhai_pusle_width; 
-				PID_roll.setpoint -= roll_level_adjust;
-				PID_roll.setpoint = (PID_roll.setpoint/ (float)3.0);  
-				
-				//PITCH PID
-				PID_pitch.setpoint = 0;
-				if(IC_Elevator_TienLui_pusle_width > 1508 && IC_Elevator_TienLui_pusle_width < 2000)
-					PID_pitch.setpoint = IC_Elevator_TienLui_pusle_width - 1508;
-				else if(IC_Elevator_TienLui_pusle_width < 1492 && IC_Elevator_TienLui_pusle_width > 1000)
-					PID_pitch.setpoint = 1492 - IC_Elevator_TienLui_pusle_width; 
-				PID_pitch.setpoint -= pitch_level_adjust;
-				PID_pitch.setpoint = PID_pitch.setpoint/(float)3.0;  
-				
-				//YAW PID
-				PID_yaw.setpoint = 0;
-				if(IC_Throttle_pusle_width > 1150)
-				{
-					if(IC_Rudder_Xoay_pusle_width > 1508 && IC_Rudder_Xoay_pusle_width < 2000)
-						PID_yaw.setpoint = (IC_Rudder_Xoay_pusle_width - 1508)/(float)3.0;
-					else if(IC_Rudder_Xoay_pusle_width < 1492 && IC_Rudder_Xoay_pusle_width > 1000 )
-						PID_yaw.setpoint = (1492 - IC_Rudder_Xoay_pusle_width )/(float)3.0; 
-				}
-				calculate_pid(); 
-				
-				pwm_motor_1 = (int) IC_Throttle_pusle_width + (int)PID_roll.output - (int)PID_pitch.output  - (int)PID_yaw.output;
-				pwm_motor_2 = (int) IC_Throttle_pusle_width + (int)PID_roll.output + (int)PID_pitch.output  + (int)PID_yaw.output;
-				pwm_motor_3 = (int) IC_Throttle_pusle_width - (int)PID_roll.output + (int)PID_pitch.output  - (int)PID_yaw.output;
-				pwm_motor_4 = (int) IC_Throttle_pusle_width - (int)PID_roll.output - (int)PID_pitch.output  + (int)PID_yaw.output;
-				
-				Update_PWM_MOTOR_1_4_CheckMinMax(); 
-				TIM3->CCR1 = 	1000; TIM3->CCR2 = 	1000; TIM3->CCR3 = 	1000; TIM3->CCR4 = 	1000;
-				
-				//Sang_Led_By_MPU6050_Values(angle_roll, angle_pitch, angle_yaw);
-				if((get_current_time_us() - loop_timer) > 4000) 
-				{
-					SANG_4_LED();
-					delay_ms(10);
-					SANG_4_LED_OFF();
-					delay_ms(10);
-				}
-				else SANG_4_LED_OFF();
-				while( (get_current_time_us() - loop_timer) < 4000){}; //4000 us = 4ms = 1/250Hz
-				loop_timer = get_current_time_us(); 
-		}
+		PID_roll.derivative_error = 0;
+		PID_roll.integral_error = 0;
+		PID_roll.pre_error = 0;
+		PID_roll.setpoint = 0;
+		PID_roll.output = 0;
+		// PID_roll.kP = PID_KP;
+		// PID_roll.kI = PID_KI;
+		// PID_roll.kD = PID_KD;
+		// PID_roll.output_max = PID_MAX_VALUE_ROLL;
+		
+		PID_pitch.derivative_error = 0;
+		PID_pitch.integral_error = 0;
+		PID_pitch.pre_error = 0;
+		PID_pitch.setpoint = 0;
+		PID_pitch.output = 0;
+		// PID_pitch.kP = PID_KP;
+		// PID_pitch.kI = PID_KI;
+		// PID_pitch.kD = PID_KD;
+		// PID_pitch.output_max = PID_MAX_VALUE_PITCH;
+		
+		
+		PID_yaw.derivative_error = 0;
+		PID_yaw.integral_error = 0;
+		PID_yaw.pre_error = 0;
+		PID_yaw.setpoint = 0;
+		PID_yaw.output = 0;
+		// PID_yaw.kP = PID_KP_YAW;
+		// PID_yaw.kI = PID_KI_YAW;
+		// PID_yaw.kD = PID_KD_YAW;
+		// PID_yaw.output_max = PID_MAX_VALUE_YAW;
 }
 
 void calculate_pid(void) 
@@ -447,36 +522,42 @@ void calculate_pid(void)
 
 void Turn_Off_Quadrotor(void) //tat quadrotor
 {
-		int i=0;
-		int timedelay = 50;
-		while(i<5)
-		{
-			SANG_1_LED(12); delay_ms(timedelay);
-			SANG_1_LED(13); delay_ms(timedelay);
-			SANG_1_LED(14); delay_ms(timedelay);
-			SANG_1_LED(15); delay_ms(timedelay);
-			i++;
-		}
-		SANG_4_LED(); 
-		if( (IC_Throttle_pusle_width         >= RC_ON_OFF_MIN && IC_Throttle_pusle_width         <= RC_ON_OFF_MAX) && 
-				(IC_Aileron_TraiPhai_pusle_width >= RC_ON_OFF_MIN && IC_Aileron_TraiPhai_pusle_width <= RC_ON_OFF_MAX) && 
-				(IC_Elevator_TienLui_pusle_width >= RC_ON_OFF_MIN && IC_Elevator_TienLui_pusle_width <= RC_ON_OFF_MAX) &&
-				(IC_Rudder_Xoay_pusle_width      >= RC_ON_OFF_MIN && IC_Rudder_Xoay_pusle_width      <= RC_ON_OFF_MAX) &&
-				(FlyState == 1)
-		)
-		{				
-				FlyState = STATE_FLY_OFF;
-				SANG_4_LED_OFF(); 
-				pwm_motor_1 = 1000;
-				pwm_motor_2 = 1000;
-				pwm_motor_3 = 1000;
-				pwm_motor_4 = 1000;
-				TIM3->CCR1 = 1000;
-				TIM3->CCR2 = 1000;
-				TIM3->CCR3 = 1000;
-				TIM3->CCR4 = 1000;
-				delay_ms(3000);
-		}
+	if( (IC_Throttle_pusle_width           >= 1070 && IC_Throttle_pusle_width         <= 1130) && 
+			(IC_Aileron_TraiPhai_pusle_width   >= 1070 && IC_Aileron_TraiPhai_pusle_width <= 1130) && 
+			(IC_Elevator_TienLui_pusle_width   >= 1070 && IC_Elevator_TienLui_pusle_width <= 1130) &&
+			(IC_Rudder_Xoay_pusle_width        >= 1070 && IC_Rudder_Xoay_pusle_width      <= 1130) )  
+	{
+			int i=0;
+			while(i<5)
+			{
+				SANG_1_LED(12); delay_ms(50);
+				SANG_1_LED(13); delay_ms(50);
+				SANG_1_LED(14); delay_ms(50);
+				SANG_1_LED(15); delay_ms(50);
+				i++;
+			}
+			SANG_4_LED(); 
+			if( (IC_Throttle_pusle_width         >= 1070 && IC_Throttle_pusle_width         <= 1130) && 
+					(IC_Aileron_TraiPhai_pusle_width >= 1070 && IC_Aileron_TraiPhai_pusle_width <= 1130) && 
+					(IC_Elevator_TienLui_pusle_width >= 1070 && IC_Elevator_TienLui_pusle_width <= 1130) &&
+					(IC_Rudder_Xoay_pusle_width      >= 1070 && IC_Rudder_Xoay_pusle_width      <= 1130) &&
+					(FlyState == 1)
+			)
+			{				
+					FlyState = STATE_FLY_OFF;
+					SANG_4_LED_OFF(); 
+					pwm_motor_1 = 1000;
+					pwm_motor_2 = 1000;
+					pwm_motor_3 = 1000;
+					pwm_motor_4 = 1000;
+					TIM3->CCR1 = 1000;
+					TIM3->CCR2 = 1000;
+					TIM3->CCR3 = 1000;
+					TIM3->CCR4 = 1000;
+					delay_ms(3000);
+			}
+	}	
+		
 }
 //-----------------------------------------------------------------------------------
 //
