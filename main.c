@@ -383,7 +383,13 @@ void Turn_On_Quadrotor(void)
 				TIM3->CCR1 = 	1000; TIM3->CCR2 = 	1000; TIM3->CCR3 = 	1000; TIM3->CCR4 = 	1000;
 				
 				//Sang_Led_By_MPU6050_Values(angle_roll, angle_pitch, angle_yaw);
-				if((get_current_time_us() - loop_timer) > 4000) SANG_4_LED();
+				if((get_current_time_us() - loop_timer) > 4000) 
+				{
+					SANG_4_LED();
+					delay_ms(10);
+					SANG_4_LED_OFF();
+					delay_ms(10);
+				}
 				else SANG_4_LED_OFF();
 				while( (get_current_time_us() - loop_timer) < 4000){}; //4000 us = 4ms = 1/250Hz
 				loop_timer = get_current_time_us(); 
