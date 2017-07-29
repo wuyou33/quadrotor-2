@@ -43,7 +43,7 @@ Step 5: Defuzzification: caculate output via Loop all rule list
 #define ValuePWMControl_minXD 			(float)-120.0
 	
 #define LIMIT_OUTPUT_FUZZY					(float)100.0
-#define VALUE_SANG_LED_BY_MPU6050		(float)7.5
+#define VALUE_SANG_LED_BY_MPU6050		(float)10
 
 
 //-------MEMBERSHIP FUNCTION--------------------------------

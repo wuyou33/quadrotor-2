@@ -21,7 +21,8 @@ PORT D:
 			PD12 
 			PD13 
 			PD14 
-			PD15  																=> LEDSang (PD12 GREEN, PD13 ORANGE, PD14 RED, PD15 BLUE)
+			PD15  																=> LEDSang (PD12 vang, PD13 cam, PD14 do, PD15 xanh)
+			
 PORT E:
 			PE9																		=>PE9 ->TIM1_CH1  //Devo 7 Throttle
 --------------------------------------------------------------------------
@@ -188,10 +189,10 @@ int main(void)
 	
 		Init_LEDSANG_AND_BUTTON_USER_PORT_A0(); delay_ms(10); //---GPIO 4 led & GPIO button user---------------							
 		
-		PWM_Input_Capture_TIM1();  																	delay_ms(50);	 
-		PWM_Input_Capture_TIM2();  																	delay_ms(50); 
-		PWM_Input_Capture_TIM4();  																	delay_ms(50); 
-		PWM_Input_Capture_TIM5();  																	delay_ms(50);
+		PWM_Input_Capture_TIM1();  																	delay_ms(100);	 
+		PWM_Input_Capture_TIM2();  																	delay_ms(100); 
+		PWM_Input_Capture_TIM4();  																	delay_ms(100); 
+		PWM_Input_Capture_TIM5();  																	delay_ms(100);
 	
 		//-----------------------------------------------------------------------	
 		GY86_I2C_Handle_GY86();	 																		delay_ms(100);	 //---MPU6050 cau hinh PB6, PB7 doc cam bien
@@ -199,7 +200,7 @@ int main(void)
 		GY86_MPU6050_Set_Sample_Rate(		0xD0, 0x1A, 0x00);					delay_ms(100);  //set sample rate 8kHz
 		GY86_MPU6050_SetAccelerometer( 	0xD0, 0x1C, 0x02);					delay_ms(100);  //Range is +- 8G
 		GY86_MPU6050_SetGyroscope( 			0xD0, 0x1B, 0x01);					delay_ms(100);  //Gyroscope Range is +- 500 degrees/s
-		SANG_4_LED();     																					delay_ms(3000); 
+		SANG_4_LED();     																					delay_ms(2000); 
 		
 		//-----------------------------------------------------------------------	
 		Init_TIM3_OUTPUT_PWM();//---Timer 3 4 channel PWM
@@ -372,11 +373,10 @@ void Turn_On_Quadrotor(void)
 				//-----------------------------------------------------
 
 				TIM3->CCR1 = 	1000; TIM3->CCR2 = 	1000; TIM3->CCR3 = 	1000; TIM3->CCR4 = 	1000;
-				//Sang_Led_By_MPU6050_Values(angle_roll, angle_pitch, angle_yaw);
-				if((get_current_time_us() - loop_timer) > 4000) 
-				{
-					SANG_4_LED(); delay_ms(10); SANG_4_LED_OFF(); delay_ms(10);
-				} else SANG_4_LED_OFF();
+				Sang_Led_By_MPU6050_Values(angle_roll, angle_pitch, angle_yaw);
+				/*if((get_current_time_us() - loop_timer) > 4000) 
+					{ SANG_4_LED(); delay_ms(10); SANG_4_LED_OFF(); delay_ms(10); } 
+				else SANG_4_LED_OFF(); */
 				while( (get_current_time_us() - loop_timer) < 4000){}; //4000 us = 4ms = 1/250Hz
 				loop_timer = get_current_time_us(); 
 		}
@@ -882,27 +882,27 @@ void Check_EveryThing_OK(void)
 		SANG_4_LED_OFF();
 		if(who_i_am_reg_value_MPU6050 != MPU6050_I_AM_VALUES)  //---Doc gia tri cua WHO I AM register, if error => LED RED(14) sang nhap nhay
 		{
-				while(1) {			 SANG_4_LED(); delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
+				while(1) {			 SANG_1_LED(12); delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
 		}	
 		if(loop_time_cal_gyro != 1000) //kiem tra da cal gyro 1000 lan chua
 		{
-				while(1) {			 SANG_4_LED(); delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
+				while(1) {			 SANG_1_LED(13); delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
 		}	
 		if(set_gyro_angles_first_time == 0 ) //kiem tra da set gia tri angle roll, pitch lan dau chua
 		{
-				while(1) {			 SANG_4_LED(); delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
+				while(1) {			 SANG_1_LED(14); delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
 		}
 		
 		//kiem tra doc gia tri RX ok chua
 		if(IC_Throttle_pusle_width == 0 || IC_Aileron_TraiPhai_pusle_width == 0 || IC_Elevator_TienLui_pusle_width == 0 || IC_Rudder_Xoay_pusle_width == 0)
 		{
-				while(1) {			   SANG_4_LED(); delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
+				while(1) {			   SANG_1_LED(15); delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
 		}
 		
 		//kiem tra doc RX OK chua
 		if(IC_Throttle_pusle_width > 2000 || IC_Aileron_TraiPhai_pusle_width > 2000 || IC_Elevator_TienLui_pusle_width > 2000 || IC_Rudder_Xoay_pusle_width > 2000)
 		{
-				while(1) {			 SANG_4_LED(); delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
+				while(1) {			 SANG_1_LED(15);  delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
 		}		
 }
 
@@ -1249,20 +1249,58 @@ void HMC5883L_read_compass_data(Compass_HMC5883L* compass)
 
 void Sang_Led_By_MPU6050_Values(float roll, float pitch, float yaw )
 {
-		SANG_4_LED_OFF();	
-		if(roll > VALUE_SANG_LED_BY_MPU6050)	 { 
-			LED_D_14_HIGH;		 /*SANG_1_LED(LED_YELLOW); */
-		}
-		else if(roll < VALUE_SANG_LED_BY_MPU6050 * -1)	 { 
-			LED_D_12_HIGH;			/*SANG_1_LED(LED_RED);*/
+	//   xanh
+	//do      vang
+	//   cam
+	//(PD12 vang, PD13 cam, PD14 do, PD15 xanh) 
+	if(roll > VALUE_SANG_LED_BY_MPU6050 && pitch > VALUE_SANG_LED_BY_MPU6050)
+	{
+			LED_D_14_HIGH;
+			LED_D_15_HIGH;
+					LED_D_12_LOW;
+					LED_D_13_LOW;
+	}else if(roll > VALUE_SANG_LED_BY_MPU6050 && pitch < VALUE_SANG_LED_BY_MPU6050*-1 )
+	{
+			LED_D_14_HIGH;
+			LED_D_13_HIGH;
+					LED_D_12_LOW;
+					LED_D_15_LOW;
+	}else if(roll < (VALUE_SANG_LED_BY_MPU6050*-1) && pitch > VALUE_SANG_LED_BY_MPU6050)
+	{
+			LED_D_12_HIGH;
+			LED_D_15_HIGH;
+					LED_D_13_LOW;
+					LED_D_14_LOW;
+	}else if(roll < (VALUE_SANG_LED_BY_MPU6050*-1) && pitch <  VALUE_SANG_LED_BY_MPU6050*-1 )
+	{
+		LED_D_12_HIGH;
+		LED_D_13_HIGH;
+					LED_D_14_LOW;
+					LED_D_15_LOW;
+	}else{
+		if(roll > VALUE_SANG_LED_BY_MPU6050)
+		{
+			LED_D_14_HIGH;
+		}else if(roll < -1* VALUE_SANG_LED_BY_MPU6050)
+		{
+			LED_D_12_HIGH;
+		}else{
+			LED_D_14_LOW;
+			LED_D_12_LOW;
 		}
 		
-		if(pitch > VALUE_SANG_LED_BY_MPU6050) 	 { 
-			LED_D_13_HIGH;	/*LED_ORANGE */ 
-		}
-		else if(pitch < VALUE_SANG_LED_BY_MPU6050* -1) 	 { 
-			LED_D_15_HIGH;	/*LED XANH */ 
-		}
+		if(pitch > VALUE_SANG_LED_BY_MPU6050)
+		{
+			LED_D_15_HIGH;
+		}else if(pitch < -1* VALUE_SANG_LED_BY_MPU6050)
+		{
+			LED_D_13_HIGH;
+		}else{ 
+				LED_D_13_LOW; 
+				LED_D_15_LOW;
+		} 
+	}  
+		
 }
 //end Accelerametor 10truc
 //
