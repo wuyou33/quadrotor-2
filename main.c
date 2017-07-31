@@ -247,24 +247,24 @@ int main(void)
 				{ 
 							GY86_MPU6050_ReadAll( 0xD0, &mpu6050_Object);  
 							GY86_Cal_Angle_By_Gyro_And_Acc(&mpu6050_Object);  
-							if(IC_Throttle_pusle_width > 1150 && IC_Throttle_pusle_width <  2000)
+							if(IC_Throttle_pusle_width > 1150 && IC_Throttle_pusle_width <=  1900)
 							{
 									 	//-----------------------------------------------------
 										//ROLL PID
 										PID_roll.setpoint = 0;
-										if(IC_Aileron_TraiPhai_pusle_width > 1508 && IC_Aileron_TraiPhai_pusle_width < 2000)
-										  PID_roll.setpoint = IC_Aileron_TraiPhai_pusle_width - 1508; 
-										else if(IC_Aileron_TraiPhai_pusle_width < 1492 && IC_Aileron_TraiPhai_pusle_width > 1000) 
-											PID_roll.setpoint = 1492 - IC_Aileron_TraiPhai_pusle_width; 
+										if(IC_Aileron_TraiPhai_pusle_width > 1510 && IC_Aileron_TraiPhai_pusle_width <= 1900)
+										  PID_roll.setpoint = IC_Aileron_TraiPhai_pusle_width - 1510; 
+										else if(IC_Aileron_TraiPhai_pusle_width < 1490 && IC_Aileron_TraiPhai_pusle_width > 1000) 
+											PID_roll.setpoint = 1490 - IC_Aileron_TraiPhai_pusle_width; 
 										PID_roll.setpoint -= roll_level_adjust;
 										PID_roll.setpoint /= (float)3.0;  
 										
 										//PITCH PID
 										PID_pitch.setpoint = 0;
-										if(IC_Elevator_TienLui_pusle_width > 1508 && IC_Elevator_TienLui_pusle_width < 2000)
-											PID_pitch.setpoint = IC_Elevator_TienLui_pusle_width - 1508;
-										else if(IC_Elevator_TienLui_pusle_width < 1492 && IC_Elevator_TienLui_pusle_width > 1000)
-											PID_pitch.setpoint = 1492 - IC_Elevator_TienLui_pusle_width; 
+										if(IC_Elevator_TienLui_pusle_width > 1510 && IC_Elevator_TienLui_pusle_width <= 1900)
+											PID_pitch.setpoint = IC_Elevator_TienLui_pusle_width - 1510;
+										else if(IC_Elevator_TienLui_pusle_width < 1490 && IC_Elevator_TienLui_pusle_width > 1000)
+											PID_pitch.setpoint = 1490 - IC_Elevator_TienLui_pusle_width; 
 										PID_pitch.setpoint -= pitch_level_adjust;
 										PID_pitch.setpoint /= (float)3.0;  
 										
@@ -272,10 +272,10 @@ int main(void)
 										PID_yaw.setpoint = 0;
 										if(IC_Throttle_pusle_width > 1150)
 										{
-											if(IC_Rudder_Xoay_pusle_width > 1508 && IC_Rudder_Xoay_pusle_width < 2000)
-												PID_yaw.setpoint = (IC_Rudder_Xoay_pusle_width - 1508)/(float)3.0;
-											else if(IC_Rudder_Xoay_pusle_width < 1492 && IC_Rudder_Xoay_pusle_width > 1000 )
-												PID_yaw.setpoint = (1492 - IC_Rudder_Xoay_pusle_width )/(float)3.0; 
+											if(IC_Rudder_Xoay_pusle_width > 1510 && IC_Rudder_Xoay_pusle_width <= 1900)
+												PID_yaw.setpoint = (IC_Rudder_Xoay_pusle_width - 1510)/(float)3.0;
+											else if(IC_Rudder_Xoay_pusle_width < 1490 && IC_Rudder_Xoay_pusle_width > 1000 )
+												PID_yaw.setpoint = (1490 - IC_Rudder_Xoay_pusle_width )/(float)3.0; 
 										}
 										calculate_pid(); 
 										
@@ -286,25 +286,22 @@ int main(void)
 										
 										Update_PWM_MOTOR_1_4_CheckMinMax(); 
 										Apply_PWM_MOTOR_1_4_TO_ESC();		
-										//Sang_Led_By_MPU6050_Values(angle_roll, angle_pitch, angle_yaw);
 										//-----------------------------------------------------
 							}
 							else
 							{ 
 								reset_PID();
-								pwm_motor_1 = 1000; pwm_motor_2 = 1000; pwm_motor_3 = 1000; pwm_motor_4 = 1000;
-								TIM3->CCR1 = 	1000; TIM3->CCR2 = 	1000; TIM3->CCR3 = 1000; TIM3->CCR4 = 1000;
+								pwm_motor_1 =   1000; pwm_motor_2 = 1000; pwm_motor_3 = 1000; pwm_motor_4 = 1000;
+								TIM3->CCR1 = 	1000; TIM3->CCR2 = 	1000; TIM3->CCR3  = 1000; TIM3->CCR4  = 1000;
 								Turn_Off_Quadrotor(); 
 							}	
 
-							if((get_current_time_us() - loop_timer) > 4000) 
-							{
-								SANG_4_LED(); delay_ms(10); SANG_4_LED_OFF(); delay_ms(10);
-							} else SANG_4_LED_OFF();
+							Sang_Led_By_MPU6050_Values(angle_roll, angle_pitch, angle_yaw);
+							if((get_current_time_us() - loop_timer) > 4000)  SANG_4_LED_LOOP(3,50);  //else SANG_4_LED_OFF(); 
 							while( (get_current_time_us() - loop_timer) < 4000){}; //4000 us = 4ms = 1/250Hz
-							loop_timer = get_current_time_us();  
+							loop_timer = get_current_time_us(); 
 				}
-				//end while(FlyState == 1) ---Quadrotor Fly
+				//end while(FlyState == 1)
 		}//End while(1)
 }
 
@@ -337,19 +334,19 @@ void Turn_On_Quadrotor(void)
 			 	//-----------------------------------------------------
 				//ROLL PID
 				PID_roll.setpoint = 0;
-				if(IC_Aileron_TraiPhai_pusle_width > 1508 && IC_Aileron_TraiPhai_pusle_width < 2000)
-				  PID_roll.setpoint = IC_Aileron_TraiPhai_pusle_width - 1508; 
-				else if(IC_Aileron_TraiPhai_pusle_width < 1492 && IC_Aileron_TraiPhai_pusle_width > 1000) 
-					PID_roll.setpoint = 1492 - IC_Aileron_TraiPhai_pusle_width; 
+				if(IC_Aileron_TraiPhai_pusle_width > 1510 && IC_Aileron_TraiPhai_pusle_width < 2000)
+				  PID_roll.setpoint = IC_Aileron_TraiPhai_pusle_width - 1510; 
+				else if(IC_Aileron_TraiPhai_pusle_width < 1490 && IC_Aileron_TraiPhai_pusle_width > 1000) 
+					PID_roll.setpoint = 1490 - IC_Aileron_TraiPhai_pusle_width; 
 				PID_roll.setpoint -= roll_level_adjust;
 				PID_roll.setpoint /= (float)3.0;  
 				
 				//PITCH PID
 				PID_pitch.setpoint = 0;
-				if(IC_Elevator_TienLui_pusle_width > 1508 && IC_Elevator_TienLui_pusle_width < 2000)
-					PID_pitch.setpoint = IC_Elevator_TienLui_pusle_width - 1508;
-				else if(IC_Elevator_TienLui_pusle_width < 1492 && IC_Elevator_TienLui_pusle_width > 1000)
-					PID_pitch.setpoint = 1492 - IC_Elevator_TienLui_pusle_width; 
+				if(IC_Elevator_TienLui_pusle_width > 1510 && IC_Elevator_TienLui_pusle_width < 2000)
+					PID_pitch.setpoint = IC_Elevator_TienLui_pusle_width - 1510;
+				else if(IC_Elevator_TienLui_pusle_width < 1490 && IC_Elevator_TienLui_pusle_width > 1000)
+					PID_pitch.setpoint = 1490 - IC_Elevator_TienLui_pusle_width; 
 				PID_pitch.setpoint -= pitch_level_adjust;
 				PID_pitch.setpoint /= (float)3.0;  
 				
@@ -357,10 +354,10 @@ void Turn_On_Quadrotor(void)
 				PID_yaw.setpoint = 0;
 				if(IC_Throttle_pusle_width > 1150)
 				{
-					if(IC_Rudder_Xoay_pusle_width > 1508 && IC_Rudder_Xoay_pusle_width < 2000)
-						PID_yaw.setpoint = (IC_Rudder_Xoay_pusle_width - 1508)/(float)3.0;
-					else if(IC_Rudder_Xoay_pusle_width < 1492 && IC_Rudder_Xoay_pusle_width > 1000 )
-						PID_yaw.setpoint = (1492 - IC_Rudder_Xoay_pusle_width )/(float)3.0; 
+					if(IC_Rudder_Xoay_pusle_width > 1510 && IC_Rudder_Xoay_pusle_width < 2000)
+						PID_yaw.setpoint = (IC_Rudder_Xoay_pusle_width - 1510)/(float)3.0;
+					else if(IC_Rudder_Xoay_pusle_width < 1490 && IC_Rudder_Xoay_pusle_width > 1000 )
+						PID_yaw.setpoint = (1490 - IC_Rudder_Xoay_pusle_width )/(float)3.0; 
 				}
 				calculate_pid(); 
 				// trick throttle IC_Throttle_pusle_width= 1500
