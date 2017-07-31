@@ -7,11 +7,11 @@
 
 Type X quadrotor
 ```javascript
-(1)\   /(2)   ^^Head
-    \ /		  ||	      y
-     X		  ||	      |
-    / \              x____|
-(4)/   \(3)	
+(4)\   /(1)       ^^Head
+    \ /		  ||	      x
+     X		  ||	      |
+    / \                  y____|O (gy86)
+(3)/   \(2)	
 
 (1)(3) clockwise along
 (2)(4) not clockwise along
@@ -21,7 +21,7 @@ Type X quadrotor
 - 4 ESC(electric speed control) and 4 bruless motor
 - RF module: devo 7 transmit and receiver
 - STM32f407VG of ARM
-- MPU6050 (gry sensor + accele sensor + temp sensor)
+- GY86 module (gyro + accele + temp)
 
 
 --------------------------------------------------------------------------
