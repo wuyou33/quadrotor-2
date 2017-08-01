@@ -54,6 +54,9 @@ PB1 pwm 4
 I2C_HandleTypeDef 				I2C_Handle_GY86_10truc;  //I2C handle, dung de doc value cua cam bien MPU6050
 TIM_HandleTypeDef 				Tim3_Handle_PWM;		//timer 3 dung de output PWM ra 4 channel
 TIM_HandleTypeDef 				htim1 , htim2 , htim4 , htim5; //  4 timer de capture Devo 7
+ADC_HandleTypeDef 				g_AdcHandle; //read analog battery vol
+uint32_t 									g_ADCValue;
+int 											g_MeasurementNumber;
 
 				//---------RF Module, PWM Capture
 int32_t 									IC_Throttle1,          IC_Throttle2, 								IC_Throttle_pusle_width; //Throttle (can ga) tang giam toc do quay
@@ -118,6 +121,8 @@ void 							Turn_Off_Quadrotor(void);
 															
 				//Khoi Tao LED, BUTTON USER
 void 							Init_LEDSANG_AND_BUTTON_USER_PORT_A0(void);
+
+void 							Init_Config_ADC_read_Vol_battery(void);
 															
 				//Khoi tao TIMER3 output PWM											
 void 							Init_TIM3_OUTPUT_PWM(void);
@@ -186,8 +191,11 @@ int main(void)
 		__GPIOA_CLK_ENABLE();	__GPIOB_CLK_ENABLE();	__GPIOC_CLK_ENABLE(); __GPIOD_CLK_ENABLE();	__GPIOE_CLK_ENABLE();		
 		__TIM1_CLK_ENABLE();  __TIM2_CLK_ENABLE(); 	__TIM3_CLK_ENABLE(); 	__TIM4_CLK_ENABLE(); 	__TIM5_CLK_ENABLE();  	 
 		__I2C1_CLK_ENABLE(); 	       delay_ms(10); 
+    __ADC1_CLK_ENABLE();				 delay_ms(10); 
 			//---GPIO 4 led & GPIO button user---------------	
 		Init_LEDSANG_AND_BUTTON_USER_PORT_A0();  delay_ms(10);  
+			//config ADC read vol battery
+		Init_Config_ADC_read_Vol_battery();   delay_ms(10);  
 			//---Timer 3 4 channel PWM
 		Init_TIM3_OUTPUT_PWM();		   delay_ms(10); 
 			//Capture xung PWM of devo 7
@@ -231,6 +239,23 @@ int main(void)
 		//-----------------------------------------------------------------------
 		while(1) //main loop
 		{		 
+		    /*
+		    //Load the battery voltage to the battery_voltage variable.
+			  //65 is the voltage compensation for the diode.
+			  //12.6V equals ~5V @ Analog 0.
+			  //12.6V equals 1023 analogRead(0).
+			  //1260 / 1023 = 1.2317.
+			  //The variable battery_voltage holds 1050 if the battery voltage is 10.5V.
+			  battery_voltage = (analogRead(0) + 65) * 1.2317;
+			  for (;;)
+		    {
+		        if (HAL_ADC_PollForConversion(&g_AdcHandle, 1000000) == HAL_OK)
+		        {
+		            g_ADCValue = HAL_ADC_GetValue(&g_AdcHandle);
+		            g_MeasurementNumber++;
+		        }
+		    }*/
+
 				while(FlyState == STATE_FLY_OFF)
 				{
 						SANG_4_LED_LAN_LUOT(10,30); SANG_4_LED();  delay_ms(2000);  SANG_4_LED_OFF();  delay_ms(1000); 
@@ -963,6 +988,98 @@ void Init_LEDSANG_AND_BUTTON_USER_PORT_A0(void)
 		BUTTON_USER_PA_0.Speed = GPIO_SPEED_HIGH;
 		HAL_GPIO_Init(GPIOA, &BUTTON_USER_PA_0);
 }
+
+
+//
+//
+//Init ADC ADC1 -  channel 11 - pin PC1
+//
+
+void 	Init_Config_ADC_read_Vol_battery(void)
+{
+    GPIO_InitTypeDef gpioInit;
+
+    gpioInit.Pin = GPIO_PIN_1;
+    gpioInit.Mode = GPIO_MODE_ANALOG;
+    gpioInit.Pull = GPIO_NOPULL;
+    HAL_GPIO_Init(GPIOC, &gpioInit);
+
+    HAL_NVIC_SetPriority(ADC_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(ADC_IRQn);
+
+    ADC_ChannelConfTypeDef adcChannel;
+
+    g_AdcHandle.Instance = ADC1;
+		g_AdcHandle.Init.ScanConvMode = DISABLE;
+		g_AdcHandle.Init.Resolution = ADC_RESOLUTION_12B; //12 bit
+		g_AdcHandle.Init.ContinuousConvMode = ENABLE; //important Set hadc.Init.ContinuousConvMode to ENABLE
+		g_AdcHandle.Init.ExternalTrigConv = ADC_EXTERNALTRIGCONV_T1_CC1;
+		g_AdcHandle.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+		g_AdcHandle.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+		g_AdcHandle.Init.NbrOfConversion = 1;
+
+    g_AdcHandle.Init.ClockPrescaler = ADC_CLOCKPRESCALER_PCLK_DIV2;
+    g_AdcHandle.Init.DiscontinuousConvMode = DISABLE;
+    g_AdcHandle.Init.NbrOfDiscConversion = 0;
+    g_AdcHandle.Init.DMAContinuousRequests = ENABLE;
+    g_AdcHandle.Init.EOCSelection = DISABLE; //important hadc.Init.EOCSelection to DISABLE for continuous sampling. 
+
+    HAL_ADC_Init(&g_AdcHandle);
+
+    adcChannel.Channel = ADC_CHANNEL_11;
+    adcChannel.Rank = 1;
+    adcChannel.SamplingTime = ADC_SAMPLETIME_480CYCLES; 
+		//ADC_SampleTime_144Cycles 
+		//ADC_SAMPLETIME_4CYCLES
+    adcChannel.Offset = 0;
+
+    if (HAL_ADC_ConfigChannel(&g_AdcHandle, &adcChannel) != HAL_OK)
+    {
+        //asm("bkpt 255");
+    }
+		delay_ms(10);
+		HAL_ADC_Start(&g_AdcHandle);
+		__HAL_ADC_ENABLE_IT(&g_AdcHandle, ADC_IT_EOC);
+		//HAL_ADC_Start_IT(&g_AdcHandle);
+
+		/*
+		    //Load the battery voltage to the battery_voltage variable.
+			  //65 is the voltage compensation for the diode.
+			  //12.6V equals ~5V @ Analog 0.
+			  //12.6V equals 1023 analogRead(0).
+			  //1260 / 1023 = 1.2317.
+			  //The variable battery_voltage holds 1050 if the battery voltage is 10.5V.
+			  battery_voltage = (analogRead(0) + 65) * 1.2317;
+			  for (;;)
+		    {
+		        if (HAL_ADC_PollForConversion(&g_AdcHandle, 1000000) == HAL_OK)
+		        {
+		            g_ADCValue = HAL_ADC_GetValue(&g_AdcHandle);
+		        }
+		    }*/
+}
+
+
+void ADC_IRQHandler() //interrupt handle cua ADC
+{
+    HAL_ADC_IRQHandler(&g_AdcHandle); 
+    //HAL_ADC_IRQHandler(&hadc2); <--- In case of a second ADC
+}
+
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) // xu ly interrupt handle
+{
+    if(hadc->Instance == ADC1)
+    {
+    	if(__HAL_ADC_GET_FLAG(hadc, ADC_FLAG_EOC) )
+    	{
+    		g_ADCValue = HAL_ADC_GetValue(hadc);
+        // Do stuff
+    	}
+    }
+    //if(hadc->Instance == ADC2)  // <-- In case of a second ADC
+    //{}
+}
+
 //
 //
 //
