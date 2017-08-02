@@ -1866,37 +1866,6 @@ void SANG_4_LED_LAN_LUOT(int16_t n, int16_t delaytime)
 	}	
 }
 
-/*
-float kalmanCalculate(Kalman_Setting *kalman, float newAngle, float newRate, float DT_)
-{
-			float dt = (float)DT_;	// dt=10/1000;
-			kalman->angle += dt * (newRate - kalman->x_bias);
-			kalman->P_00 += - dt * (kalman->P_10 + kalman->P_01) + kalman->Q_angle * dt;
-			kalman->P_01 += - dt * kalman->P_11;  
-			kalman->P_10 += - dt * kalman->P_11; 
-			kalman->P_11 += + kalman->Q_gyro * dt;
-			
-			kalman->y = newAngle - kalman->angle;
-			kalman->S = kalman->P_00 + kalman->R_angle;
-			
-			kalman->K_0     = kalman->P_00 / kalman->S;
-			kalman->K_1     = kalman->P_10 / kalman->S;
-			
-			kalman->angle   +=  kalman->K_0 * kalman->y;
-			kalman->x_bias  +=  kalman->K_1 * kalman->y;
-
-			kalman->P_00    -= kalman->K_0 * kalman->P_00;
-			kalman->P_01    -= kalman->K_0 * kalman->P_01;
-			kalman->P_10    -= kalman->K_1 * kalman->P_00;
-			kalman->P_11    -= kalman->K_1 * kalman->P_01;
-			return kalman->angle;
-}
-*/
-
-
-
-
-
 
 
 //------------------------------------------------------------------------------------------------------------------------------
