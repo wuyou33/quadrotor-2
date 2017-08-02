@@ -336,9 +336,7 @@ void Turn_On_Quadrotor(void)
 								FlyState = STATE_FLY_ON; 
 								pwm_motor_1 = 1100; pwm_motor_2 = 1100; pwm_motor_3 = 1100; pwm_motor_4 = 1100;
 								TIM3->CCR1 = 	1100; TIM3->CCR2 = 	1100; TIM3->CCR3 = 1100; TIM3->CCR4 = 1100; 
-								SANG_4_LED_LOOP(7,40); 
-								SANG_4_LED_OFF();
-								delay_ms(1000);
+								SANG_4_LED_LOOP(7,40);  SANG_4_LED_OFF(); delay_ms(1000);
 								reset_PID();
 								loop_timer = get_current_time_us(); 
 						}

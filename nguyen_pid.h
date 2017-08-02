@@ -1,11 +1,11 @@
 
 
 #define PID_KP  								    (float)1.3		
-#define PID_KI  								    (float)0.0 //0.02 //0.04 (origin)				
+#define PID_KI  								    (float)0.04 //0.02 //0.04 (origin)				
 #define PID_KD  								    (float)18.0		
 	
 #define PID_KP_YAW  								(float)4.0		
-#define PID_KI_YAW  								(float)0.0 //0.02 (origin)	
+#define PID_KI_YAW  								(float)0.02 //0.02 (origin)	
 #define PID_KD_YAW 								  (float)0.0	
 	
 
