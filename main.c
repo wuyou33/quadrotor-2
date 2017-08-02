@@ -204,6 +204,7 @@ int main(void)
 		PWM_Input_Capture_TIM4();		 
 		PWM_Input_Capture_TIM5(); 
 		SANG_4_LED();
+		delay_ms(3000);
 			//---MPU6050 cau hinh PB6 SCL, PB7 SDA 
 		GY86_I2C_Handle_GY86();	 																		delay_ms(10);	 
 		GY86_I2C_WRITE( 								0xD0, 0x6B, 0x00);					delay_ms(10);  // 0x6B PWR_MGMT_1 register; set to zero (wakes up the MPU-6050)
@@ -280,7 +281,7 @@ int main(void)
 										
 										//YAW PID
 										PID_yaw.setpoint = 0;
-										if(IC_Throttle_pusle_width > 1200 )
+										if(IC_Throttle_pusle_width > 1150 )
 										{
 											if(IC_Rudder_Xoay_pusle_width > 1510 && IC_Rudder_Xoay_pusle_width <= 2000)
 												PID_yaw.setpoint = (IC_Rudder_Xoay_pusle_width - 1510)/(float)3.0;
@@ -306,10 +307,10 @@ int main(void)
 							else
 							{ 
 								reset_PID();
-								pwm_motor_1 = 1000;  pwm_motor_2 = 1000;  pwm_motor_3 = 1000;  pwm_motor_4 = 1000;
-								TIM3->CCR1 = 	1000; TIM3->CCR2 = 	1000; TIM3->CCR3  = 1000; TIM3->CCR4  = 1000; 
-								SANG_4_LED_OFF(); LED_D_12_HIGH; LED_D_14_HIGH; delay_ms(500);
-								SANG_4_LED_OFF(); LED_D_13_HIGH; LED_D_15_HIGH; delay_ms(500);
+								pwm_motor_1 = 1075;  pwm_motor_2 = 1075;  pwm_motor_3 = 1075;  pwm_motor_4 = 1075;
+								TIM3->CCR1 = 	1075; TIM3->CCR2 = 	1075; TIM3->CCR3  = 1075; TIM3->CCR4  = 1075; 
+								SANG_4_LED_OFF(); LED_D_12_HIGH; LED_D_14_HIGH; delay_ms(200);
+								SANG_4_LED_OFF(); LED_D_13_HIGH; LED_D_15_HIGH; delay_ms(200);
 								Turn_Off_Quadrotor(); 
 								loop_timer = get_current_time_us(); 
 							}	 
@@ -337,9 +338,9 @@ void Turn_On_Quadrotor(void)
 						{			
 								SANG_4_LED_OFF();  
 								FlyState = STATE_FLY_ON; 
-								pwm_motor_1 = 1000; pwm_motor_2 = 1000; pwm_motor_3 = 1000; pwm_motor_4 = 1000;
-								TIM3->CCR1 = 	1000; TIM3->CCR2 = 	1000; TIM3->CCR3 = 1000; TIM3->CCR4 = 1000;
-								SANG_4_LED_LOOP(7,40);  SANG_4_LED_OFF(); delay_ms(2000);   
+								pwm_motor_1 = 1075; pwm_motor_2 = 1075; pwm_motor_3 = 1075; pwm_motor_4 = 1075;
+								TIM3->CCR1 = 	1075; TIM3->CCR2 = 	1075; TIM3->CCR3 = 1075; TIM3->CCR4 = 1075;
+								SANG_4_LED_LOOP(7,40);  SANG_4_LED_OFF(); delay_ms(1000);   
 								reset_PID();
 								loop_timer = get_current_time_us(); 
 						}
