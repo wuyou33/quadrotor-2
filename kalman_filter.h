@@ -21,8 +21,8 @@ typedef struct _Kalman_Setting {
 	float Q_gyro  ;
 	float R_angle ;
 
-	float bias ;
-	float angle;
+	float x_bias ;
+	
 	float P_00 ;
 	float P_01 ;
 	float P_10 ;
@@ -31,6 +31,7 @@ typedef struct _Kalman_Setting {
 	float S;
 	float K_0;
 	float K_1;
+	float angle;
 } Kalman_Setting;
 
 /*
