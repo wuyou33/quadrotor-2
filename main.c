@@ -142,8 +142,7 @@ void 							SetPWM_1_Motor(int16_t numberMotor, int16_t newValue);
 void 							SetPWM_Motor_Tang(int16_t numberMotor, int16_t changeValue);
 void 							SetPWM_Motor_Giam(int16_t numberMotor, int16_t changeValue);
 void 							Update_PWM_MOTOR_1_4_CheckMinMax(void);
-void 							Apply_PWM_MOTOR_1_4_TO_ESC(void);
-void 							Direct_Quadrotor_By_Receiver(void);
+void 							Apply_PWM_MOTOR_1_4_TO_ESC(void); 
 
 				//i2c chip mpu6050 10truc
 void 							GY86_I2C_Handle_GY86(void);
@@ -1662,91 +1661,6 @@ int16_t Giam_Do_Vot_Lo(int16_t value)
 		value = DO_VOT_LO;
 	if(value <= 0)		value = 0;
 	return value;
-}
-
-void Direct_Quadrotor_By_Receiver(void)
-{
-			int16_t chenhLechGiaTri = 0;
-			//int16_t timedelay = 50;
-			//Tien - Lui
-			if( IC_Elevator_TienLui_pusle_width >= 1000 && IC_Elevator_TienLui_pusle_width <= 2000  )
-			{
-				//LUI` ra sau => giam 3,4 ; tang 1,2
-				while(IC_Elevator_TienLui_pusle_width <= RC_Effect_Min ) 
-				{			
-							chenhLechGiaTri = RC_Medium - IC_Elevator_TienLui_pusle_width;
-							chenhLechGiaTri = Giam_Do_Vot_Lo(chenhLechGiaTri);
-							SetPWM_Motor_Tang(1,chenhLechGiaTri);
-							SetPWM_Motor_Tang(2,chenhLechGiaTri);
-							//SetPWM_Motor_Giam(3,chenhLechGiaTri);
-							//SetPWM_Motor_Giam(4,chenhLechGiaTri);
-				}
-				//TIEN' ve truoc => giam 1,2 ; tang 3,4
-				while(IC_Elevator_TienLui_pusle_width >= RC_Effect_Max )
-				{
-							//Lui ve phia sau, giam dong co 3+4 va tang dong co 1+2
-							chenhLechGiaTri = IC_Elevator_TienLui_pusle_width - RC_Medium;
-							chenhLechGiaTri = Giam_Do_Vot_Lo(chenhLechGiaTri);
-							SetPWM_Motor_Tang(3,chenhLechGiaTri);
-							SetPWM_Motor_Tang(4,chenhLechGiaTri);
-							//SetPWM_Motor_Giam(1,chenhLechGiaTri);
-							//SetPWM_Motor_Giam(2,chenhLechGiaTri);		
-				}					
-			}
-	
-			//Trai - Phai
-			if(IC_Aileron_TraiPhai_pusle_width >= 1000 && IC_Aileron_TraiPhai_pusle_width <= 2000  )
-			{
-				//PHAI => giam 2,3; tang 1,4
-				while(IC_Aileron_TraiPhai_pusle_width <= RC_Effect_Min )
-				{		
-							chenhLechGiaTri = RC_Medium - IC_Aileron_TraiPhai_pusle_width;
-							chenhLechGiaTri = Giam_Do_Vot_Lo(chenhLechGiaTri);
-							SetPWM_Motor_Tang(1,chenhLechGiaTri);
-							SetPWM_Motor_Tang(4,chenhLechGiaTri);
-							//SetPWM_Motor_Giam(2,chenhLechGiaTri);
-							//SetPWM_Motor_Giam(3,chenhLechGiaTri);
-				}
-				//TRAI => giam 1,4; tang 2,3
-				while(IC_Aileron_TraiPhai_pusle_width >= RC_Effect_Max )
-				{
-							chenhLechGiaTri = IC_Aileron_TraiPhai_pusle_width - RC_Medium;
-							chenhLechGiaTri = Giam_Do_Vot_Lo(chenhLechGiaTri);
-							SetPWM_Motor_Tang(2,chenhLechGiaTri);
-							SetPWM_Motor_Tang(3,chenhLechGiaTri);
-							//SetPWM_Motor_Giam(1,chenhLechGiaTri);
-							//SetPWM_Motor_Giam(4,chenhLechGiaTri);
-				}
-				//trong khoang 1470 - 1530 khong lam gi		
-			}
-	
-			//Xoay
-			if(IC_Rudder_Xoay_pusle_width >= 1000 && IC_Rudder_Xoay_pusle_width <= 2000  )
-			{		
-				while(IC_Rudder_Xoay_pusle_width <= RC_Effect_Min )
-				{
-					//Xoay cung chieu kim dong ho, giam dong co 1+3 va tang dong co 2+4			
-					chenhLechGiaTri = RC_Medium - IC_Rudder_Xoay_pusle_width;
-					chenhLechGiaTri = Giam_Do_Vot_Lo(chenhLechGiaTri);
-					SetPWM_Motor_Tang(2,chenhLechGiaTri);
-					SetPWM_Motor_Tang(4,chenhLechGiaTri);
-					//SetPWM_Motor_Giam(1,chenhLechGiaTri);
-					//SetPWM_Motor_Giam(3,chenhLechGiaTri);
-					
-				}
-				
-				while(IC_Rudder_Xoay_pusle_width >= RC_Effect_Max )
-				{
-					//Xoay nguoc chieu kim dong ho, giam dong co 2+4 va tang dong co 1+3
-					chenhLechGiaTri = IC_Rudder_Xoay_pusle_width - RC_Medium;
-					chenhLechGiaTri = Giam_Do_Vot_Lo(chenhLechGiaTri);
-					SetPWM_Motor_Tang(1,chenhLechGiaTri);
-					SetPWM_Motor_Tang(3,chenhLechGiaTri);	
-					//SetPWM_Motor_Giam(2,chenhLechGiaTri);
-					//SetPWM_Motor_Giam(4,chenhLechGiaTri);
-				}
-				//trong khoang 1470 - 1530 khong lam gi				
-			}
 }
 
 
