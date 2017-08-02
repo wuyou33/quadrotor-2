@@ -1,13 +1,6 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <math.h>
-
-//----------------------//
-//				 ORANGE							//
-//	Yellow 				Red					//
-//				  BLUE	 			//
-//----------------------//
-
 	
 #define LED_YELLOW												12
 #define LED_ORANGE												13

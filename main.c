@@ -298,19 +298,22 @@ int main(void)
 										Update_PWM_MOTOR_1_4_CheckMinMax(); 
 										Apply_PWM_MOTOR_1_4_TO_ESC();		
 										//-----------------------------------------------------
+										Sang_Led_By_MPU6050_Values(angle_roll, angle_pitch, angle_yaw);
+										if( (get_current_time_us() - loop_timer) > 4000)  SANG_4_LED_LOOP(3,30);
+										while( (get_current_time_us() - loop_timer) < 4000){}; //4000 us = 4ms = 1/250Hz
+										loop_timer = get_current_time_us(); 
 							}
 							else
 							{ 
 								reset_PID();
 								pwm_motor_1 = 1000;  pwm_motor_2 = 1000;  pwm_motor_3 = 1000;  pwm_motor_4 = 1000;
-								TIM3->CCR1 = 	1000; TIM3->CCR2 = 	1000; TIM3->CCR3  = 1000; TIM3->CCR4  = 1000;
+								TIM3->CCR1 = 	1000; TIM3->CCR2 = 	1000; TIM3->CCR3  = 1000; TIM3->CCR4  = 1000; 
+								SANG_4_LED_OFF(); LED_D_12_HIGH; LED_D_14_HIGH; delay_ms(500);
+								SANG_4_LED_OFF(); LED_D_13_HIGH; LED_D_15_HIGH; delay_ms(500);
 								Turn_Off_Quadrotor(); 
-							}	
-
-							Sang_Led_By_MPU6050_Values(angle_roll, angle_pitch, angle_yaw);
-							if( (get_current_time_us() - loop_timer) > 4000)  SANG_4_LED_LOOP(3,30);
-							while( (get_current_time_us() - loop_timer) < 4000){}; //4000 us = 4ms = 1/250Hz
-							loop_timer = get_current_time_us(); 
+								loop_timer = get_current_time_us(); 
+							}	 
+							 
 				}
 				//end while(FlyState == 1)
 		}//End while(1)
@@ -325,17 +328,18 @@ void Turn_On_Quadrotor(void)
 			(IC_Elevator_TienLui_pusle_width >= 1070 && IC_Elevator_TienLui_pusle_width <= 1130) && 
 			(FlyState == 0	)) 
 		{	
-						SANG_4_LED_LAN_LUOT(7,40);	 SANG_4_LED(); 	 delay_ms(1000); 					
+						SANG_4_LED_LAN_LUOT(7,40);	 SANG_4_LED(); 	 delay_ms(1000); 	
+			
 						if( (IC_Throttle_pusle_width         >= 1070 && IC_Throttle_pusle_width         <= 1130) && 
 								(IC_Aileron_TraiPhai_pusle_width >= 1070 && IC_Aileron_TraiPhai_pusle_width <= 1130) && 
 								(IC_Elevator_TienLui_pusle_width >= 1070 && IC_Elevator_TienLui_pusle_width <= 1130) &&
 								(FlyState == 0	)		)
 						{			
-								SANG_4_LED_OFF();    
+								SANG_4_LED_OFF();  
 								FlyState = STATE_FLY_ON; 
-								pwm_motor_1 = 1100; pwm_motor_2 = 1100; pwm_motor_3 = 1100; pwm_motor_4 = 1100;
-								TIM3->CCR1 = 	1100; TIM3->CCR2 = 	1100; TIM3->CCR3 = 1100; TIM3->CCR4 = 1100; 
-								SANG_4_LED_LOOP(7,40);  SANG_4_LED_OFF(); delay_ms(1000);
+								pwm_motor_1 = 1000; pwm_motor_2 = 1000; pwm_motor_3 = 1000; pwm_motor_4 = 1000;
+								TIM3->CCR1 = 	1000; TIM3->CCR2 = 	1000; TIM3->CCR3 = 1000; TIM3->CCR4 = 1000;
+								SANG_4_LED_LOOP(7,40);  SANG_4_LED_OFF(); delay_ms(2000);   
 								reset_PID();
 								loop_timer = get_current_time_us(); 
 						}
@@ -573,7 +577,7 @@ void Turn_Off_Quadrotor(void) //tat quadrotor
 			(IC_Rudder_Xoay_pusle_width        >= 1070 && IC_Rudder_Xoay_pusle_width      <= 1130) )  
 	{ 
 			SANG_4_LED_LAN_LUOT(7,40);
-			SANG_4_LED();
+			SANG_4_LED(); delay_ms(1000);
 			if( (IC_Throttle_pusle_width         >= 1070 && IC_Throttle_pusle_width         <= 1130) && 
 					(IC_Aileron_TraiPhai_pusle_width >= 1070 && IC_Aileron_TraiPhai_pusle_width <= 1130) && 
 					(IC_Elevator_TienLui_pusle_width >= 1070 && IC_Elevator_TienLui_pusle_width <= 1130) &&
@@ -591,7 +595,7 @@ void Turn_Off_Quadrotor(void) //tat quadrotor
 					TIM3->CCR3 = 1000;
 					TIM3->CCR4 = 1000;
 					SANG_4_LED_OFF();
-					delay_ms(3000);
+					delay_ms(2500);
 					reset_PID();
 					loop_timer = get_current_time_us();
 			}
