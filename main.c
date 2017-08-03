@@ -54,9 +54,9 @@ PB1 pwm 4
 I2C_HandleTypeDef 				I2C_Handle_GY86_10truc;  //I2C handle, dung de doc value cua cam bien MPU6050
 TIM_HandleTypeDef 				Tim3_Handle_PWM;		//timer 3 dung de output PWM ra 4 channel
 TIM_HandleTypeDef 				htim1 , htim2 , htim4 , htim5; //  4 timer de capture Devo 7
-ADC_HandleTypeDef 				g_AdcHandle; //read analog battery vol
-uint32_t 									g_ADCValue;
-int 											g_MeasurementNumber;
+ADC_HandleTypeDef 				g_Adc_HandleTypeDef; //read analog battery vol
+int 											battery_voltage;
+int 											battery_voltage_first;
 
 				//---------RF Module, PWM Capture
 int32_t 									IC_Throttle1,          IC_Throttle2, 								IC_Throttle_pusle_width; //Throttle (can ga) tang giam toc do quay
@@ -180,9 +180,7 @@ void 							reset_PID(void);
 
 int main(void)
 {		
-						//#ifdef RTE_CMSIS_RTOS                   
-						//		osKernelInitialize(); /*..................code default cua ARM co san						*/                 
-						//#endif			
+						 		
 		HAL_Init();		
 		SystemClock_Config();	
 		SysTick_Config(SystemCoreClock/1000000);
@@ -192,32 +190,30 @@ int main(void)
 		__TIM1_CLK_ENABLE();  __TIM2_CLK_ENABLE(); 	__TIM3_CLK_ENABLE(); 	__TIM4_CLK_ENABLE(); 	__TIM5_CLK_ENABLE();  	 
 		__I2C1_CLK_ENABLE(); 	        
 		__ADC1_CLK_ENABLE();				 
-			//---GPIO 4 led & GPIO button user---------------	
-		Init_LEDSANG_AND_BUTTON_USER_PORT_A0();  
-			//config ADC read vol battery
-		//Init_Config_ADC_read_Vol_battery();   
-			//---Timer 3 4 channel PWM
-		Init_TIM3_OUTPUT_PWM();		   
-			//Capture xung PWM of devo 7
-		PWM_Input_Capture_TIM1();  	  
-		PWM_Input_Capture_TIM2();  	  
-		PWM_Input_Capture_TIM4();		 
-		PWM_Input_Capture_TIM5(); 
+			
+		Init_LEDSANG_AND_BUTTON_USER_PORT_A0();  delay_ms(10);	//---GPIO 4 led & GPIO button user---------------	
+			
+		Init_Config_ADC_read_Vol_battery();   delay_ms(10);	//config ADC read vol battery
+			
+		Init_TIM3_OUTPUT_PWM();		   delay_ms(10);	 //---Timer 3 4 channel PWM
+			
+		PWM_Input_Capture_TIM1();  delay_ms(10);	   //Capture xung PWM of devo 7
+		PWM_Input_Capture_TIM2();  delay_ms(10);	  
+		PWM_Input_Capture_TIM4();	 delay_ms(10); 
+		PWM_Input_Capture_TIM5();  delay_ms(10);
 		SANG_4_LED();
-		delay_ms(3000);
+		delay_ms(2000);
+		SANG_4_LED_OFF();
 			//---MPU6050 cau hinh PB6 SCL, PB7 SDA 
-		GY86_I2C_Handle_GY86();	 																		delay_ms(10);	 
-		GY86_I2C_WRITE( 								0xD0, 0x6B, 0x00);					delay_ms(10);  // 0x6B PWR_MGMT_1 register; set to zero (wakes up the MPU-6050)
-		GY86_MPU6050_Set_Sample_Rate(		0xD0, 0x1A, 0x00);					delay_ms(10);  //set sample rate 8kHz
-		GY86_MPU6050_SetAccelerometer( 	0xD0, 0x1C, 0x02);					delay_ms(10);  //Range is +- 8G
-		GY86_MPU6050_SetGyroscope( 			0xD0, 0x1B, 0x01);					delay_ms(10);  //Gyroscope Range is +- 500 degrees/s
-		  																							 																					 	
+		GY86_I2C_Handle_GY86();	 																		delay_ms(50); 
+		GY86_I2C_WRITE( 								0xD0, 0x6B, 0x00);					delay_ms(50);  // 0x6B PWR_MGMT_1 register; set to zero (wakes up the MPU-6050)  
+		GY86_MPU6050_Set_Sample_Rate(		0xD0, 0x1A, 0x00);					delay_ms(50);  //set sample rate 8kHz
+		GY86_MPU6050_SetAccelerometer( 	0xD0, 0x1C, 0x02);					delay_ms(50);  //Range is +- 8G
+		GY86_MPU6050_SetGyroscope( 			0xD0, 0x1B, 0x01);					delay_ms(50);  //Gyroscope Range is +- 500 degrees/s
+																								 																					 	
 		//-----------------------------------------------------------------------
 		GY86_I2C_IS_DEVICE_CONNECTED();	 															delay_ms(10);
 		GY86_I2C_WHO_I_AM( 0xD0, 0x75); 															delay_ms(10);
-					//#ifdef RTE_CMSIS_RTOS 
-					//	osKernelStart(); //.........code dafault cua ARM		// when using CMSIS RTOS	// start thread execution 
-					//#endif
 		
 		//cal gyro 1000 time		
 		GY86_Cal_Gyro_Offset(); 																			delay_ms(10);   
@@ -236,7 +232,7 @@ int main(void)
 		SANG_4_LED();      																					delay_ms(2000); 
 		setPWM_4_Motor_Cung_Value(CONFIG_PWM_MIN);
 		SANG_4_LED_OFF(); 																					delay_ms(1000); 	 									
-		SANG_4_LED_LAN_LUOT(10,30);
+		SANG_4_LED_LAN_LUOT(10,40);
 		loop_timer = get_current_time_us();
 		//-----------------------------------------------------------------------
 		while(1) //main loop
@@ -257,7 +253,9 @@ int main(void)
 				while(FlyState == STATE_FLY_ON) //quadrotor State Fly
 				{ 
 							GY86_MPU6050_ReadAll( 0xD0, &mpu6050_Object);  
-							GY86_Cal_Angle_By_Gyro_And_Acc(&mpu6050_Object);  
+							GY86_Cal_Angle_By_Gyro_And_Acc(&mpu6050_Object); 
+							while(HAL_ADC_PollForConversion(&g_Adc_HandleTypeDef,0) != HAL_OK){} 
+							battery_voltage = battery_voltage * 0.96 +  (HAL_ADC_GetValue(&g_Adc_HandleTypeDef)+65) * 1.2317 * 0.04;
 							if(IC_Throttle_pusle_width > 1150 && IC_Throttle_pusle_width <=  2000)
 							{
 									 	//-----------------------------------------------------
@@ -295,7 +293,13 @@ int main(void)
 										pwm_motor_2 = (int)IC_Throttle_pusle_width + (int)PID_roll.output + (int)PID_pitch.output  + (int)PID_yaw.output;
 										pwm_motor_3 = (int)IC_Throttle_pusle_width - (int)PID_roll.output + (int)PID_pitch.output  - (int)PID_yaw.output;
 										pwm_motor_4 = (int)IC_Throttle_pusle_width - (int)PID_roll.output - (int)PID_pitch.output  + (int)PID_yaw.output;
-										
+										if(battery_voltage < 1240 && battery_voltage > 800)
+										{
+											pwm_motor_1 += pwm_motor_1*( (1240-battery_voltage)/(float)3500 );
+											pwm_motor_2 += pwm_motor_2*( (1240-battery_voltage)/(float)3500 );
+											pwm_motor_3 += pwm_motor_3*( (1240-battery_voltage)/(float)3500 );
+											pwm_motor_4 += pwm_motor_4*( (1240-battery_voltage)/(float)3500 );
+										}
 										Update_PWM_MOTOR_1_4_CheckMinMax(); 
 										Apply_PWM_MOTOR_1_4_TO_ESC();		
 										//-----------------------------------------------------
@@ -313,8 +317,7 @@ int main(void)
 								SANG_4_LED_OFF(); LED_D_13_HIGH; LED_D_15_HIGH; delay_ms(200);
 								Turn_Off_Quadrotor(); 
 								loop_timer = get_current_time_us(); 
-							}	 
-							 
+							}	   
 				}
 				//end while(FlyState == 1)
 		}//End while(1)
@@ -347,8 +350,10 @@ void Turn_On_Quadrotor(void)
 		} else 
 		{ 
 				GY86_MPU6050_ReadAll( 0xD0, &mpu6050_Object);  
-				GY86_Cal_Angle_By_Gyro_And_Acc(&mpu6050_Object); 
-			 	//-----------------------------------------------------
+				GY86_Cal_Angle_By_Gyro_And_Acc(&mpu6050_Object);
+				while(HAL_ADC_PollForConversion(&g_Adc_HandleTypeDef,0) != HAL_OK){} 
+				battery_voltage = battery_voltage * 0.96 +  (HAL_ADC_GetValue(&g_Adc_HandleTypeDef)+65) * 1.2317 * 0.04;
+				//-----------------------------------------------------
 				//ROLL PID
 				PID_roll.setpoint = 0;
 				if(IC_Aileron_TraiPhai_pusle_width > 1510 && IC_Aileron_TraiPhai_pusle_width <= 2000)
@@ -383,7 +388,13 @@ void Turn_On_Quadrotor(void)
 				pwm_motor_2 = (int)IC_Throttle_pusle_width + (int)PID_roll.output + (int)PID_pitch.output  + (int)PID_yaw.output;
 				pwm_motor_3 = (int)IC_Throttle_pusle_width - (int)PID_roll.output + (int)PID_pitch.output  - (int)PID_yaw.output;
 				pwm_motor_4 = (int)IC_Throttle_pusle_width - (int)PID_roll.output - (int)PID_pitch.output  + (int)PID_yaw.output;
-				
+				if(battery_voltage < 1240 && battery_voltage > 800)
+				{
+					pwm_motor_1 += pwm_motor_1*( (1240-battery_voltage)/(float)3500 );
+					pwm_motor_2 += pwm_motor_2*( (1240-battery_voltage)/(float)3500 );
+					pwm_motor_3 += pwm_motor_3*( (1240-battery_voltage)/(float)3500 );
+					pwm_motor_4 += pwm_motor_4*( (1240-battery_voltage)/(float)3500 );
+				}
 				Update_PWM_MOTOR_1_4_CheckMinMax(); 
 				TIM3->CCR1 = 	1000; TIM3->CCR2 = 	1000; TIM3->CCR3 = 	1000; TIM3->CCR4 = 	1000;
 				Sang_Led_By_MPU6050_Values(angle_roll, angle_pitch, angle_yaw);
@@ -421,6 +432,7 @@ void Reset_IC_Devo7(void)
 void SetInitDataQuadrotor(void)
 {
 		who_i_am_reg_value_MPU6050 = ZERO_;
+		battery_voltage = 0;
 		FlyState = STATE_FLY_OFF; 
 		//-------------------------------------------------
 		IC_Throttle1 = 0;		
@@ -929,31 +941,50 @@ void TIM5_IRQHandler(void) //PA3 - TIM5_CH4 ////Aileron_TraiPhai (trai - phai) -
 //-----------------------------------------------------------------------------------
 void Check_EveryThing_OK(void)
 {	
+	  //        15 XANH             ^^
+		//14 DO           12 VANG     ||
+	  //        13 CAM              ||
 		SANG_4_LED_OFF();
-		if(who_i_am_reg_value_MPU6050 != MPU6050_I_AM_VALUES)  //---Doc gia tri cua WHO I AM register, if error => LED RED(14) sang nhap nhay
+		if(who_i_am_reg_value_MPU6050 != MPU6050_I_AM_VALUES)  //---Doc gia tri cua WHO I AM register, 
 		{
-				while(1) {			 SANG_1_LED(12); delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
+				while(1) {			 LED_D_12_HIGH; delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
 		}	
 		if(loop_time_cal_gyro != 1000) //kiem tra da cal gyro 1000 lan chua
 		{
-				while(1) {			 SANG_1_LED(13); delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
+				while(1) {			 LED_D_13_HIGH; delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
 		}	
 		if(set_gyro_angles_first_time == 0 ) //kiem tra da set gia tri angle roll, pitch lan dau chua
 		{
-				while(1) {			 SANG_1_LED(14); delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
+				while(1) {			 LED_D_14_HIGH; delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
 		}
 		
 		//kiem tra doc gia tri RX ok chua
 		if(IC_Throttle_pusle_width == 0 || IC_Aileron_TraiPhai_pusle_width == 0 || IC_Elevator_TienLui_pusle_width == 0 || IC_Rudder_Xoay_pusle_width == 0)
 		{
-				while(1) {			   SANG_1_LED(15); delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
+				while(1) {			 LED_D_15_HIGH; delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
 		}
 		
 		//kiem tra doc RX OK chua
 		if(IC_Throttle_pusle_width > 2000 || IC_Aileron_TraiPhai_pusle_width > 2000 || IC_Elevator_TienLui_pusle_width > 2000 || IC_Rudder_Xoay_pusle_width > 2000)
 		{
-				while(1) {			 SANG_1_LED(15);  delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
-		}		
+				while(1) {			LED_D_15_HIGH;  delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
+		}
+
+			//kiem tra battery_voltage, het pin led VANG + DO sang
+		if(HAL_ADC_PollForConversion(&g_Adc_HandleTypeDef, 100) == HAL_OK )
+		{
+			battery_voltage_first = (HAL_ADC_GetValue(&g_Adc_HandleTypeDef)+65) * 1.2317;
+			battery_voltage  =  battery_voltage_first;
+			if(battery_voltage == 0)
+			{
+				while(1) {			 LED_D_12_HIGH; LED_D_14_HIGH;  delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
+			}
+			if(battery_voltage < 1000 && battery_voltage > 600)
+			{
+				while(1) {			 LED_D_12_HIGH; LED_D_14_HIGH;  delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
+			}
+		}
+		
 }
 
 void Init_LEDSANG_AND_BUTTON_USER_PORT_A0(void)
@@ -993,58 +1024,39 @@ void 	Init_Config_ADC_read_Vol_battery(void)
 		HAL_NVIC_SetPriority(ADC_IRQn, 0, 0);
 		HAL_NVIC_EnableIRQ(ADC_IRQn);
  
-		g_AdcHandle.Instance = ADC1;
-		g_AdcHandle.Init.ScanConvMode = DISABLE;
-		g_AdcHandle.Init.Resolution = ADC_RESOLUTION_12B; //12 bit
-		g_AdcHandle.Init.ContinuousConvMode = ENABLE; //important Set hadc.Init.ContinuousConvMode to ENABLE
-		g_AdcHandle.Init.ExternalTrigConv = ADC_EXTERNALTRIGCONV_T1_CC1;
-		g_AdcHandle.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
-		g_AdcHandle.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-		g_AdcHandle.Init.NbrOfConversion = 1;
-
-		g_AdcHandle.Init.ClockPrescaler = ADC_CLOCKPRESCALER_PCLK_DIV2;
-		g_AdcHandle.Init.DiscontinuousConvMode = DISABLE;
-		g_AdcHandle.Init.NbrOfDiscConversion = 0;
-		g_AdcHandle.Init.DMAContinuousRequests = ENABLE;
-		g_AdcHandle.Init.EOCSelection = DISABLE; //important hadc.Init.EOCSelection to DISABLE for continuous sampling. 
-		HAL_ADC_Init(&g_AdcHandle);
+		g_Adc_HandleTypeDef.Instance = ADC1;
+		g_Adc_HandleTypeDef.Init.ScanConvMode = DISABLE;
+		g_Adc_HandleTypeDef.Init.Resolution = ADC_RESOLUTION_10B; //2^10 = 1024 (0->1023)
+		g_Adc_HandleTypeDef.Init.ContinuousConvMode = ENABLE; //important Set hadc.Init.ContinuousConvMode to ENABLE
+		g_Adc_HandleTypeDef.Init.ExternalTrigConv = ADC_EXTERNALTRIGCONV_T1_CC1;
+		g_Adc_HandleTypeDef.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+		g_Adc_HandleTypeDef.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+		g_Adc_HandleTypeDef.Init.NbrOfConversion = 1; 
+		g_Adc_HandleTypeDef.Init.ClockPrescaler = ADC_CLOCKPRESCALER_PCLK_DIV2;
+		g_Adc_HandleTypeDef.Init.DiscontinuousConvMode = DISABLE;
+		g_Adc_HandleTypeDef.Init.NbrOfDiscConversion = 0;
+		g_Adc_HandleTypeDef.Init.DMAContinuousRequests = ENABLE;
+		g_Adc_HandleTypeDef.Init.EOCSelection = DISABLE; //important hadc.Init.EOCSelection to DISABLE for continuous sampling. 
+		HAL_ADC_Init(&g_Adc_HandleTypeDef);
+		
 		adcChannel.Channel = ADC_CHANNEL_11;
 		adcChannel.Rank = 1;
-		adcChannel.SamplingTime = ADC_SAMPLETIME_480CYCLES; 
-		//ADC_SampleTime_144Cycles 
-		//ADC_SAMPLETIME_4CYCLES
+		adcChannel.SamplingTime = ADC_SAMPLETIME_3CYCLES;
 		adcChannel.Offset = 0;
 
-		if (HAL_ADC_ConfigChannel(&g_AdcHandle, &adcChannel) != HAL_OK)
-		{ //asm("bkpt 255");
-		}
-		delay_ms(10);
-		HAL_ADC_Start(&g_AdcHandle);
-		__HAL_ADC_ENABLE_IT(&g_AdcHandle, ADC_IT_EOC);
-		//HAL_ADC_Start_IT(&g_AdcHandle);
-
-		/*
-			//Load the battery voltage to the battery_voltage variable.
-			//65 is the voltage compensation for the diode.
-			//12.6V equals ~5V @ Analog 0.
-			//12.6V equals 1023 analogRead(0).
-			//1260 / 1023 = 1.2317.
-			//The variable battery_voltage holds 1050 if the battery voltage is 10.5V.
-			battery_voltage = (analogRead(0) + 65) * 1.2317;
-			for (;;)
-			{
-					if (HAL_ADC_PollForConversion(&g_AdcHandle, 1000000) == HAL_OK)
-					{
-							g_ADCValue = HAL_ADC_GetValue(&g_AdcHandle);
-					}
-			}*/
+		while (HAL_ADC_ConfigChannel(&g_Adc_HandleTypeDef, &adcChannel) != HAL_OK)
+		{  }
+		
+		while(HAL_ADC_Start(&g_Adc_HandleTypeDef) ){}
+		
+		//__HAL_ADC_ENABLE_IT(&g_Adc_HandleTypeDef, ADC_IT_EOC);
+		//HAL_ADC_Start_IT(&g_Adc_HandleTypeDef); 
 }
 
-
+/*
 void ADC_IRQHandler() //interrupt handle cua ADC
 {
-    HAL_ADC_IRQHandler(&g_AdcHandle); 
-    //HAL_ADC_IRQHandler(&hadc2); <--- In case of a second ADC
+    HAL_ADC_IRQHandler(&g_Adc_HandleTypeDef);  
 }
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) // xu ly interrupt handle
@@ -1053,13 +1065,11 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) // xu ly interrupt handle
     {
     	if(__HAL_ADC_GET_FLAG(hadc, ADC_FLAG_EOC) )
     	{
-    		g_ADCValue = HAL_ADC_GetValue(hadc);
-        // Do stuff
+    		battery_voltage = battery_voltage*0.92 + (HAL_ADC_GetValue(&g_Adc_HandleTypeDef)+65)*1.2317*0.08;
     	}
-    }
-    //if(hadc->Instance == ADC2)  // <-- In case of a second ADC
-    //{}
+    } 
 }
+*/
 
 //
 //
@@ -1150,12 +1160,8 @@ void GY86_I2C_Handle_GY86(void)
 		I2C_Handle_GY86_10truc.Init.OwnAddress2 = 0;
 		I2C_Handle_GY86_10truc.Init.GeneralCallMode = I2C_GENERALCALL_DISABLED;
 		I2C_Handle_GY86_10truc.Init.NoStretchMode = I2C_NOSTRETCH_DISABLED;
-		if (HAL_I2C_Init(&I2C_Handle_GY86_10truc) != HAL_OK)
-	  {
-        while(1) { SANG_4_LED(); }
-	  }
-		HAL_I2C_Init(&I2C_Handle_GY86_10truc);	
-		__HAL_I2C_ENABLE(&I2C_Handle_GY86_10truc);
+		HAL_I2C_Init(&I2C_Handle_GY86_10truc) ; 	
+		//while (__HAL_I2C_ENABLE(&I2C_Handle_GY86_10truc) ){}; 
 }
 
 
@@ -1187,19 +1193,20 @@ void GY86_I2C_WRITE( uint8_t device_address, uint8_t register_address, uint8_t d
 	uint8_t d[2];		
 	d[0] = register_address;
 	d[1] = data;	
-	while(HAL_I2C_Master_Transmit(&I2C_Handle_GY86_10truc, (uint16_t)device_address, (uint8_t *)d, 2, 50) != HAL_OK) 
+	while(HAL_I2C_Master_Transmit(&I2C_Handle_GY86_10truc, (uint16_t)device_address, (uint8_t *)d, 2, 100) != HAL_OK) 
 	{}
-	while(HAL_I2C_GetState(&I2C_Handle_GY86_10truc)!=HAL_I2C_STATE_READY){}
+	while(HAL_I2C_GetState(&I2C_Handle_GY86_10truc)!=HAL_I2C_STATE_READY)
+	{}
 }
 	
 	
 void GY86_I2C_READ(  uint8_t device_address, uint8_t register_address, uint8_t* data)
 {
-	while (HAL_I2C_Master_Transmit(&I2C_Handle_GY86_10truc, (uint16_t)device_address, &register_address, 1, 50) != HAL_OK) 
+	while (HAL_I2C_Master_Transmit(&I2C_Handle_GY86_10truc, (uint16_t)device_address, &register_address, 1, 100) != HAL_OK) 
 	{}
 	while(HAL_I2C_GetState(&I2C_Handle_GY86_10truc)!=HAL_I2C_STATE_READY){}
 		
-	while (HAL_I2C_Master_Receive(&I2C_Handle_GY86_10truc, device_address, data, 1, 50) != HAL_OK) 
+	while (HAL_I2C_Master_Receive(&I2C_Handle_GY86_10truc, device_address, data, 1, 100) != HAL_OK) 
 	{}
 	while(HAL_I2C_GetState(&I2C_Handle_GY86_10truc)!=HAL_I2C_STATE_READY){}
 }
@@ -1207,11 +1214,11 @@ void GY86_I2C_READ(  uint8_t device_address, uint8_t register_address, uint8_t* 
 
 void GY86_I2C_READ_MULTI( uint8_t device_address, uint8_t register_address, uint8_t* data, uint16_t count)  
 {
-	while (HAL_I2C_Master_Transmit(&I2C_Handle_GY86_10truc, (uint16_t)device_address, &register_address, 1, 50) != HAL_OK) 
+	while (HAL_I2C_Master_Transmit(&I2C_Handle_GY86_10truc, (uint16_t)device_address, &register_address, 1, 100) != HAL_OK) 
 	{}
 	while(HAL_I2C_GetState(&I2C_Handle_GY86_10truc)!=HAL_I2C_STATE_READY){}
 		
-	while (HAL_I2C_Master_Receive(&I2C_Handle_GY86_10truc, device_address, data, count, 50) != HAL_OK) 
+	while (HAL_I2C_Master_Receive(&I2C_Handle_GY86_10truc, device_address, data, count, 100) != HAL_OK) 
 	{}
 	while(HAL_I2C_GetState(&I2C_Handle_GY86_10truc)!=HAL_I2C_STATE_READY){}
 }
@@ -1303,10 +1310,7 @@ void GY86_Cal_Gyro_Offset(void)//tinh gyro offset 3 truc
 		{
 			GY86_MPU6050_ReadAll( 0xD0, &mpu6050_Object); 
 			delay_ms(1);
-			//if(loop_time_cal_gyro % 20 == 0)
-			//{
-			//	SANG_4_LED(); delay_ms(30); SANG_4_LED_OFF();
-			//} 
+			if(loop_time_cal_gyro % 100 == 0) { SANG_4_LED(); delay_ms(30); SANG_4_LED_OFF(); } 
 			total_x +=  mpu6050_Object.Gyro_X;
 			total_y +=  mpu6050_Object.Gyro_Y;
 			total_z +=  mpu6050_Object.Gyro_Z; 
