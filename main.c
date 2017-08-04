@@ -54,6 +54,9 @@ PB1 pwm 4
 I2C_HandleTypeDef 				I2C_Handle_GY86_10truc;  //I2C handle, dung de doc value cua cam bien MPU6050
 TIM_HandleTypeDef 				Tim3_Handle_PWM;		//timer 3 dung de output PWM ra 4 channel
 TIM_HandleTypeDef 				htim1 , htim2 , htim4 , htim5; //  4 timer de capture Devo 7
+ADC_HandleTypeDef 				g_Adc_HandleTypeDef; //read analog battery vol
+int 											battery_voltage;
+int 											battery_voltage_first;
 
 				//---------RF Module, PWM Capture
 int32_t 									IC_Throttle1,          IC_Throttle2, 								IC_Throttle_pusle_width; //Throttle (can ga) tang giam toc do quay
@@ -191,7 +194,7 @@ int main(void)
 			//---GPIO 4 led & GPIO button user---------------	
 		Init_LEDSANG_AND_BUTTON_USER_PORT_A0();  
 			//config ADC read vol battery
-		//Init_Config_ADC_read_Vol_battery();   
+		Init_Config_ADC_read_Vol_battery();   
 			//---Timer 3 4 channel PWM
 		Init_TIM3_OUTPUT_PWM();		   
 			//Capture xung PWM of devo 7
@@ -251,6 +254,8 @@ int main(void)
 
 										GY86_MPU6050_ReadAll( 0xD0, &mpu6050_Object);  
 										GY86_Cal_Angle_By_Gyro_And_Acc(&mpu6050_Object);  
+										while(HAL_ADC_PollForConversion(&g_Adc_HandleTypeDef,0) != HAL_OK){} 
+										battery_voltage = battery_voltage * 0.96 +  (HAL_ADC_GetValue(&g_Adc_HandleTypeDef)+65) * 1.2317 * 0.04;
 										if(IC_Throttle_pusle_width > 1150 && IC_Throttle_pusle_width <=  2000)
 										{
 												 	//FUZZY SYSTEM------------------------------------------------------------------------
@@ -320,6 +325,9 @@ void Turn_On_Quadrotor(void)
 		{ 
 				GY86_MPU6050_ReadAll( 0xD0, &mpu6050_Object);  
 				GY86_Cal_Angle_By_Gyro_And_Acc(&mpu6050_Object); 
+				while(HAL_ADC_PollForConversion(&g_Adc_HandleTypeDef,0) != HAL_OK){} 
+				battery_voltage = battery_voltage * 0.96 +  (HAL_ADC_GetValue(&g_Adc_HandleTypeDef)+65) * 1.2317 * 0.04;
+			
 				Update_PWM_MOTOR_1_4_CheckMinMax(); 
 				TIM3->CCR1 = 	1000; TIM3->CCR2 = 	1000; TIM3->CCR3 = 	1000; TIM3->CCR4 = 	1000;
 				Sang_Led_By_MPU6050_Values(angle_roll, angle_pitch, angle_yaw);
@@ -873,31 +881,50 @@ void TIM5_IRQHandler(void) //PA3 - TIM5_CH4 ////Aileron_TraiPhai (trai - phai) -
 //-----------------------------------------------------------------------------------
 void Check_EveryThing_OK(void)
 {	
+	  //        15 XANH             ^^
+		//14 DO           12 VANG     ||
+	  //        13 CAM              ||
 		SANG_4_LED_OFF();
-		if(who_i_am_reg_value_MPU6050 != MPU6050_I_AM_VALUES)  //---Doc gia tri cua WHO I AM register, if error => LED RED(14) sang nhap nhay
+		if(who_i_am_reg_value_MPU6050 != MPU6050_I_AM_VALUES)  //---Doc gia tri cua WHO I AM register, 
 		{
-				while(1) {			 SANG_1_LED(12); delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
+				while(1) {			 LED_D_12_HIGH; delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
 		}	
 		if(loop_time_cal_gyro != 1000) //kiem tra da cal gyro 1000 lan chua
 		{
-				while(1) {			 SANG_1_LED(13); delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
+				while(1) {			 LED_D_13_HIGH; delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
 		}	
 		if(set_gyro_angles_first_time == 0 ) //kiem tra da set gia tri angle roll, pitch lan dau chua
 		{
-				while(1) {			 SANG_1_LED(14); delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
+				while(1) {			 LED_D_14_HIGH; delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
 		}
 		
 		//kiem tra doc gia tri RX ok chua
 		if(IC_Throttle_pusle_width == 0 || IC_Aileron_TraiPhai_pusle_width == 0 || IC_Elevator_TienLui_pusle_width == 0 || IC_Rudder_Xoay_pusle_width == 0)
 		{
-				while(1) {			   SANG_1_LED(15); delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
+				while(1) {			 LED_D_15_HIGH; delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
 		}
 		
 		//kiem tra doc RX OK chua
 		if(IC_Throttle_pusle_width > 2000 || IC_Aileron_TraiPhai_pusle_width > 2000 || IC_Elevator_TienLui_pusle_width > 2000 || IC_Rudder_Xoay_pusle_width > 2000)
 		{
-				while(1) {			 SANG_1_LED(15);  delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
-		}		
+				while(1) {			LED_D_15_HIGH;  delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
+		}
+
+			//kiem tra battery_voltage, het pin led VANG + DO sang
+		if(HAL_ADC_PollForConversion(&g_Adc_HandleTypeDef, 100) == HAL_OK )
+		{
+			battery_voltage_first = (HAL_ADC_GetValue(&g_Adc_HandleTypeDef)+65) * 1.2317;
+			battery_voltage  =  battery_voltage_first;
+			if(battery_voltage == 0)
+			{
+				while(1) {			 LED_D_12_HIGH; LED_D_14_HIGH;  delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
+			}
+			if(battery_voltage < 1000 && battery_voltage > 600)
+			{
+				while(1) {			 LED_D_12_HIGH; LED_D_14_HIGH;  delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
+			}
+		}
+		
 }
 
 void Init_LEDSANG_AND_BUTTON_USER_PORT_A0(void)
@@ -937,58 +964,39 @@ void 	Init_Config_ADC_read_Vol_battery(void)
 		HAL_NVIC_SetPriority(ADC_IRQn, 0, 0);
 		HAL_NVIC_EnableIRQ(ADC_IRQn);
  
-		g_AdcHandle.Instance = ADC1;
-		g_AdcHandle.Init.ScanConvMode = DISABLE;
-		g_AdcHandle.Init.Resolution = ADC_RESOLUTION_12B; //12 bit
-		g_AdcHandle.Init.ContinuousConvMode = ENABLE; //important Set hadc.Init.ContinuousConvMode to ENABLE
-		g_AdcHandle.Init.ExternalTrigConv = ADC_EXTERNALTRIGCONV_T1_CC1;
-		g_AdcHandle.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
-		g_AdcHandle.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-		g_AdcHandle.Init.NbrOfConversion = 1;
-
-		g_AdcHandle.Init.ClockPrescaler = ADC_CLOCKPRESCALER_PCLK_DIV2;
-		g_AdcHandle.Init.DiscontinuousConvMode = DISABLE;
-		g_AdcHandle.Init.NbrOfDiscConversion = 0;
-		g_AdcHandle.Init.DMAContinuousRequests = ENABLE;
-		g_AdcHandle.Init.EOCSelection = DISABLE; //important hadc.Init.EOCSelection to DISABLE for continuous sampling. 
-		HAL_ADC_Init(&g_AdcHandle);
+		g_Adc_HandleTypeDef.Instance = ADC1;
+		g_Adc_HandleTypeDef.Init.ScanConvMode = DISABLE;
+		g_Adc_HandleTypeDef.Init.Resolution = ADC_RESOLUTION_10B; //2^10 = 1024 (0->1023)
+		g_Adc_HandleTypeDef.Init.ContinuousConvMode = ENABLE; //important Set hadc.Init.ContinuousConvMode to ENABLE
+		g_Adc_HandleTypeDef.Init.ExternalTrigConv = ADC_EXTERNALTRIGCONV_T1_CC1;
+		g_Adc_HandleTypeDef.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+		g_Adc_HandleTypeDef.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+		g_Adc_HandleTypeDef.Init.NbrOfConversion = 1; 
+		g_Adc_HandleTypeDef.Init.ClockPrescaler = ADC_CLOCKPRESCALER_PCLK_DIV2;
+		g_Adc_HandleTypeDef.Init.DiscontinuousConvMode = DISABLE;
+		g_Adc_HandleTypeDef.Init.NbrOfDiscConversion = 0;
+		g_Adc_HandleTypeDef.Init.DMAContinuousRequests = ENABLE;
+		g_Adc_HandleTypeDef.Init.EOCSelection = DISABLE; //important hadc.Init.EOCSelection to DISABLE for continuous sampling. 
+		HAL_ADC_Init(&g_Adc_HandleTypeDef);
+		
 		adcChannel.Channel = ADC_CHANNEL_11;
 		adcChannel.Rank = 1;
-		adcChannel.SamplingTime = ADC_SAMPLETIME_480CYCLES; 
-		//ADC_SampleTime_144Cycles 
-		//ADC_SAMPLETIME_4CYCLES
+		adcChannel.SamplingTime = ADC_SAMPLETIME_3CYCLES;
 		adcChannel.Offset = 0;
 
-		if (HAL_ADC_ConfigChannel(&g_AdcHandle, &adcChannel) != HAL_OK)
-		{ //asm("bkpt 255");
-		}
-		delay_ms(10);
-		HAL_ADC_Start(&g_AdcHandle);
-		__HAL_ADC_ENABLE_IT(&g_AdcHandle, ADC_IT_EOC);
-		//HAL_ADC_Start_IT(&g_AdcHandle);
-
-		/*
-			//Load the battery voltage to the battery_voltage variable.
-			//65 is the voltage compensation for the diode.
-			//12.6V equals ~5V @ Analog 0.
-			//12.6V equals 1023 analogRead(0).
-			//1260 / 1023 = 1.2317.
-			//The variable battery_voltage holds 1050 if the battery voltage is 10.5V.
-			battery_voltage = (analogRead(0) + 65) * 1.2317;
-			for (;;)
-			{
-					if (HAL_ADC_PollForConversion(&g_AdcHandle, 1000000) == HAL_OK)
-					{
-							g_ADCValue = HAL_ADC_GetValue(&g_AdcHandle);
-					}
-			}*/
+		while (HAL_ADC_ConfigChannel(&g_Adc_HandleTypeDef, &adcChannel) != HAL_OK)
+		{  }
+		
+		while(HAL_ADC_Start(&g_Adc_HandleTypeDef) ){}
+		
+		//__HAL_ADC_ENABLE_IT(&g_Adc_HandleTypeDef, ADC_IT_EOC);
+		//HAL_ADC_Start_IT(&g_Adc_HandleTypeDef); 
 }
 
-
+/*
 void ADC_IRQHandler() //interrupt handle cua ADC
 {
-    HAL_ADC_IRQHandler(&g_AdcHandle); 
-    //HAL_ADC_IRQHandler(&hadc2); <--- In case of a second ADC
+    HAL_ADC_IRQHandler(&g_Adc_HandleTypeDef);  
 }
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) // xu ly interrupt handle
@@ -997,13 +1005,11 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) // xu ly interrupt handle
     {
     	if(__HAL_ADC_GET_FLAG(hadc, ADC_FLAG_EOC) )
     	{
-    		g_ADCValue = HAL_ADC_GetValue(hadc);
-        // Do stuff
+    		battery_voltage = battery_voltage*0.92 + (HAL_ADC_GetValue(&g_Adc_HandleTypeDef)+65)*1.2317*0.08;
     	}
-    }
-    //if(hadc->Instance == ADC2)  // <-- In case of a second ADC
-    //{}
+    } 
 }
+*/
 
 
 //
