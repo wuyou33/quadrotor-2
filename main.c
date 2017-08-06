@@ -971,13 +971,19 @@ void Check_EveryThing_OK(void)
 		}
 
 			//kiem tra battery_voltage, het pin led VANG + DO sang
-		if(HAL_ADC_PollForConversion(&g_Adc_HandleTypeDef, 100) == HAL_OK )
+		while(HAL_ADC_PollForConversion(&g_Adc_HandleTypeDef, 1000000) != HAL_OK )
 		{
 			battery_voltage_first = (HAL_ADC_GetValue(&g_Adc_HandleTypeDef)+65) * 1.2317;
 			battery_voltage  =  battery_voltage_first;
 			if(battery_voltage == 0)
 			{
-				while(1) {			 LED_D_12_HIGH; LED_D_14_HIGH;  delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
+				while(1) 
+					{		
+							LED_D_12_HIGH; 
+							delay_ms(50); SANG_4_LED_OFF();
+							LED_D_14_HIGH;  
+							delay_ms(50); SANG_4_LED_OFF();
+					}
 			}
 			if(battery_voltage < 1000 && battery_voltage > 600)
 			{
