@@ -941,56 +941,40 @@ void TIM5_IRQHandler(void) //PA3 - TIM5_CH4 ////Aileron_TraiPhai (trai - phai) -
 //-----------------------------------------------------------------------------------
 void Check_EveryThing_OK(void)
 {	
+		int i=0;
 	  //        15 XANH             ^^
 		//14 DO           12 VANG     ||
 	  //        13 CAM              ||
 		SANG_4_LED_OFF();
-		if(who_i_am_reg_value_MPU6050 != MPU6050_I_AM_VALUES)  //---Doc gia tri cua WHO I AM register, 
+		if(who_i_am_reg_value_MPU6050 != MPU6050_I_AM_VALUES)  //---VANG sang, Doc gia tri cua WHO I AM register, 
 		{
 				while(1) {			 LED_D_12_HIGH; delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
 		}	
-		if(loop_time_cal_gyro != 1000) //kiem tra da cal gyro 1000 lan chua
+		if(loop_time_cal_gyro != 1000) //CAM sang, kiem tra da cal gyro 1000 lan chua
 		{
 				while(1) {			 LED_D_13_HIGH; delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
 		}	
-		if(set_gyro_angles_first_time == 0 ) //kiem tra da set gia tri angle roll, pitch lan dau chua
+		if(set_gyro_angles_first_time == 0 ) //DO sang, kiem tra da set gia tri angle roll, pitch lan dau chua
 		{
 				while(1) {			 LED_D_14_HIGH; delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
-		}
+		}  
 		
-		//kiem tra doc gia tri RX ok chua
-		if(IC_Throttle_pusle_width == 0 || IC_Aileron_TraiPhai_pusle_width == 0 || IC_Elevator_TienLui_pusle_width == 0 || IC_Rudder_Xoay_pusle_width == 0)
+		while(i<5) //VANG+DO sang nhap nhay; pin yeu; kiem tra battery
+		{ battery_voltage_first = ( HAL_ADC_GetValue(&g_Adc_HandleTypeDef)+65 ) * 1.2317;
+			delay_ms(10); i++; 
+		}
+		battery_voltage  =  battery_voltage_first; 
+		if(battery_voltage == 0 || (battery_voltage < 1000 && battery_voltage > 600) ) 
+		{
+			while(1) {			 LED_D_12_HIGH; LED_D_14_HIGH;  delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
+		}  
+		
+		//XANH sang, kiem tra doc gia tri RX ok chua
+		if(IC_Throttle_pusle_width <= 0 || IC_Aileron_TraiPhai_pusle_width <= 0 || IC_Elevator_TienLui_pusle_width <= 0 || IC_Rudder_Xoay_pusle_width <= 0 || 
+			IC_Throttle_pusle_width > 2000 || IC_Aileron_TraiPhai_pusle_width > 2000 || IC_Elevator_TienLui_pusle_width > 2000 || IC_Rudder_Xoay_pusle_width > 2000)
 		{
 				while(1) {			 LED_D_15_HIGH; delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
 		}
-		
-		//kiem tra doc RX OK chua
-		if(IC_Throttle_pusle_width > 2000 || IC_Aileron_TraiPhai_pusle_width > 2000 || IC_Elevator_TienLui_pusle_width > 2000 || IC_Rudder_Xoay_pusle_width > 2000)
-		{
-				while(1) {			LED_D_15_HIGH;  delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
-		}
-
-			//kiem tra battery_voltage, het pin led VANG + DO sang
-		while(HAL_ADC_PollForConversion(&g_Adc_HandleTypeDef, 1000000) != HAL_OK )
-		{
-			battery_voltage_first = (HAL_ADC_GetValue(&g_Adc_HandleTypeDef)+65) * 1.2317;
-			battery_voltage  =  battery_voltage_first;
-			if(battery_voltage == 0)
-			{
-				while(1) 
-					{		
-							LED_D_12_HIGH; 
-							delay_ms(50); SANG_4_LED_OFF();
-							LED_D_14_HIGH;  
-							delay_ms(50); SANG_4_LED_OFF();
-					}
-			}
-			if(battery_voltage < 1000 && battery_voltage > 600)
-			{
-				while(1) {			 LED_D_12_HIGH; LED_D_14_HIGH;  delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
-			}
-		}
-		
 }
 
 void Init_LEDSANG_AND_BUTTON_USER_PORT_A0(void)
