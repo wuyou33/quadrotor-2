@@ -33,8 +33,7 @@
 
 
 #define CONFIG_PWM_MAX										2000
-#define CONFIG_PWM_MIN										700
-#define ENTER_BALANCE_STATE								1200
+#define CONFIG_PWM_MIN										700 
 
 
 //dung de khoi dong/tat quadrotor
@@ -52,8 +51,7 @@
 
 #define STATE_FLY_ON									  1
 #define STATE_FLY_OFF								  	0
-
-#define MAIN_DELAY_TIME								  30
+ 
 
 #define ERROR_MPU6050_NOT_CONNECT									  11
 #define ERROR_MPU6050_NOT_I_AM_VALUES							  12

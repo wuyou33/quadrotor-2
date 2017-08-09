@@ -9,10 +9,11 @@
 #define PID_KD_YAW 								  (float)0.0	
 	
 
-#define PID_MAX_VALUE_ROLL  				(float) 350 //400 (origin)	
-#define PID_MAX_VALUE_PITCH  				(float) 350 //400 (origin)	
-#define PID_MAX_VALUE_YAW  					(float) 350 //400 (origin)	
-#define MAX_VALUE_MOTOR_THROTTLE    (float) 500 
+#define PID_MAX_VALUE_ROLL  				(float) 400 //400 (origin)	
+#define PID_MAX_VALUE_PITCH  				(float) 400 //400 (origin)	
+#define PID_MAX_VALUE_YAW  					(float) 400 //400 (origin)	
+#define MAX_SUM_I_VALUE_PID    			(float) 300 
+#define MAX_VALUE_MOTOR_THROTTLE    (float) 400 
 
 typedef struct 
 {

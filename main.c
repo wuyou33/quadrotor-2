@@ -191,17 +191,14 @@ int main(void)
 		__I2C1_CLK_ENABLE(); 	        
 		__ADC1_CLK_ENABLE();				 
 			
-		Init_LEDSANG_AND_BUTTON_USER_PORT_A0();  delay_ms(10);	//---GPIO 4 led & GPIO button user---------------	
-			
-		Init_Config_ADC_read_Vol_battery();   delay_ms(10);	//config ADC read vol battery
-			
-		Init_TIM3_OUTPUT_PWM();		   delay_ms(10);	 //---Timer 3 4 channel PWM
-			
-		PWM_Input_Capture_TIM1();  delay_ms(10);	   //Capture xung PWM of devo 7
-		PWM_Input_Capture_TIM2();  delay_ms(10);	  
-		PWM_Input_Capture_TIM4();	 delay_ms(10); 
-		PWM_Input_Capture_TIM5();  delay_ms(10);
-		SANG_4_LED();
+		Init_LEDSANG_AND_BUTTON_USER_PORT_A0();  delay_ms(10);	//---GPIO 4 led & GPIO button user---------------	 
+		Init_Config_ADC_read_Vol_battery();   	 delay_ms(10);//config ADC read vol battery 
+		Init_TIM3_OUTPUT_PWM();		   delay_ms(10);	 //---Timer 3 4 channel PWM 
+		PWM_Input_Capture_TIM1();    delay_ms(10);	   //Capture xung PWM of devo 7
+		PWM_Input_Capture_TIM2();    delay_ms(10);	  
+		PWM_Input_Capture_TIM4();	   delay_ms(10); 
+		PWM_Input_Capture_TIM5();    delay_ms(10); 
+		SANG_4_LED();	
 		delay_ms(2000);
 		SANG_4_LED_OFF();
 			//---MPU6050 cau hinh PB6 SCL, PB7 SDA 
@@ -226,13 +223,13 @@ int main(void)
 		} 
 		Check_EveryThing_OK();																				delay_ms(10);
 		Reset_IC_Devo7();																							delay_ms(10);
-		//-----------------------------------------------------------------------	 
-																																delay_ms(1000); 
-		setPWM_4_Motor_Cung_Value(CONFIG_PWM_MAX);
-		SANG_4_LED();      																					delay_ms(2000); 
-		setPWM_4_Motor_Cung_Value(CONFIG_PWM_MIN);
-		SANG_4_LED_OFF(); 																					delay_ms(1000); 	 									
-		SANG_4_LED_LAN_LUOT(10,40);
+		//-----------------------------------------------------------------------	  
+		TIM3->CCR1 = 	2000; TIM3->CCR2 = 	2000; TIM3->CCR3 = 	2000; TIM3->CCR4 = 	2000; 
+		SANG_4_LED();  delay_ms(2000); 
+		TIM3->CCR1 = 	700; TIM3->CCR2 = 	700; TIM3->CCR3 = 	700; TIM3->CCR4 = 	700;
+		SANG_4_LED_OFF(); 									
+		SANG_4_LED_LAN_LUOT(5,40);		
+		SANG_4_LED(); 		
 		loop_timer = get_current_time_us();
 		//-----------------------------------------------------------------------
 		while(1) //main loop
@@ -240,7 +237,7 @@ int main(void)
 				while(FlyState == STATE_FLY_OFF)
 				{
 						SANG_4_LED_OFF();
-						TIM3->CCR1 = 	1000; TIM3->CCR2 = 	1000; TIM3->CCR3  = 1000; TIM3->CCR4  = 1000;
+						//TIM3->CCR1 = 	1000; TIM3->CCR2 = 	1000; TIM3->CCR3  = 1000; TIM3->CCR4  = 1000;
 						loop_timer = get_current_time_us(); //truoc khi vao while, ta set lai loop_timer de do thoigian xu ly < 4000us
 						while(FlyState == STATE_FLY_OFF) {  //Check sign to TURN ON quadrotor 
 								Turn_On_Quadrotor();  	
@@ -253,9 +250,10 @@ int main(void)
 				while(FlyState == STATE_FLY_ON) //quadrotor State Fly
 				{ 
 							GY86_MPU6050_ReadAll( 0xD0, &mpu6050_Object);  
-							GY86_Cal_Angle_By_Gyro_And_Acc(&mpu6050_Object); 
-							while(HAL_ADC_PollForConversion(&g_Adc_HandleTypeDef,0) != HAL_OK){} 
-							battery_voltage = battery_voltage * 0.96 +  (HAL_ADC_GetValue(&g_Adc_HandleTypeDef)+65) * 1.2317 * 0.04;
+							GY86_Cal_Angle_By_Gyro_And_Acc(&mpu6050_Object);  
+							/*if( HAL_ADC_PollForConversion(&g_Adc_HandleTypeDef, 500) == HAL_OK )
+							{ battery_voltage =  battery_voltage * 0.96 + (HAL_ADC_GetValue(&g_Adc_HandleTypeDef)+65) * 1.2317 * 0.04;
+							}	*/
 							if(IC_Throttle_pusle_width > 1150 && IC_Throttle_pusle_width <=  2000)
 							{
 									 	//-----------------------------------------------------
@@ -293,13 +291,13 @@ int main(void)
 										pwm_motor_2 = (int)IC_Throttle_pusle_width + (int)PID_roll.output + (int)PID_pitch.output  + (int)PID_yaw.output;
 										pwm_motor_3 = (int)IC_Throttle_pusle_width - (int)PID_roll.output + (int)PID_pitch.output  - (int)PID_yaw.output;
 										pwm_motor_4 = (int)IC_Throttle_pusle_width - (int)PID_roll.output - (int)PID_pitch.output  + (int)PID_yaw.output;
-										if(battery_voltage < 1240 && battery_voltage > 800)
+										/*if(battery_voltage < 1240 && battery_voltage > 800)
 										{
 											pwm_motor_1 += pwm_motor_1*( (1240-battery_voltage)/(float)3500 );
 											pwm_motor_2 += pwm_motor_2*( (1240-battery_voltage)/(float)3500 );
 											pwm_motor_3 += pwm_motor_3*( (1240-battery_voltage)/(float)3500 );
 											pwm_motor_4 += pwm_motor_4*( (1240-battery_voltage)/(float)3500 );
-										}
+										}*/
 										Update_PWM_MOTOR_1_4_CheckMinMax(); 
 										Apply_PWM_MOTOR_1_4_TO_ESC();		
 										//-----------------------------------------------------
@@ -311,8 +309,8 @@ int main(void)
 							else
 							{ 
 								reset_PID();
-								pwm_motor_1 = 1075;  pwm_motor_2 = 1075;  pwm_motor_3 = 1075;  pwm_motor_4 = 1075;
-								TIM3->CCR1 = 	1075; TIM3->CCR2 = 	1075; TIM3->CCR3  = 1075; TIM3->CCR4  = 1075; 
+								pwm_motor_1 = 1000;  pwm_motor_2 = 1000;  pwm_motor_3 = 1000;  pwm_motor_4 = 1000;
+								TIM3->CCR1 = 	1000; TIM3->CCR2 = 	1000; TIM3->CCR3  = 1000; TIM3->CCR4  = 1000; 
 								SANG_4_LED_OFF(); LED_D_12_HIGH; LED_D_14_HIGH; delay_ms(200);
 								SANG_4_LED_OFF(); LED_D_13_HIGH; LED_D_15_HIGH; delay_ms(200);
 								Turn_Off_Quadrotor(); 
@@ -341,18 +339,26 @@ void Turn_On_Quadrotor(void)
 						{			
 								SANG_4_LED_OFF();  
 								FlyState = STATE_FLY_ON; 
-								pwm_motor_1 = 1075; pwm_motor_2 = 1075; pwm_motor_3 = 1075; pwm_motor_4 = 1075;
-								TIM3->CCR1 = 	1075; TIM3->CCR2 = 	1075; TIM3->CCR3 = 1075; TIM3->CCR4 = 1075;
+								pwm_motor_1 = 1070; pwm_motor_2 = 1070; pwm_motor_3 = 1070; pwm_motor_4 = 1070;
+								TIM3->CCR1 = 	1070; TIM3->CCR2 = 	1070; TIM3->CCR3 = 1070; TIM3->CCR4 = 1070;
 								SANG_4_LED_LOOP(7,40);  SANG_4_LED_OFF(); delay_ms(1000);   
 								reset_PID();
 								loop_timer = get_current_time_us(); 
 						}
 		} else 
 		{ 
+				//Turn_On_Quadrotor
 				GY86_MPU6050_ReadAll( 0xD0, &mpu6050_Object);  
 				GY86_Cal_Angle_By_Gyro_And_Acc(&mpu6050_Object);
-				while(HAL_ADC_PollForConversion(&g_Adc_HandleTypeDef,0) != HAL_OK){} 
-				battery_voltage = battery_voltage * 0.96 +  (HAL_ADC_GetValue(&g_Adc_HandleTypeDef)+65) * 1.2317 * 0.04;
+				/*if( HAL_ADC_PollForConversion(&g_Adc_HandleTypeDef, 500) == HAL_OK )
+				{
+					battery_voltage =  battery_voltage * 0.96 + (HAL_ADC_GetValue(&g_Adc_HandleTypeDef)+65) * 1.2317 * 0.04;
+					if( (battery_voltage_first < 1000 && battery_voltage_first > 600) ) //VANG+DO cung luc
+					{
+						LED_D_12_HIGH; LED_D_14_HIGH;  delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); 
+					} 
+				}*/
+					
 				//-----------------------------------------------------
 				//ROLL PID
 				PID_roll.setpoint = 0;
@@ -384,17 +390,17 @@ void Turn_On_Quadrotor(void)
 										
 				calculate_pid(); 
 				// trick throttle IC_Throttle_pusle_width = 1500
-				pwm_motor_1 = (int)IC_Throttle_pusle_width + (int)PID_roll.output - (int)PID_pitch.output  - (int)PID_yaw.output;
-				pwm_motor_2 = (int)IC_Throttle_pusle_width + (int)PID_roll.output + (int)PID_pitch.output  + (int)PID_yaw.output;
-				pwm_motor_3 = (int)IC_Throttle_pusle_width - (int)PID_roll.output + (int)PID_pitch.output  - (int)PID_yaw.output;
-				pwm_motor_4 = (int)IC_Throttle_pusle_width - (int)PID_roll.output - (int)PID_pitch.output  + (int)PID_yaw.output;
-				if(battery_voltage < 1240 && battery_voltage > 800)
+				pwm_motor_1 = (int)1500 + (int)PID_roll.output - (int)PID_pitch.output  - (int)PID_yaw.output;
+				pwm_motor_2 = (int)1500 + (int)PID_roll.output + (int)PID_pitch.output  + (int)PID_yaw.output;
+				pwm_motor_3 = (int)1500 - (int)PID_roll.output + (int)PID_pitch.output  - (int)PID_yaw.output;
+				pwm_motor_4 = (int)1500 - (int)PID_roll.output - (int)PID_pitch.output  + (int)PID_yaw.output;
+				/*if(battery_voltage < 1240 && battery_voltage > 800)
 				{
 					pwm_motor_1 += pwm_motor_1*( (1240-battery_voltage)/(float)3500 );
 					pwm_motor_2 += pwm_motor_2*( (1240-battery_voltage)/(float)3500 );
 					pwm_motor_3 += pwm_motor_3*( (1240-battery_voltage)/(float)3500 );
 					pwm_motor_4 += pwm_motor_4*( (1240-battery_voltage)/(float)3500 );
-				}
+				}*/
 				Update_PWM_MOTOR_1_4_CheckMinMax(); 
 				TIM3->CCR1 = 	1000; TIM3->CCR2 = 	1000; TIM3->CCR3 = 	1000; TIM3->CCR4 = 	1000;
 				Sang_Led_By_MPU6050_Values(angle_roll, angle_pitch, angle_yaw);
@@ -534,10 +540,12 @@ void calculate_pid(void)
 		PID_roll.integral_error +=  PID_roll.kI * pid_error_temp;
 		PID_roll.derivative_error = PID_roll.kD * (pid_error_temp - PID_roll.pre_error) ;
 	
-		if(PID_roll.integral_error > PID_roll.output_max) { PID_roll.integral_error = PID_roll.output_max; }
-		else if(PID_roll.integral_error <  PID_roll.output_max * -1) { PID_roll.integral_error = PID_roll.output_max * -1; }
+		if(PID_roll.integral_error > MAX_SUM_I_VALUE_PID) 
+			{ PID_roll.integral_error = MAX_SUM_I_VALUE_PID; }
+		else if(PID_roll.integral_error <  MAX_SUM_I_VALUE_PID * -1) 
+			{ PID_roll.integral_error = MAX_SUM_I_VALUE_PID * -1; }
 		
-		PID_roll.output = (int)(PID_roll.kP * pid_error_temp) +  (int)PID_roll.integral_error +  (int)PID_roll.derivative_error ;
+		PID_roll.output = (PID_roll.kP * pid_error_temp) +  PID_roll.integral_error +  PID_roll.derivative_error ;
 		
 		if(PID_roll.output > PID_roll.output_max) { PID_roll.output = PID_roll.output_max; }
 		else if(PID_roll.output < PID_roll.output_max * -1) { PID_roll.output = PID_roll.output_max * -1; }
@@ -551,10 +559,12 @@ void calculate_pid(void)
 		PID_pitch.integral_error +=  PID_pitch.kI * pid_error_temp;
 		PID_pitch.derivative_error = PID_pitch.kD * (pid_error_temp - PID_pitch.pre_error) ;
 		
-		if(PID_pitch.integral_error > PID_pitch.output_max) { PID_pitch.integral_error = PID_pitch.output_max; }
-		else if(PID_pitch.integral_error <  PID_pitch.output_max * -1) { PID_pitch.integral_error = PID_pitch.output_max * -1; }
+		if(PID_pitch.integral_error > MAX_SUM_I_VALUE_PID) 
+			{ PID_pitch.integral_error = MAX_SUM_I_VALUE_PID; }
+		else if(PID_pitch.integral_error <  MAX_SUM_I_VALUE_PID * -1) 
+			{ PID_pitch.integral_error = MAX_SUM_I_VALUE_PID * -1; }
 		
-		PID_pitch.output = (int)(PID_pitch.kP * pid_error_temp) +  (int)PID_pitch.integral_error +  (int)PID_pitch.derivative_error ;
+		PID_pitch.output = (PID_pitch.kP * pid_error_temp) +  PID_pitch.integral_error +  PID_pitch.derivative_error ;
 		
 		if(PID_pitch.output > PID_pitch.output_max) { PID_pitch.output = PID_pitch.output_max; }
 		else if(PID_pitch.output < PID_pitch.output_max * -1) { PID_pitch.output = PID_pitch.output_max * -1; }
@@ -568,16 +578,17 @@ void calculate_pid(void)
 		PID_yaw.integral_error +=  PID_yaw.kI * pid_error_temp;
 		PID_yaw.derivative_error = PID_yaw.kD * (pid_error_temp - PID_yaw.pre_error) ;
 	
-		if(PID_yaw.integral_error > PID_yaw.output_max) { PID_yaw.integral_error = PID_yaw.output_max; }
-		else if(PID_yaw.integral_error <  PID_yaw.output_max * -1) { PID_yaw.integral_error = PID_yaw.output_max * -1; }
+		if(PID_yaw.integral_error > MAX_SUM_I_VALUE_PID) 
+			{ PID_yaw.integral_error = MAX_SUM_I_VALUE_PID; }
+		else if(PID_yaw.integral_error <  MAX_SUM_I_VALUE_PID * -1) 
+			{ PID_yaw.integral_error = MAX_SUM_I_VALUE_PID * -1; }
 		
-		PID_yaw.output = (int)(PID_yaw.kP * pid_error_temp) +  (int)PID_yaw.integral_error +  (int)PID_yaw.derivative_error ;
+		PID_yaw.output = (PID_yaw.kP * pid_error_temp) +  PID_yaw.integral_error +  PID_yaw.derivative_error ;
 		
 		if(PID_yaw.output > PID_yaw.output_max) { PID_yaw.output = PID_yaw.output_max; }
 		else if(PID_yaw.output < PID_yaw.output_max * -1) { PID_yaw.output = PID_yaw.output_max * -1; }
 			
-		PID_yaw.pre_error = pid_error_temp;
-		
+		PID_yaw.pre_error = pid_error_temp; 
 }
 
 
@@ -940,40 +951,49 @@ void TIM5_IRQHandler(void) //PA3 - TIM5_CH4 ////Aileron_TraiPhai (trai - phai) -
 //
 //-----------------------------------------------------------------------------------
 void Check_EveryThing_OK(void)
-{	
-		int i=0;
+{	  
 	  //        15 XANH             ^^
 		//14 DO           12 VANG     ||
 	  //        13 CAM              ||
 		SANG_4_LED_OFF();
 		if(who_i_am_reg_value_MPU6050 != MPU6050_I_AM_VALUES)  //---VANG sang, Doc gia tri cua WHO I AM register, 
 		{
-				while(1) {			 LED_D_12_HIGH; delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
+				while(1) {			 LED_D_12_HIGH; delay_ms(500); SANG_4_LED_OFF(); delay_ms(500); }
 		}	
 		if(loop_time_cal_gyro != 1000) //CAM sang, kiem tra da cal gyro 1000 lan chua
 		{
-				while(1) {			 LED_D_13_HIGH; delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
+				while(1) {			 LED_D_13_HIGH; delay_ms(500); SANG_4_LED_OFF(); delay_ms(500); }
 		}	
 		if(set_gyro_angles_first_time == 0 ) //DO sang, kiem tra da set gia tri angle roll, pitch lan dau chua
 		{
-				while(1) {			 LED_D_14_HIGH; delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
-		}  
-		
-		while(i<5) //VANG+DO sang nhap nhay; pin yeu; kiem tra battery
-		{ battery_voltage_first = ( HAL_ADC_GetValue(&g_Adc_HandleTypeDef)+65 ) * 1.2317;
-			delay_ms(10); i++; 
-		}
-		battery_voltage  =  battery_voltage_first; 
-		if(battery_voltage == 0 || (battery_voltage < 1000 && battery_voltage > 600) ) 
+				while(1) {			 LED_D_14_HIGH; delay_ms(500); SANG_4_LED_OFF(); delay_ms(500); }
+		}   
+		  
+		/*
+		int i = 0;
+		while(i < 100) // kiem tra battery volt
 		{
-			while(1) {			 LED_D_12_HIGH; LED_D_14_HIGH;  delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
-		}  
-		
+			if( HAL_ADC_PollForConversion(&g_Adc_HandleTypeDef, 1000000) == HAL_OK )
+			{
+				battery_voltage_first = (HAL_ADC_GetValue(&g_Adc_HandleTypeDef)+65) * 1.2317;
+				battery_voltage = battery_voltage_first;
+				if(battery_voltage_first == 0) // VANG sang-> DO sang
+				{
+					while(1) {			 LED_D_12_HIGH; delay_ms(500); SANG_4_LED_OFF();  LED_D_14_HIGH;  delay_ms(500); SANG_4_LED_OFF(); }
+				} 
+				if( (battery_voltage_first < 1000 && battery_voltage_first > 600) ) //VANG+DO cung luc
+				{
+					while(1) {			 LED_D_12_HIGH; LED_D_14_HIGH;  delay_ms(500); SANG_4_LED_OFF(); delay_ms(500); }
+				} 		
+			}
+			i++;
+		}*/
+		 
 		//XANH sang, kiem tra doc gia tri RX ok chua
 		if(IC_Throttle_pusle_width <= 0 || IC_Aileron_TraiPhai_pusle_width <= 0 || IC_Elevator_TienLui_pusle_width <= 0 || IC_Rudder_Xoay_pusle_width <= 0 || 
 			IC_Throttle_pusle_width > 2000 || IC_Aileron_TraiPhai_pusle_width > 2000 || IC_Elevator_TienLui_pusle_width > 2000 || IC_Rudder_Xoay_pusle_width > 2000)
 		{
-				while(1) {			 LED_D_15_HIGH; delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); }
+				while(1) {			 LED_D_15_HIGH; delay_ms(500); SANG_4_LED_OFF(); delay_ms(500); }
 		}
 }
 
@@ -1013,7 +1033,8 @@ void 	Init_Config_ADC_read_Vol_battery(void)
 
 		HAL_NVIC_SetPriority(ADC_IRQn, 0, 0);
 		HAL_NVIC_EnableIRQ(ADC_IRQn);
- 
+	
+		g_Adc_HandleTypeDef.Init.ClockPrescaler = ADC_CLOCKPRESCALER_PCLK_DIV2; 
 		g_Adc_HandleTypeDef.Instance = ADC1;
 		g_Adc_HandleTypeDef.Init.ScanConvMode = DISABLE;
 		g_Adc_HandleTypeDef.Init.Resolution = ADC_RESOLUTION_10B; //2^10 = 1024 (0->1023)
@@ -1021,11 +1042,10 @@ void 	Init_Config_ADC_read_Vol_battery(void)
 		g_Adc_HandleTypeDef.Init.ExternalTrigConv = ADC_EXTERNALTRIGCONV_T1_CC1;
 		g_Adc_HandleTypeDef.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
 		g_Adc_HandleTypeDef.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-		g_Adc_HandleTypeDef.Init.NbrOfConversion = 1; 
-		g_Adc_HandleTypeDef.Init.ClockPrescaler = ADC_CLOCKPRESCALER_PCLK_DIV2;
+		g_Adc_HandleTypeDef.Init.NbrOfConversion = 1;  
 		g_Adc_HandleTypeDef.Init.DiscontinuousConvMode = DISABLE;
 		g_Adc_HandleTypeDef.Init.NbrOfDiscConversion = 0;
-		g_Adc_HandleTypeDef.Init.DMAContinuousRequests = ENABLE;
+		g_Adc_HandleTypeDef.Init.DMAContinuousRequests = DISABLE;
 		g_Adc_HandleTypeDef.Init.EOCSelection = DISABLE; //important hadc.Init.EOCSelection to DISABLE for continuous sampling. 
 		HAL_ADC_Init(&g_Adc_HandleTypeDef);
 		
@@ -1034,13 +1054,12 @@ void 	Init_Config_ADC_read_Vol_battery(void)
 		adcChannel.SamplingTime = ADC_SAMPLETIME_3CYCLES;
 		adcChannel.Offset = 0;
 
-		while (HAL_ADC_ConfigChannel(&g_Adc_HandleTypeDef, &adcChannel) != HAL_OK)
-		{  }
+		while (HAL_ADC_ConfigChannel(&g_Adc_HandleTypeDef, &adcChannel) != HAL_OK) {  }
 		
-		while(HAL_ADC_Start(&g_Adc_HandleTypeDef) ){}
+		while (HAL_ADC_Start(&g_Adc_HandleTypeDef) ){}
 		
 		//__HAL_ADC_ENABLE_IT(&g_Adc_HandleTypeDef, ADC_IT_EOC);
-		//HAL_ADC_Start_IT(&g_Adc_HandleTypeDef); 
+		//while(HAL_ADC_Start_IT(&g_Adc_HandleTypeDef) ){} 
 }
 
 /*
@@ -1054,12 +1073,13 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) // xu ly interrupt handle
     if(hadc->Instance == ADC1)
     {
     	if(__HAL_ADC_GET_FLAG(hadc, ADC_FLAG_EOC) )
-    	{
-    		battery_voltage = battery_voltage*0.92 + (HAL_ADC_GetValue(&g_Adc_HandleTypeDef)+65)*1.2317*0.08;
+    	{ 
+				battery_voltage =  battery_voltage * 0.96 + (HAL_ADC_GetValue(&g_Adc_HandleTypeDef)+65) * 1.2317 * 0.04;
     	}
     } 
 }
 */
+
 
 //
 //
@@ -1161,7 +1181,7 @@ void GY86_I2C_IS_DEVICE_CONNECTED(void)
 	while(HAL_I2C_IsDeviceReady(&I2C_Handle_GY86_10truc, 0xD0, 10, 100) != HAL_OK) 
 	{
 		//k ket noi dc mpu6050; LED VANG sang 
-		SANG_1_LED(12); 			delay_ms(50);			SANG_4_LED_OFF();			delay_ms(50);
+		LED_D_12_HIGH;		delay_ms(50);			SANG_4_LED_OFF();			delay_ms(50);
 	}
 	while(HAL_I2C_GetState(&I2C_Handle_GY86_10truc)!=HAL_I2C_STATE_READY){}
 }
@@ -1335,17 +1355,17 @@ void GY86_Cal_Angle_By_Gyro_And_Acc(TM_MPU6050_t* mpu6050_Object)
 	angle_pitch_acc = atan2(-acc_x, sqrt(acc_y*acc_y + acc_z*acc_z))           * (float)57.296 *-1;  // *-1 vi theo chieu +
 	
 	//Calculate angle by gyro & accelerate data
-	angle_roll =  angle_roll  * (float)0.996 + angle_roll_acc  * (float)0.004;
-	angle_pitch = angle_pitch * (float)0.996 + angle_pitch_acc * (float)0.004;  
+	angle_roll =  angle_roll  * (float)0.9996 + angle_roll_acc  * (float)0.0004;
+	angle_pitch = angle_pitch * (float)0.9996 + angle_pitch_acc * (float)0.0004;  
 	
 	//Calculate setpoint PID
 	roll_level_adjust =  angle_roll  * 15;
 	pitch_level_adjust = angle_pitch * 15;
 	
 	//Calculate input (error) PID
-	gyro_roll_input_pid  =   gyro_roll_input_pid *(float)0.7 + (gyro_x/(float)65.5)*(float)0.3; //gyro pid input is deg/second
-	gyro_pitch_input_pid =  gyro_pitch_input_pid *(float)0.7 + (gyro_y/(float)65.5)*(float)0.3; 
-	gyro_yaw_input_pid  =   gyro_yaw_input_pid   *(float)0.7 + (gyro_z/(float)65.5)*(float)0.3; 
+	gyro_roll_input_pid  =   gyro_roll_input_pid *(float)0.8 + (gyro_x/(float)65.5)*(float)0.2; //gyro pid input is deg/second
+	gyro_pitch_input_pid =  gyro_pitch_input_pid *(float)0.8 + (gyro_y/(float)65.5)*(float)0.2; 
+	gyro_yaw_input_pid  =   gyro_yaw_input_pid   *(float)0.8 + (gyro_z/(float)65.5)*(float)0.2; 
 }	
 
 
