@@ -38,6 +38,15 @@ PB5 pwm 2
 PB0 pwm 3
 PB1 pwm 4
 --------------------------------------------------------------------------
+
+//ERROR
+		//VANG sang, Doc gia tri cua WHO I AM register, 
+		//CAM sang, kiem tra da cal gyro 1000 lan chua
+		//DO sang, kiem tra da set gia tri angle roll, pitch; set_gyro_angles_first_time == 0
+		//VANG sang -> DO sang; battery_voltage_first == 0
+		//VANG + DO cung luc; battery_voltage_first < 1000 && battery_voltage_first > 600
+		//XANH sang, kiem tra doc gia tri RX ok chua
+--------------------------------------------------------------------------
 */
 #include "stdio.h"
 #include "math.h"
@@ -179,8 +188,7 @@ void 							reset_PID(void);
 //-----------END Khai bao HAM-------------------------------------------------------
 
 int main(void)
-{		
-						 		
+{		 				 		
 		HAL_Init();		
 		SystemClock_Config();	
 		SysTick_Config(SystemCoreClock/1000000);
@@ -218,8 +226,7 @@ int main(void)
 		GY86_Cal_Angle_By_Gyro_And_Acc(&mpu6050_Object); 							delay_ms(10);  
 		if(set_gyro_angles_first_time == 0 && loop_time_cal_gyro == 1000)
 		{
-			angle_roll = angle_roll_acc;  angle_pitch = angle_pitch_acc;  set_gyro_angles_first_time = 1;	
-			delay_ms(10); 
+			angle_roll = angle_roll_acc;  angle_pitch = angle_pitch_acc;  set_gyro_angles_first_time = 1;	 delay_ms(10); 
 		} 
 		Check_EveryThing_OK();																				delay_ms(10);
 		Reset_IC_Devo7();																							delay_ms(10);
@@ -252,8 +259,9 @@ int main(void)
 							GY86_MPU6050_ReadAll( 0xD0, &mpu6050_Object);  
 							GY86_Cal_Angle_By_Gyro_And_Acc(&mpu6050_Object);  
 							/*if( HAL_ADC_PollForConversion(&g_Adc_HandleTypeDef, 500) == HAL_OK )
-							{ battery_voltage =  battery_voltage * 0.96 + (HAL_ADC_GetValue(&g_Adc_HandleTypeDef)+65) * 1.2317 * 0.04;
-							}	*/
+							{ 
+								battery_voltage =  battery_voltage * 0.96 + (HAL_ADC_GetValue(&g_Adc_HandleTypeDef)+65) * 1.2317 * 0.04;
+							}*/
 							if(IC_Throttle_pusle_width > 1150 && IC_Throttle_pusle_width <=  2000)
 							{
 									 	//-----------------------------------------------------
@@ -310,7 +318,7 @@ int main(void)
 							{ 
 								reset_PID();
 								pwm_motor_1 = 1000;  pwm_motor_2 = 1000;  pwm_motor_3 = 1000;  pwm_motor_4 = 1000;
-								TIM3->CCR1 = 	1000; TIM3->CCR2 = 	1000; TIM3->CCR3  = 1000; TIM3->CCR4  = 1000; 
+								TIM3->CCR1 = 	1000;  TIM3->CCR2  = 1000;  TIM3->CCR3  = 1000;  TIM3->CCR4  = 1000; 
 								SANG_4_LED_OFF(); LED_D_12_HIGH; LED_D_14_HIGH; delay_ms(200);
 								SANG_4_LED_OFF(); LED_D_13_HIGH; LED_D_15_HIGH; delay_ms(200);
 								Turn_Off_Quadrotor(); 
@@ -339,8 +347,8 @@ void Turn_On_Quadrotor(void)
 						{			
 								SANG_4_LED_OFF();  
 								FlyState = STATE_FLY_ON; 
-								pwm_motor_1 = 1070; pwm_motor_2 = 1070; pwm_motor_3 = 1070; pwm_motor_4 = 1070;
-								TIM3->CCR1 = 	1070; TIM3->CCR2 = 	1070; TIM3->CCR3 = 1070; TIM3->CCR4 = 1070;
+								pwm_motor_1 = 1060; pwm_motor_2 = 1060; pwm_motor_3 = 1060; pwm_motor_4 = 1060;
+								TIM3->CCR1 = 	1060; TIM3->CCR2 = 	1060; TIM3->CCR3  = 1060; TIM3->CCR4 = 1060;
 								SANG_4_LED_LOOP(7,40);  SANG_4_LED_OFF(); delay_ms(1000);   
 								reset_PID();
 								loop_timer = get_current_time_us(); 
@@ -350,10 +358,10 @@ void Turn_On_Quadrotor(void)
 				//Turn_On_Quadrotor
 				GY86_MPU6050_ReadAll( 0xD0, &mpu6050_Object);  
 				GY86_Cal_Angle_By_Gyro_And_Acc(&mpu6050_Object);
-				/*if( HAL_ADC_PollForConversion(&g_Adc_HandleTypeDef, 500) == HAL_OK )
+				/*if( HAL_ADC_PollForConversion(&g_Adc_HandleTypeDef, 100) == HAL_OK )
 				{
 					battery_voltage =  battery_voltage * 0.96 + (HAL_ADC_GetValue(&g_Adc_HandleTypeDef)+65) * 1.2317 * 0.04;
-					if( (battery_voltage_first < 1000 && battery_voltage_first > 600) ) //VANG+DO cung luc
+					if( (battery_voltage_first < 1000 && battery_voltage_first > 600) ) 
 					{
 						LED_D_12_HIGH; LED_D_14_HIGH;  delay_ms(50); SANG_4_LED_OFF(); delay_ms(50); 
 					} 
@@ -389,7 +397,7 @@ void Turn_On_Quadrotor(void)
 				}
 										
 				calculate_pid(); 
-				// trick throttle IC_Throttle_pusle_width = 1500
+				// hack debug; throttle IC_Throttle_pusle_width = 1500
 				pwm_motor_1 = (int)1500 + (int)PID_roll.output - (int)PID_pitch.output  - (int)PID_yaw.output;
 				pwm_motor_2 = (int)1500 + (int)PID_roll.output + (int)PID_pitch.output  + (int)PID_yaw.output;
 				pwm_motor_3 = (int)1500 - (int)PID_roll.output + (int)PID_pitch.output  - (int)PID_yaw.output;
@@ -951,10 +959,10 @@ void TIM5_IRQHandler(void) //PA3 - TIM5_CH4 ////Aileron_TraiPhai (trai - phai) -
 //
 //-----------------------------------------------------------------------------------
 void Check_EveryThing_OK(void)
-{	  
+{	   
 	  //        15 XANH             ^^
 		//14 DO           12 VANG     ||
-	  //        13 CAM              ||
+	  //        13 CAM              || 
 		SANG_4_LED_OFF();
 		if(who_i_am_reg_value_MPU6050 != MPU6050_I_AM_VALUES)  //---VANG sang, Doc gia tri cua WHO I AM register, 
 		{
@@ -964,30 +972,32 @@ void Check_EveryThing_OK(void)
 		{
 				while(1) {			 LED_D_13_HIGH; delay_ms(500); SANG_4_LED_OFF(); delay_ms(500); }
 		}	
+		
 		if(set_gyro_angles_first_time == 0 ) //DO sang, kiem tra da set gia tri angle roll, pitch lan dau chua
 		{
 				while(1) {			 LED_D_14_HIGH; delay_ms(500); SANG_4_LED_OFF(); delay_ms(500); }
-		}   
-		  
-		/*
+		}    
+		
+		/* 
 		int i = 0;
-		while(i < 100) // kiem tra battery volt
+		while(i < 1000) // kiem tra battery volt
 		{
-			if( HAL_ADC_PollForConversion(&g_Adc_HandleTypeDef, 1000000) == HAL_OK )
+			if( HAL_ADC_PollForConversion(&g_Adc_HandleTypeDef, 500) == HAL_OK )
 			{
 				battery_voltage_first = (HAL_ADC_GetValue(&g_Adc_HandleTypeDef)+65) * 1.2317;
-				battery_voltage = battery_voltage_first;
-				if(battery_voltage_first == 0) // VANG sang-> DO sang
-				{
-					while(1) {			 LED_D_12_HIGH; delay_ms(500); SANG_4_LED_OFF();  LED_D_14_HIGH;  delay_ms(500); SANG_4_LED_OFF(); }
-				} 
-				if( (battery_voltage_first < 1000 && battery_voltage_first > 600) ) //VANG+DO cung luc
-				{
-					while(1) {			 LED_D_12_HIGH; LED_D_14_HIGH;  delay_ms(500); SANG_4_LED_OFF(); delay_ms(500); }
-				} 		
-			}
+				battery_voltage =       (HAL_ADC_GetValue(&g_Adc_HandleTypeDef)+65) * 1.2317;
+			} 
 			i++;
-		}*/
+		} 
+		if(battery_voltage_first == 0) // VANG sang -> DO sang
+		{
+			while(1) {			 LED_D_12_HIGH;  delay_ms(250); SANG_4_LED_OFF(); delay_ms(250);  
+											 LED_D_14_HIGH;  delay_ms(250); SANG_4_LED_OFF(); delay_ms(250);  }
+		} 
+		if( battery_voltage_first != 0 && battery_voltage_first < 1000 && battery_voltage_first > 600 ) //VANG + DO cung luc
+		{
+			while(1) {	 LED_D_12_HIGH; LED_D_14_HIGH;  delay_ms(500); SANG_4_LED_OFF(); delay_ms(500);  }
+		}*/ 	
 		 
 		//XANH sang, kiem tra doc gia tri RX ok chua
 		if(IC_Throttle_pusle_width <= 0 || IC_Aileron_TraiPhai_pusle_width <= 0 || IC_Elevator_TienLui_pusle_width <= 0 || IC_Rudder_Xoay_pusle_width <= 0 || 
