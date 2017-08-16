@@ -397,11 +397,30 @@ void Turn_On_Quadrotor(void)
 				}
 										
 				calculate_pid(); 
-				// hack debug; throttle IC_Throttle_pusle_width = 1500
-				pwm_motor_1 = (int)1500 + (int)PID_roll.output - (int)PID_pitch.output  - (int)PID_yaw.output;
-				pwm_motor_2 = (int)1500 + (int)PID_roll.output + (int)PID_pitch.output  + (int)PID_yaw.output;
-				pwm_motor_3 = (int)1500 - (int)PID_roll.output + (int)PID_pitch.output  - (int)PID_yaw.output;
-				pwm_motor_4 = (int)1500 - (int)PID_roll.output - (int)PID_pitch.output  + (int)PID_yaw.output;
+				
+				//debug pitch
+				/*
+				pwm_motor_1 = (int)IC_Throttle_pusle_width  - (int)PID_pitch.output;// + (int)PID_roll.output  - (int)PID_yaw.output;
+				pwm_motor_2 = (int)IC_Throttle_pusle_width  + (int)PID_pitch.output;// + (int)PID_roll.output + (int)PID_yaw.output;
+				pwm_motor_3 = (int)IC_Throttle_pusle_width  + (int)PID_pitch.output;// - (int)PID_roll.output  - (int)PID_yaw.output;
+				pwm_motor_4 = (int)IC_Throttle_pusle_width  - (int)PID_pitch.output;// - (int)PID_roll.output  + (int)PID_yaw.output;
+				*/
+				//debug roll
+				/*
+				pwm_motor_1 = (int)IC_Throttle_pusle_width + (int)PID_roll.output; // - (int)PID_pitch.output  - (int)PID_yaw.output;
+				pwm_motor_2 = (int)IC_Throttle_pusle_width + (int)PID_roll.output; // + (int)PID_pitch.output  + (int)PID_yaw.output;
+				pwm_motor_3 = (int)IC_Throttle_pusle_width - (int)PID_roll.output; // + (int)PID_pitch.output  - (int)PID_yaw.output;
+				pwm_motor_4 = (int)IC_Throttle_pusle_width - (int)PID_roll.output; // - (int)PID_pitch.output  + (int)PID_yaw.output;
+				*/
+				
+				// hack debug; 
+				//IC_Throttle_pusle_width = 1500
+				pwm_motor_1 = (int)IC_Throttle_pusle_width + (int)PID_roll.output - (int)PID_pitch.output  - (int)PID_yaw.output;
+				pwm_motor_2 = (int)IC_Throttle_pusle_width + (int)PID_roll.output + (int)PID_pitch.output  + (int)PID_yaw.output;
+				pwm_motor_3 = (int)IC_Throttle_pusle_width - (int)PID_roll.output + (int)PID_pitch.output  - (int)PID_yaw.output;
+				pwm_motor_4 = (int)IC_Throttle_pusle_width - (int)PID_roll.output - (int)PID_pitch.output  + (int)PID_yaw.output;
+				
+				
 				/*if(battery_voltage < 1240 && battery_voltage > 800)
 				{
 					pwm_motor_1 += pwm_motor_1*( (1240-battery_voltage)/(float)3500 );
